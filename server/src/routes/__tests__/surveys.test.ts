@@ -4,6 +4,7 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { initDB } from "../../database.js";
 import { surveysRouter } from "../surveys.routes.js";
+import { surveyRespondRouter } from "../public/survey-respond.routes.js";
 import { generateJWT } from "../../auth.js";
 import type { Database } from "sql.js";
 
@@ -296,5 +297,157 @@ describe("Survey admin routes", () => {
     expect(body.survey.title).toBe("End-of-Semester Feedback");
     expect(body.questions).toBeDefined();
     expect(body.questions.length).toBeGreaterThan(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Public survey routes
+// ---------------------------------------------------------------------------
+
+describe("surveys public routes", () => {
+  let pubDb: Database;
+  let pubServer: Server;
+  let pubBaseUrl: string;
+  let pubAdminToken: string;
+
+  beforeEach(async () => {
+    pubDb = await initDB();
+
+    // Insert admin guardian
+    pubDb.run(
+      `INSERT INTO guardians (id, phone, name, role, passwordHash)
+       VALUES (1, '+41700000001', 'Admin User', 'admin', 'hash')`,
+    );
+
+    pubAdminToken = generateJWT({ id: 1, role: "admin" });
+
+    const app = express();
+    app.use(express.json());
+    app.use("/api", surveysRouter);
+    app.use("/api/public", surveyRespondRouter);
+
+    pubServer = createServer(app);
+    await new Promise<void>((resolve) => pubServer.listen(0, resolve));
+    const { port } = pubServer.address() as AddressInfo;
+    pubBaseUrl = `http://localhost:${port}`;
+  });
+
+  afterEach(async () => {
+    await new Promise<void>((resolve, reject) =>
+      pubServer.close((err) => (err ? reject(err) : resolve())),
+    );
+    pubDb.close();
+  });
+
+  /** Helper: create a survey via the admin route */
+  async function createSurveyViaAdmin(
+    overrides: Record<string, unknown> = {},
+  ) {
+    const payload = {
+      title: "Public Test Survey",
+      anonymous: false,
+      questions: [
+        { type: "star_rating", label: "Rate us", sort_order: 0 },
+        { type: "free_text", label: "Comments?", sort_order: 1 },
+      ],
+      ...overrides,
+    };
+    const res = await fetch(`${pubBaseUrl}/api/surveys`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${pubAdminToken}`,
+      },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  }
+
+  it("GET /api/public/surveys/:id — returns 200 with title + questions, without created_by", async () => {
+    const created = await createSurveyViaAdmin();
+    const surveyId = created.survey.id;
+
+    const res = await fetch(`${pubBaseUrl}/api/public/surveys/${surveyId}`);
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.title).toBe("Public Test Survey");
+    expect(body.questions).toBeDefined();
+    expect(body.questions).toHaveLength(2);
+    expect(body).not.toHaveProperty("created_by");
+    expect(body).not.toHaveProperty("created_at");
+  });
+
+  it("POST /api/public/surveys/:id/respond — returns 201 with response_id and payment_required false", async () => {
+    const created = await createSurveyViaAdmin();
+    const surveyId = created.survey.id;
+    const questions = created.questions;
+
+    const res = await fetch(
+      `${pubBaseUrl}/api/public/surveys/${surveyId}/respond`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          player_nickname: "TestPlayer",
+          answers: [
+            { question_id: questions[0].id, value: "4" },
+            { question_id: questions[1].id, value: "Great!" },
+          ],
+        }),
+      },
+    );
+
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body).toHaveProperty("response_id");
+    expect(body.payment_required).toBe(false);
+  });
+
+  it("POST /api/public/surveys/:id/respond — returns 409 on duplicate submission", async () => {
+    const created = await createSurveyViaAdmin();
+    const surveyId = created.survey.id;
+    const questions = created.questions;
+
+    const payload = {
+      player_nickname: "DuplicatePlayer",
+      answers: [
+        { question_id: questions[0].id, value: "3" },
+        { question_id: questions[1].id, value: "OK" },
+      ],
+    };
+
+    // First submission
+    await fetch(`${pubBaseUrl}/api/public/surveys/${surveyId}/respond`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    // Duplicate submission
+    const res = await fetch(
+      `${pubBaseUrl}/api/public/surveys/${surveyId}/respond`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      },
+    );
+
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body).toHaveProperty("error");
+  });
+
+  it("GET /api/public/surveys/:id/qr — returns 200 with content-type image/png", async () => {
+    const created = await createSurveyViaAdmin();
+    const surveyId = created.survey.id;
+
+    const res = await fetch(
+      `${pubBaseUrl}/api/public/surveys/${surveyId}/qr`,
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("image/png");
   });
 });

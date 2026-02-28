@@ -4,6 +4,7 @@ import { useState, useEffect, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import { setToken } from '@/lib/auth';
+import { t, getLanguage } from '@/lib/i18n';
 
 interface ResetPasswordResponse {
   token: string;
@@ -16,6 +17,12 @@ export default function ResetPasswordClient() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [, setLang] = useState(() => getLanguage());
+  useEffect(() => {
+    function onLangChange() { setLang(getLanguage()); }
+    window.addEventListener('languagechange', onLangChange);
+    return () => window.removeEventListener('languagechange', onLangChange);
+  }, []);
 
   useEffect(() => {
     const segments = window.location.pathname.split('/');
@@ -30,7 +37,7 @@ export default function ResetPasswordClient() {
     setError('');
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match.');
+      setError(t('passwords_no_match'));
       return;
     }
 
@@ -56,24 +63,24 @@ export default function ResetPasswordClient() {
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold text-emerald-600">OpenKick</h1>
-          <p className="mt-1 text-sm text-gray-500">Youth Football Management</p>
+          <p className="mt-1 text-sm text-gray-500">{t('youth_football_mgmt')}</p>
         </div>
 
         <div className="rounded-xl bg-white p-6 shadow-md">
           <h2 className="mb-6 text-xl font-semibold text-gray-800">
-            Reset Password
+            {t('reset_password')}
           </h2>
 
           {error === 'invalid_or_expired' ? (
             <div>
               <p className="mb-4 text-sm text-red-700">
-                Invalid or expired link. Please request a new one.
+                {t('invalid_reset_link')}
               </p>
               <a
                 href="/forgot-password/"
                 className="text-sm text-emerald-600 hover:underline"
               >
-                Request a new reset link
+                {t('request_new_link')}
               </a>
             </div>
           ) : (
@@ -85,7 +92,7 @@ export default function ResetPasswordClient() {
               )}
 
               <label className="mb-1 block text-sm font-medium text-gray-700">
-                New Password
+                {t('new_password')}
               </label>
               <input
                 type="password"
@@ -98,7 +105,7 @@ export default function ResetPasswordClient() {
               />
 
               <label className="mb-1 block text-sm font-medium text-gray-700">
-                Confirm Password
+                {t('confirm_password')}
               </label>
               <input
                 type="password"
@@ -115,7 +122,7 @@ export default function ResetPasswordClient() {
                 disabled={loading}
                 className="w-full rounded-xl bg-emerald-500 px-6 py-3 text-sm font-medium text-white transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 disabled:opacity-50"
               >
-                {loading ? '...' : 'Reset Password'}
+                {loading ? '...' : t('reset_password_submit')}
               </button>
             </form>
           )}

@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
+import { t, getLanguage } from '@/lib/i18n';
 
 /* ── Types ──────────────────────────────────────────────────────────── */
 
@@ -31,12 +32,12 @@ interface Props {
 
 /* ── Constants ──────────────────────────────────────────────────────── */
 
-const PREDEFINED_ACHIEVEMENTS: Achievement[] = [
-  { type: '1st_place', label: '1st Place' },
-  { type: '2nd_place', label: '2nd Place' },
-  { type: '3rd_place', label: '3rd Place' },
-  { type: 'fair_play', label: 'Fair Play' },
-  { type: 'best_player', label: 'Best Player' },
+const PREDEFINED_ACHIEVEMENT_KEYS: { type: string; key: string }[] = [
+  { type: '1st_place', key: 'achievement_1st' },
+  { type: '2nd_place', key: 'achievement_2nd' },
+  { type: '3rd_place', key: 'achievement_3rd' },
+  { type: 'fair_play', key: 'achievement_fair_play' },
+  { type: 'best_player', key: 'achievement_best_player' },
 ];
 
 /* ── Helpers ─────────────────────────────────────────────────────────── */
@@ -87,6 +88,14 @@ export default function TournamentResultsForm({
 
   // Suppress unused-var lint for eventType (kept in props for future use)
   void _eventType;
+
+  // Language reactivity
+  const [, setLang] = useState(() => getLanguage());
+  useEffect(() => {
+    function onLangChange() { setLang(getLanguage()); }
+    window.addEventListener('languagechange', onLangChange);
+    return () => window.removeEventListener('languagechange', onLangChange);
+  }, []);
 
   /* ── Handlers ── */
 
@@ -155,14 +164,14 @@ export default function TournamentResultsForm({
       setEditing(false);
       resetForm(saved);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save results');
+      setError(err instanceof Error ? err.message : t('failed_save_results'));
     } finally {
       setSaving(false);
     }
   }
 
   async function handleDelete() {
-    if (!confirm('Delete tournament results? This action cannot be undone.')) return;
+    if (!confirm(t('delete_results_confirm'))) return;
     setDeleting(true);
     setError(null);
     try {
@@ -171,7 +180,7 @@ export default function TournamentResultsForm({
       setEditing(false);
       resetForm(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete results');
+      setError(err instanceof Error ? err.message : t('failed_delete_results'));
     } finally {
       setDeleting(false);
     }
@@ -196,7 +205,7 @@ export default function TournamentResultsForm({
       if (imported.summary) setSummary(imported.summary);
       if (imported.achievements) setAchievements(imported.achievements);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to import results');
+      setError(err instanceof Error ? err.message : t('failed_import_results'));
     } finally {
       setImporting(false);
     }
@@ -211,13 +220,13 @@ export default function TournamentResultsForm({
       return (
         <section>
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
-            Tournament Results
+            {t('tournament_results')}
           </h2>
           <button
             onClick={handleEdit}
             className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-600"
           >
-            Add results
+            {t('add_results')}
           </button>
         </section>
       );
@@ -226,7 +235,7 @@ export default function TournamentResultsForm({
     return (
       <section>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
-          Tournament Results
+          {t('tournament_results')}
         </h2>
 
         <div className="space-y-3 rounded-lg border border-gray-200 p-4">
@@ -237,7 +246,7 @@ export default function TournamentResultsForm({
                 className={`inline-flex items-center rounded-full px-4 py-1.5 text-sm font-bold ${placementBgClass(results.placement)}`}
               >
                 {ordinal(results.placement)}
-                {results.totalTeams != null && ` out of ${results.totalTeams}`}
+                {results.totalTeams != null && ` ${t('out_of')} ${results.totalTeams}`}
               </span>
             </div>
           )}
@@ -271,7 +280,7 @@ export default function TournamentResultsForm({
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 text-sm text-emerald-600 underline hover:text-emerald-800"
             >
-              View full results
+              {t('view_full_results')}
               <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
               </svg>
@@ -285,7 +294,7 @@ export default function TournamentResultsForm({
                 onClick={handleEdit}
                 className="text-sm text-emerald-600 underline hover:text-emerald-800"
               >
-                Edit
+                {t('edit')}
               </button>
             </div>
           )}
@@ -299,7 +308,7 @@ export default function TournamentResultsForm({
   return (
     <section>
       <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
-        Tournament Results
+        {t('tournament_results')}
       </h2>
 
       <div className="space-y-4 rounded-lg border border-gray-200 p-4">
@@ -312,7 +321,7 @@ export default function TournamentResultsForm({
         {/* Placement & Total Teams */}
         <div className="grid grid-cols-2 gap-4">
           <label className="block text-sm text-gray-600">
-            Placement
+            {t('placement')}
             <input
               type="number"
               min={1}
@@ -323,7 +332,7 @@ export default function TournamentResultsForm({
             />
           </label>
           <label className="block text-sm text-gray-600">
-            Total teams
+            {t('total_teams_field')}
             <input
               type="number"
               min={1}
@@ -337,36 +346,37 @@ export default function TournamentResultsForm({
 
         {/* Summary */}
         <label className="block text-sm text-gray-600">
-          Summary
+          {t('summary')}
           <textarea
             rows={3}
             value={summary}
             onChange={(e) => setSummary(e.target.value)}
-            placeholder="Brief summary of the tournament results..."
+            placeholder={t('summary_placeholder')}
             className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
           />
         </label>
 
         {/* Achievements */}
         <div>
-          <p className="mb-2 text-sm font-medium text-gray-600">Achievements</p>
+          <p className="mb-2 text-sm font-medium text-gray-600">{t('achievements')}</p>
 
           {/* Predefined chips */}
           <div className="mb-2 flex flex-wrap gap-2">
-            {PREDEFINED_ACHIEVEMENTS.map((a) => {
+            {PREDEFINED_ACHIEVEMENT_KEYS.map((a) => {
+              const label = t(a.key);
               const active = achievements.some((sel) => sel.type === a.type);
               return (
                 <button
                   key={a.type}
                   type="button"
-                  onClick={() => toggleAchievement(a)}
+                  onClick={() => toggleAchievement({ type: a.type, label })}
                   className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
                     active
                       ? 'border-emerald-400 bg-emerald-100 text-emerald-700'
                       : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50'
                   }`}
                 >
-                  {a.label}
+                  {label}
                 </button>
               );
             })}
@@ -384,7 +394,7 @@ export default function TournamentResultsForm({
                   addCustomAchievement();
                 }
               }}
-              placeholder="Add custom achievement"
+              placeholder={t('add_achievement')}
               className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
             />
             <button
@@ -392,7 +402,7 @@ export default function TournamentResultsForm({
               onClick={addCustomAchievement}
               className="rounded-lg border border-emerald-300 bg-white px-3 py-1.5 text-sm font-medium text-emerald-600 transition hover:bg-emerald-50"
             >
-              Add
+              {t('add')}
             </button>
           </div>
 
@@ -409,7 +419,7 @@ export default function TournamentResultsForm({
                     type="button"
                     onClick={() => removeAchievement(a.type)}
                     className="ml-0.5 text-emerald-500 hover:text-emerald-800"
-                    aria-label={`Remove ${a.label}`}
+                    aria-label={`${t('delete')} ${a.label}`}
                   >
                     &times;
                   </button>
@@ -422,7 +432,7 @@ export default function TournamentResultsForm({
         {/* Results URL */}
         <div>
           <label className="block text-sm text-gray-600">
-            Results URL
+            {t('results_url')}
             <div className="mt-1 flex gap-2">
               <input
                 type="text"
@@ -443,10 +453,10 @@ export default function TournamentResultsForm({
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                     </svg>
-                    Importing...
+                    {t('importing')}
                   </span>
                 ) : (
-                  'Import from URL'
+                  t('import_from_url_btn')
                 )}
               </button>
             </div>
@@ -461,14 +471,14 @@ export default function TournamentResultsForm({
             disabled={saving}
             className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-600 disabled:opacity-50"
           >
-            {saving ? 'Saving...' : 'Save'}
+            {saving ? t('saving') : t('save')}
           </button>
           <button
             type="button"
             onClick={handleCancel}
             className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
           >
-            Cancel
+            {t('cancel')}
           </button>
           {results && (
             <button
@@ -477,7 +487,7 @@ export default function TournamentResultsForm({
               disabled={deleting}
               className="rounded-xl border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:opacity-50"
             >
-              {deleting ? 'Deleting...' : 'Delete'}
+              {deleting ? t('deleting') : t('delete')}
             </button>
           )}
         </div>

@@ -242,4 +242,81 @@ describe("Events routes", () => {
     const res = await fetch(`${baseUrl}/api/events/999`, { method: "DELETE" });
     expect(res.status).toBe(404);
   });
+
+  it("GET /api/events — includes expanded series instances", async () => {
+    // Insert an event series directly into the DB (every Wednesday, March 2026)
+    db.run(
+      `INSERT INTO event_series (type, title, description, startTime, attendanceTime, location,
+        categoryRequirement, maxParticipants, minParticipants, recurrenceDay, startDate, endDate,
+        customDates, excludedDates, deadlineOffsetHours)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        "training", "Wednesday Series", "Series desc", "18:00", "17:45", "Platz B",
+        "E", 20, 8, 3, "2026-03-01", "2026-03-31",
+        null, null, 24,
+      ],
+    );
+
+    // Also create a standalone event to make sure it still shows up
+    await fetch(`${baseUrl}/api/events`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "tournament", title: "Standalone Cup", date: "2026-03-15" }),
+    });
+
+    const res = await fetch(`${baseUrl}/api/events`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(Array.isArray(body)).toBe(true);
+
+    // The standalone event should be present
+    const standalone = body.find((e: any) => e.title === "Standalone Cup");
+    expect(standalone).toBeDefined();
+    expect(standalone.type).toBe("tournament");
+
+    // March 2026 Wednesdays: 4, 11, 18, 25 → 4 series instances
+    const seriesInstances = body.filter((e: any) => e.title === "Wednesday Series");
+    expect(seriesInstances.length).toBe(4);
+
+    // Verify fields on one instance
+    const first = seriesInstances[0];
+    expect(first.seriesId).toBeDefined();
+    expect(first.type).toBe("training");
+    expect(first.date).toBe("2026-03-04");
+    expect(first.startTime).toBe("18:00");
+    expect(first.location).toBe("Platz B");
+
+    // Should be sorted by date
+    for (let i = 1; i < body.length; i++) {
+      expect(body[i].date >= body[i - 1].date).toBe(true);
+    }
+  });
+
+  it("GET /api/events — does not duplicate materialized series events", async () => {
+    // Insert a series
+    db.run(
+      `INSERT INTO event_series (type, title, startTime, recurrenceDay, startDate, endDate)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      ["training", "Mat Series", "18:00", 3, "2026-03-01", "2026-03-31"],
+    );
+
+    // Materialize one instance (March 4 is a Wednesday)
+    db.run(
+      `INSERT INTO events (type, title, date, startTime, seriesId)
+       VALUES (?, ?, ?, ?, ?)`,
+      ["training", "Mat Series (edited)", "2026-03-04", "19:00", 1],
+    );
+
+    const res = await fetch(`${baseUrl}/api/events`);
+    const body = await res.json();
+
+    // Should not have duplicate entries for 2026-03-04
+    const march4Events = body.filter(
+      (e: any) => e.date === "2026-03-04" && (e.title === "Mat Series" || e.title === "Mat Series (edited)"),
+    );
+    expect(march4Events).toHaveLength(1);
+    // The materialized version should win
+    expect(march4Events[0].title).toBe("Mat Series (edited)");
+    expect(march4Events[0].startTime).toBe("19:00");
+  });
 });

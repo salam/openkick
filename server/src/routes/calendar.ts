@@ -1,11 +1,14 @@
 import { Router, type Request, type Response } from "express";
-import { getDB } from "../database.js";
+import { getDB, getLastInsertId } from "../database.js";
 import {
   parseICS,
   extractHolidaysFromUrl,
   syncZurichHolidays,
   getZurichHolidays,
+  getZurichPublicHolidays,
+  getUpcomingVacations,
 } from "../services/holidays.js";
+import { expandSeries, type SeriesTemplate, type VacationPeriod, type MaterializedEvent } from "../services/event-series.js";
 
 export const calendarRouter = Router();
 
@@ -52,8 +55,7 @@ calendarRouter.post("/training-schedule", (req: Request, res: Response) => {
     [dayOfWeek, startTime, endTime, location ?? null, categoryFilter ?? null, validFrom ?? null, validTo ?? null],
   );
 
-  const result = db.exec("SELECT last_insert_rowid() AS id");
-  const id = result[0].values[0][0] as number;
+  const id = getLastInsertId();
   const rows = rowsToObjects(db.exec("SELECT * FROM training_schedule WHERE id = ?", [id]));
   res.status(201).json(rows[0]);
 });
@@ -128,8 +130,7 @@ calendarRouter.post("/vacations", (req: Request, res: Response) => {
     [name, startDate, endDate, source ?? "manual"],
   );
 
-  const result = db.exec("SELECT last_insert_rowid() AS id");
-  const id = result[0].values[0][0] as number;
+  const id = getLastInsertId();
   const rows = rowsToObjects(db.exec("SELECT * FROM vacation_periods WHERE id = ?", [id]));
   res.status(201).json(rows[0]);
 });
@@ -214,8 +215,10 @@ calendarRouter.post("/vacations/sync-zurich", (req: Request, res: Response) => {
   }
 
   syncZurichHolidays(year);
-  const holidays = getZurichHolidays(year);
-  res.json({ synced: holidays.length });
+  const schoolHolidays = getZurichHolidays(year);
+  const publicHolidays = getZurichPublicHolidays(year);
+  const upcoming = getUpcomingVacations(3);
+  res.json({ synced: schoolHolidays.length + publicHolidays.length, upcoming });
 });
 
 // ── Calendar Endpoint ───────────────────────────────────────────────
@@ -248,9 +251,12 @@ calendarRouter.get("/calendar", (req: Request, res: Response) => {
 
   const db = getDB();
 
-  // 1. Events in the date range
-  const events = rowsToObjects(
-    db.exec("SELECT * FROM events WHERE date >= ? AND date <= ? ORDER BY date ASC", [startDate, endDate]),
+  // 1. Standalone events in the date range (exclude materialized series events)
+  const events: Record<string, unknown>[] = rowsToObjects(
+    db.exec(
+      "SELECT * FROM events WHERE seriesId IS NULL AND date >= ? AND date <= ? ORDER BY date ASC",
+      [startDate, endDate],
+    ),
   );
 
   // 2. Vacation periods overlapping with the date range
@@ -300,6 +306,30 @@ calendarRouter.get("/calendar", (req: Request, res: Response) => {
       });
     }
   }
+
+  // 5. Expand event series into individual instances for this date range
+  const allSeries = rowsToObjects(
+    db.exec("SELECT * FROM event_series"),
+  ) as unknown as SeriesTemplate[];
+  const materializedEvents = rowsToObjects(
+    db.exec("SELECT * FROM events WHERE seriesId IS NOT NULL AND date >= ? AND date <= ?", [startDate, endDate]),
+  ) as unknown as MaterializedEvent[];
+
+  for (const series of allSeries) {
+    const instances = expandSeries(
+      series,
+      startDate,
+      endDate,
+      vacations as unknown as VacationPeriod[],
+      materializedEvents,
+    );
+    for (const inst of instances) {
+      events.push(inst as unknown as Record<string, unknown>);
+    }
+  }
+
+  // Re-sort events by date after adding series instances
+  events.sort((a, b) => String(a.date).localeCompare(String(b.date)));
 
   res.json({ events, trainings, vacations });
 });

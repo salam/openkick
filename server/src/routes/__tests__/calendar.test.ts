@@ -278,6 +278,18 @@ END:VCALENDAR`;
     mockExtract.mockRestore();
   });
 
+  // BUG-SYNC-ZH1: POST without year body should return 400
+  it("POST /api/vacations/sync-zurich — returns 400 when year is missing", async () => {
+    const res = await fetch(`${baseUrl}/api/vacations/sync-zurich`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("year is required");
+  });
+
   it("POST /api/vacations/sync-zurich — syncs Zurich holidays for a given year", async () => {
     const res = await fetch(`${baseUrl}/api/vacations/sync-zurich`, {
       method: "POST",
@@ -287,6 +299,14 @@ END:VCALENDAR`;
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.synced).toBeGreaterThan(0);
+    expect(body.upcoming).toBeDefined();
+    expect(Array.isArray(body.upcoming)).toBe(true);
+    expect(body.upcoming.length).toBeLessThanOrEqual(3);
+    if (body.upcoming.length > 0) {
+      expect(body.upcoming[0]).toHaveProperty("name");
+      expect(body.upcoming[0]).toHaveProperty("startDate");
+      expect(body.upcoming[0]).toHaveProperty("endDate");
+    }
 
     // Verify they are in the DB
     const getRes = await fetch(`${baseUrl}/api/vacations`);
@@ -425,6 +445,68 @@ describe("Calendar endpoint", () => {
   it("GET /api/calendar — returns 400 if no year or month parameter", async () => {
     const res = await fetch(`${baseUrl}/api/calendar`);
     expect(res.status).toBe(400);
+  });
+
+  it("GET /api/calendar?month=2026-03 — includes expanded series instances in events array", async () => {
+    // Insert an event series: every Wednesday in March 2026
+    db.run(
+      `INSERT INTO event_series (type, title, description, startTime, attendanceTime, location,
+        categoryRequirement, maxParticipants, minParticipants, recurrenceDay, startDate, endDate,
+        customDates, excludedDates, deadlineOffsetHours)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        "training", "Wed Series", "Series for calendar", "18:00", "17:45", "Platz C",
+        "E", 20, 8, 3, "2026-03-01", "2026-06-30",
+        null, null, 24,
+      ],
+    );
+
+    // Also create a standalone event in March
+    db.run(
+      "INSERT INTO events (type, title, date, startTime) VALUES (?, ?, ?, ?)",
+      ["tournament", "March Cup", "2026-03-20", "10:00"],
+    );
+
+    const res = await fetch(`${baseUrl}/api/calendar?month=2026-03`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+
+    // Standalone event should be present
+    const standalone = body.events.find((e: any) => e.title === "March Cup");
+    expect(standalone).toBeDefined();
+
+    // March 2026 Wednesdays: 4, 11, 18, 25 → 4 series instances
+    const seriesInstances = body.events.filter((e: any) => e.title === "Wed Series");
+    expect(seriesInstances.length).toBe(4);
+
+    // Verify fields
+    expect(seriesInstances[0].seriesId).toBeDefined();
+    expect(seriesInstances[0].type).toBe("training");
+    expect(seriesInstances[0].startTime).toBe("18:00");
+    expect(seriesInstances[0].location).toBe("Platz C");
+  });
+
+  it("GET /api/calendar — series instances respect vacation periods", async () => {
+    // Insert a series: every Wednesday in March 2026
+    db.run(
+      `INSERT INTO event_series (type, title, startTime, recurrenceDay, startDate, endDate)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      ["training", "Vacation-Test Series", "18:00", 3, "2026-03-01", "2026-03-31"],
+    );
+
+    // Add vacation covering March 11 (a Wednesday)
+    db.run(
+      "INSERT INTO vacation_periods (name, startDate, endDate, source) VALUES (?, ?, ?, ?)",
+      ["Test Break", "2026-03-09", "2026-03-15", "manual"],
+    );
+
+    const res = await fetch(`${baseUrl}/api/calendar?month=2026-03`);
+    const body = await res.json();
+
+    // March Wednesdays: 4, 11, 18, 25. But 11 is in vacation → 3 instances
+    const seriesInstances = body.events.filter((e: any) => e.title === "Vacation-Test Series");
+    expect(seriesInstances.length).toBe(3);
+    expect(seriesInstances.find((e: any) => e.date === "2026-03-11")).toBeUndefined();
   });
 
   it("Training schedule validFrom/validTo are respected", async () => {

@@ -1,5 +1,6 @@
 import { Router, type Request, type Response } from "express";
-import { getDB } from "../database.js";
+import { getDB, getLastInsertId } from "../database.js";
+import { expandSeries, type SeriesTemplate, type VacationPeriod, type MaterializedEvent } from "../services/event-series.js";
 
 export const eventsRouter = Router();
 
@@ -66,8 +67,7 @@ eventsRouter.post("/events", (req: Request, res: Response) => {
     ],
   );
 
-  const result = db.exec("SELECT last_insert_rowid() AS id");
-  const id = result[0].values[0][0] as number;
+  const id = getLastInsertId();
 
   const rows = rowsToObjects(db.exec("SELECT * FROM events WHERE id = ?", [id]));
   res.status(201).json(rows[0]);
@@ -78,7 +78,8 @@ eventsRouter.get("/events", (req: Request, res: Response) => {
   const db = getDB();
   const { type, category } = req.query;
 
-  let sql = "SELECT * FROM events";
+  // 1. Fetch standalone events (seriesId IS NULL to avoid duplicating materialized events)
+  let sql = "SELECT * FROM events WHERE seriesId IS NULL";
   const conditions: string[] = [];
   const params: unknown[] = [];
 
@@ -88,8 +89,6 @@ eventsRouter.get("/events", (req: Request, res: Response) => {
   }
 
   if (category) {
-    // Filter events where the comma-separated categoryRequirement contains the category.
-    // We check for: exact match, starts with "E,", ends with ",E", or contains ",E,".
     conditions.push(
       "(categoryRequirement = ? OR categoryRequirement LIKE ? OR categoryRequirement LIKE ? OR categoryRequirement LIKE ?)"
     );
@@ -97,13 +96,56 @@ eventsRouter.get("/events", (req: Request, res: Response) => {
   }
 
   if (conditions.length > 0) {
-    sql += " WHERE " + conditions.join(" AND ");
+    sql += " AND " + conditions.join(" AND ");
   }
 
   sql += " ORDER BY date ASC";
 
-  const rows = rowsToObjects(db.exec(sql, params as import("sql.js").SqlValue[]));
-  res.json(rows);
+  const standaloneEvents = rowsToObjects(db.exec(sql, params as import("sql.js").SqlValue[]));
+
+  // 2. Expand event series
+  const allSeries = rowsToObjects(
+    db.exec("SELECT * FROM event_series"),
+  ) as unknown as SeriesTemplate[];
+  const vacations = rowsToObjects(
+    db.exec("SELECT * FROM vacation_periods"),
+  ) as unknown as VacationPeriod[];
+  const materializedEvents = rowsToObjects(
+    db.exec("SELECT * FROM events WHERE seriesId IS NOT NULL"),
+  ) as unknown as MaterializedEvent[];
+
+  const rangeStart = "2000-01-01";
+  const rangeEnd = "2099-12-31";
+
+  const expandedEvents: Record<string, unknown>[] = [];
+  for (const series of allSeries) {
+    const instances = expandSeries(
+      series, rangeStart, rangeEnd, vacations, materializedEvents,
+    );
+
+    for (const inst of instances) {
+      if (type && inst.type !== type) continue;
+      if (category) {
+        const cat = category as string;
+        const cr = inst.categoryRequirement ?? "";
+        if (
+          cr !== cat &&
+          !cr.startsWith(`${cat},`) &&
+          !cr.endsWith(`,${cat}`) &&
+          !cr.includes(`,${cat},`)
+        ) {
+          continue;
+        }
+      }
+      expandedEvents.push(inst as unknown as Record<string, unknown>);
+    }
+  }
+
+  // 3. Merge and sort by date
+  const allEvents = [...standaloneEvents, ...expandedEvents];
+  allEvents.sort((a, b) => String(a.date).localeCompare(String(b.date)));
+
+  res.json(allEvents);
 });
 
 // GET /api/events/:id

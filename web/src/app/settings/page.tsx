@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { apiFetch } from '@/lib/api';
 import { getUserRole } from '@/lib/auth';
+import { t, getLanguage } from '@/lib/i18n';
 import ClubProfileForm from '@/components/settings/ClubProfileForm';
 import SmtpForm from '@/components/settings/SmtpForm';
 import LlmConfigForm from '@/components/settings/LlmConfigForm';
@@ -97,6 +98,13 @@ export default function SettingsPage() {
   const [inviteRole, setInviteRole] = useState('coach');
   const [inviting, setInviting] = useState(false);
 
+  const [, setLang] = useState(() => getLanguage());
+  useEffect(() => {
+    function onLangChange() { setLang(getLanguage()); }
+    window.addEventListener('languagechange', onLangChange);
+    return () => window.removeEventListener('languagechange', onLangChange);
+  }, []);
+
   const loadSettings = useCallback(async () => {
     try {
       const data = await apiFetch<SettingsMap>('/api/settings');
@@ -157,9 +165,9 @@ export default function SettingsPage() {
         ),
       );
       setOriginal({ ...settings });
-      setSaveMsg('Settings saved successfully.');
+      setSaveMsg(t('settings_saved'));
     } catch {
-      setSaveMsg('Failed to save settings.');
+      setSaveMsg(t('failed_save_settings'));
     } finally {
       setSaving(false);
       setTimeout(() => setSaveMsg(''), 3000);
@@ -195,10 +203,10 @@ export default function SettingsPage() {
       const summary = (data.upcoming || [])
         .map((v) => `${v.name} (${v.startDate} – ${v.endDate})`)
         .join(', ');
-      setHolidayMsg(summary ? `Synced! Next: ${summary}` : 'Holidays synced successfully.');
+      setHolidayMsg(summary ? `${t('holidays_synced_next')} ${summary}` : t('holidays_synced'));
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
-      setHolidayMsg(`Failed to sync holidays: ${msg}`);
+      setHolidayMsg(`${t('holidays_sync_failed')}: ${msg}`);
     } finally {
       setSyncing(false);
       setTimeout(() => setHolidayMsg(''), 5000);
@@ -227,10 +235,10 @@ export default function SettingsPage() {
         method: 'POST',
         body: JSON.stringify({ url: importUrl }),
       });
-      setHolidayMsg('Holidays imported from URL successfully.');
+      setHolidayMsg(t('holidays_imported_url'));
       setImportUrl('');
     } catch {
-      setHolidayMsg('Failed to import holidays from URL.');
+      setHolidayMsg(t('holidays_import_url_failed'));
     } finally {
       setImportingUrl(false);
       setTimeout(() => setHolidayMsg(''), 3000);
@@ -254,9 +262,9 @@ export default function SettingsPage() {
         body: formData,
       });
       if (!res.ok) throw new Error('Upload failed');
-      setHolidayMsg('ICS file uploaded successfully.');
+      setHolidayMsg(t('ics_uploaded'));
     } catch {
-      setHolidayMsg('Failed to upload ICS file.');
+      setHolidayMsg(t('ics_upload_failed'));
     } finally {
       setUploadingIcs(false);
       e.target.value = '';
@@ -277,13 +285,13 @@ export default function SettingsPage() {
       );
       update('club_logo', res.value);
       setOriginal((prev) => ({ ...prev, club_logo: res.value }));
-      setLogoMsg('Logo uploaded successfully.');
+      setLogoMsg(t('logo_uploaded'));
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
       if (msg.includes('413') || msg.toLowerCase().includes('too large')) {
-        setLogoMsg('Logo too large. Please choose a smaller file.');
+        setLogoMsg(t('logo_too_large'));
       } else {
-        setLogoMsg(msg ? `Failed to upload logo: ${msg}` : 'Failed to upload logo.');
+        setLogoMsg(msg ? `${t('failed_upload_logo')}: ${msg}` : t('failed_upload_logo'));
       }
     } finally {
       setUploadingLogo(false);
@@ -298,9 +306,9 @@ export default function SettingsPage() {
       await apiFetch('/api/settings/remove-logo', { method: 'DELETE' });
       update('club_logo', '');
       setOriginal((prev) => ({ ...prev, club_logo: '' }));
-      setLogoMsg('Logo removed.');
+      setLogoMsg(t('logo_removed'));
     } catch {
-      setLogoMsg('Failed to remove logo.');
+      setLogoMsg(t('failed_remove_logo'));
     } finally {
       setUploadingLogo(false);
       setTimeout(() => setLogoMsg(''), 3000);
@@ -331,20 +339,20 @@ export default function SettingsPage() {
         body: JSON.stringify({ role: newRole }),
       });
       setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, role: newRole } : u));
-      setUserMsg('Role updated');
+      setUserMsg(t('role_updated'));
     } catch (err: unknown) {
-      setUserMsg(err instanceof Error ? err.message : 'Failed to update role');
+      setUserMsg(err instanceof Error ? err.message : t('failed_update_role'));
     }
     setTimeout(() => setUserMsg(''), 3000);
   }
 
   async function handleResetPassword(userId: number, email: string) {
-    if (!confirm(`Send password reset email to ${email}?`)) return;
+    if (!confirm(`${t('confirm_reset_email')} ${email}?`)) return;
     try {
       await apiFetch(`/api/users/${userId}/reset-password`, { method: 'POST' });
-      setUserMsg('Reset email sent');
+      setUserMsg(t('reset_email_sent'));
     } catch {
-      setUserMsg('Failed to send reset email');
+      setUserMsg(t('failed_send_reset'));
     }
     setTimeout(() => setUserMsg(''), 3000);
   }
@@ -361,9 +369,9 @@ export default function SettingsPage() {
       setInviteEmail('');
       setInviteRole('coach');
       setShowInviteForm(false);
-      setUserMsg('Invite sent');
+      setUserMsg(t('invite_sent'));
     } catch (err: unknown) {
-      setUserMsg(err instanceof Error ? err.message : 'Failed to invite user');
+      setUserMsg(err instanceof Error ? err.message : t('failed_invite'));
     } finally {
       setInviting(false);
     }
@@ -391,16 +399,16 @@ export default function SettingsPage() {
   return (
       <div className="mx-auto max-w-3xl">
         <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{t('settings')}</h1>
           {hasChanges && !loading && (
             <div className="flex items-center gap-3">
-              <span className="text-sm font-medium text-amber-600">Unsaved changes!</span>
+              <span className="text-sm font-medium text-amber-600">{t('unsaved_changes')}</span>
               <button
                 onClick={handleSave}
                 disabled={saving}
                 className="rounded-xl bg-emerald-500 px-5 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-600 disabled:opacity-50"
               >
-                {saving ? 'Saving...' : 'Save Settings'}
+                {saving ? t('saving') : t('save_settings')}
               </button>
             </div>
           )}
@@ -426,7 +434,7 @@ export default function SettingsPage() {
             <div className={cardClass}>
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <h2 className="text-lg font-semibold text-gray-900">Security Audit</h2>
+                  <h2 className="text-lg font-semibold text-gray-900">{t('security_audit')}</h2>
                   {auditResult && (
                     <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
                       auditResult.summary.fail > 0
@@ -436,10 +444,10 @@ export default function SettingsPage() {
                           : 'bg-emerald-100 text-emerald-700'
                     }`}>
                       {auditResult.summary.fail > 0
-                        ? `${auditResult.summary.fail} issue${auditResult.summary.fail > 1 ? 's' : ''}`
+                        ? `${auditResult.summary.fail} ${t('issues')}`
                         : auditResult.summary.warn > 0
-                          ? `${auditResult.summary.warn} warning${auditResult.summary.warn > 1 ? 's' : ''}`
-                          : 'All clear'}
+                          ? `${auditResult.summary.warn} ${t('warnings')}`
+                          : t('all_clear')}
                     </span>
                   )}
                 </div>
@@ -448,25 +456,25 @@ export default function SettingsPage() {
                   disabled={runningAudit}
                   className={btnSecondary}
                 >
-                  {runningAudit ? 'Running...' : auditResult ? 'Re-run Audit' : 'Run Audit'}
+                  {runningAudit ? t('running') : auditResult ? t('rerun_audit') : t('run_audit')}
                 </button>
               </div>
               <p className="mb-3 text-sm text-gray-500">
-                Checks file permissions, database exposure, CORS, admin passwords, and more.
+                {t('security_audit_desc')}
               </p>
 
               {auditResult && (
                 <>
                   <div className="mb-3 flex items-center gap-4 text-sm">
-                    <span className="text-emerald-600 font-medium">{auditResult.summary.pass} passed</span>
+                    <span className="text-emerald-600 font-medium">{auditResult.summary.pass} {t('passed')}</span>
                     {auditResult.summary.warn > 0 && (
-                      <span className="text-amber-600 font-medium">{auditResult.summary.warn} warning{auditResult.summary.warn > 1 ? 's' : ''}</span>
+                      <span className="text-amber-600 font-medium">{auditResult.summary.warn} {t('warnings')}</span>
                     )}
                     {auditResult.summary.fail > 0 && (
-                      <span className="text-red-600 font-medium">{auditResult.summary.fail} failed</span>
+                      <span className="text-red-600 font-medium">{auditResult.summary.fail} {t('failed')}</span>
                     )}
                     {auditResult.summary.info > 0 && (
-                      <span className="text-gray-500 font-medium">{auditResult.summary.info} skipped</span>
+                      <span className="text-gray-500 font-medium">{auditResult.summary.info} {t('skipped')}</span>
                     )}
                   </div>
 
@@ -475,7 +483,7 @@ export default function SettingsPage() {
                     onClick={() => setAuditExpanded(!auditExpanded)}
                     className="text-xs text-gray-500 hover:text-gray-700 mb-2"
                   >
-                    {auditExpanded ? '▾ Hide details' : '▸ Show details'}
+                    {auditExpanded ? `▾ ${t('hide_details')}` : `▸ ${t('show_details')}`}
                   </button>
 
                   {auditExpanded && (
@@ -516,7 +524,7 @@ export default function SettingsPage() {
                   )}
 
                   <p className="mt-3 text-xs text-gray-400">
-                    Last run: {new Date(auditResult.timestamp).toLocaleString()}
+                    {t('last_run')}: {new Date(auditResult.timestamp).toLocaleString()}
                   </p>
                 </>
               )}
@@ -528,10 +536,10 @@ export default function SettingsPage() {
             {/* Bot Language */}
             <div className={cardClass}>
               <h2 className="mb-4 text-lg font-semibold text-gray-900">
-                Bot Language
+                {t('bot_language')}
               </h2>
               <p className="mb-3 text-sm text-gray-500">
-                Language used for WhatsApp bot messages.
+                {t('bot_language_desc')}
               </p>
               <div className="flex flex-wrap gap-4">
                 {BOT_LANGUAGES.map((lang) => (
@@ -556,7 +564,7 @@ export default function SettingsPage() {
               {settings.bot_language && BOT_PREVIEW_MESSAGES[settings.bot_language] && (
                 <div className="mt-4">
                   <p className="mb-2 text-xs font-medium text-gray-400 uppercase tracking-wide">
-                    Preview
+                    {t('preview')}
                   </p>
                   <div className="mx-auto max-w-xs rounded-lg bg-[#e5ddd5] p-3 space-y-2"
                        style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'200\' height=\'200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cdefs%3E%3Cpattern id=\'p\' width=\'40\' height=\'40\' patternUnits=\'userSpaceOnUse\'%3E%3Cpath d=\'M0 20h40M20 0v40\' fill=\'none\' stroke=\'%23d4ccc4\' stroke-width=\'.3\'/%3E%3C/pattern%3E%3C/defs%3E%3Crect fill=\'url(%23p)\' width=\'200\' height=\'200\'/%3E%3C/svg%3E")' }}>
@@ -596,13 +604,13 @@ export default function SettingsPage() {
             {/* Holiday Sources */}
             <div id="holidays" className={cardClass}>
               <h2 className="mb-4 text-lg font-semibold text-gray-900">
-                Holiday Sources
+                {t('holiday_sources')}
               </h2>
               <div className="space-y-4">
                 {/* Region Picker */}
                 <div>
                   <label htmlFor="holiday_preset" className={labelClass}>
-                    School holiday region
+                    {t('school_holiday_region')}
                   </label>
                   <div className="flex gap-2">
                     <select
@@ -624,7 +632,7 @@ export default function SettingsPage() {
                       disabled={syncing || !selectedPreset}
                       className={btnSecondary + ' whitespace-nowrap'}
                     >
-                      {syncing ? 'Syncing...' : 'Sync'}
+                      {syncing ? t('syncing') : t('sync')}
                     </button>
                   </div>
                   {upcomingVacations.length > 0 && (
@@ -643,12 +651,12 @@ export default function SettingsPage() {
                 {/* Manual Import */}
                 <div className="border-t border-gray-200 pt-4">
                   <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">
-                    Or import manually
+                    {t('or_import_manually')}
                   </p>
                   <div className="space-y-3">
                     <div>
                       <label htmlFor="import_url" className={labelClass}>
-                        Import from URL
+                        {t('import_from_url')}
                       </label>
                       <div className="flex gap-2">
                         <input
@@ -656,7 +664,7 @@ export default function SettingsPage() {
                           type="text"
                           value={importUrl}
                           onChange={(e) => setImportUrl(e.target.value)}
-                          placeholder="Paste holidays URL..."
+                          placeholder={t('paste_url')}
                           className={inputClass}
                         />
                         <button
@@ -664,13 +672,13 @@ export default function SettingsPage() {
                           disabled={importingUrl || !importUrl.trim()}
                           className={btnSecondary + ' whitespace-nowrap'}
                         >
-                          {importingUrl ? 'Importing...' : 'Import'}
+                          {importingUrl ? t('importing') : t('import_btn')}
                         </button>
                       </div>
                     </div>
                     <div>
                       <label htmlFor="upload_ics" className={labelClass}>
-                        Upload ICS File
+                        {t('upload_ics')}
                       </label>
                       <input
                         id="upload_ics"
@@ -687,14 +695,14 @@ export default function SettingsPage() {
                 {/* Suggest a Source */}
                 <div className="border-t border-gray-200 pt-4">
                   <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">
-                    Missing your region?
+                    {t('missing_region')}
                   </p>
                   <div className="flex gap-2">
                     <input
                       type="text"
                       value={suggestion}
                       onChange={(e) => setSuggestion(e.target.value)}
-                      placeholder="Describe the region or paste a URL..."
+                      placeholder={t('describe_region')}
                       className={inputClass}
                     />
                     <button
@@ -702,7 +710,7 @@ export default function SettingsPage() {
                       disabled={!suggestion.trim()}
                       className={btnSecondary + ' whitespace-nowrap'}
                     >
-                      Suggest
+                      {t('suggest')}
                     </button>
                   </div>
                 </div>
@@ -724,15 +732,15 @@ export default function SettingsPage() {
             {/* Bot Protection (Captcha) */}
             <div className={cardClass}>
               <h2 className="mb-4 text-lg font-semibold text-gray-900">
-                Bot Protection
+                {t('bot_protection')}
               </h2>
               <p className="mb-4 text-sm text-gray-500">
-                Protects login and attendance forms from automated bots. The captcha runs when a parent responds to an event or a coach logs in.
+                {t('captcha_desc')}
               </p>
               <div className="space-y-4">
                 <div>
                   <label htmlFor="captcha_provider" className={labelClass}>
-                    Captcha Provider
+                    {t('captcha_provider_label')}
                   </label>
                   <select
                     id="captcha_provider"
@@ -799,20 +807,20 @@ export default function SettingsPage() {
             {/* Public Feeds */}
             <div id="feeds" className={cardClass}>
               <h2 className="mb-4 text-lg font-semibold text-gray-900">
-                Public Feeds
+                {t('public_feeds')}
               </h2>
               <p className="mb-3 text-sm text-gray-500">
-                Control which public feeds are available. Disabling the master toggle turns off all feeds.
+                {t('feeds_desc')}
               </p>
               <div className="space-y-3">
                 {[
-                  { key: 'feeds_enabled', label: 'All Feeds (Master Toggle)', hint: 'Turns all public feeds on or off at once.' },
-                  { key: 'feed_rss_enabled', label: 'RSS 2.0', hint: 'Standard feed format — parents can follow club news in any feed reader (Feedly, Apple News, etc.).' },
-                  { key: 'feed_atom_enabled', label: 'Atom 1.0', hint: 'Modern feed format used by many apps and services to pull in your updates automatically.' },
-                  { key: 'feed_ics_enabled', label: 'Calendar (ICS)', hint: 'Lets parents subscribe in Google Calendar, Apple Calendar, or Outlook so games and trainings appear automatically.' },
-                  { key: 'feed_activitypub_enabled', label: 'ActivityPub (Mastodon)', hint: 'Publishes updates to the Fediverse — followers on Mastodon and compatible platforms see your posts.' },
-                  { key: 'feed_atprotocol_enabled', label: 'AT Protocol (Bluesky)', hint: 'Publishes updates to Bluesky so followers there can stay up to date with the club.' },
-                  { key: 'feed_sitemap_enabled', label: 'Include in Sitemap', hint: 'Helps Google and other search engines find and index your club pages — important for SEO and discoverability.' },
+                  { key: 'feeds_enabled', label: t('all_feeds_master'), hint: t('all_feeds_master_hint') },
+                  { key: 'feed_rss_enabled', label: t('feed_rss'), hint: t('feed_rss_hint') },
+                  { key: 'feed_atom_enabled', label: t('feed_atom'), hint: t('feed_atom_hint') },
+                  { key: 'feed_ics_enabled', label: t('feed_ics'), hint: t('feed_ics_hint') },
+                  { key: 'feed_activitypub_enabled', label: t('feed_activitypub'), hint: t('feed_activitypub_hint') },
+                  { key: 'feed_atprotocol_enabled', label: t('feed_atprotocol'), hint: t('feed_atprotocol_hint') },
+                  { key: 'feed_sitemap_enabled', label: t('feed_sitemap'), hint: t('feed_sitemap_hint') },
                 ].map(({ key, label, hint }) => (
                   <label key={key} className="flex items-center justify-between cursor-pointer">
                     <span className={`text-sm ${key === 'feeds_enabled' ? 'font-semibold' : ''} text-gray-700 flex items-center gap-1.5`}>
@@ -847,34 +855,34 @@ export default function SettingsPage() {
             {/* Users */}
             <div className={cardClass}>
               <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-gray-900">Users</h2>
+                <h2 className="text-lg font-semibold text-gray-900">{t('users')}</h2>
                 <button
                   onClick={() => setShowInviteForm(!showInviteForm)}
                   className={btnSecondary}
                 >
-                  {showInviteForm ? 'Cancel' : 'Invite User'}
+                  {showInviteForm ? t('cancel') : t('invite_user')}
                 </button>
               </div>
 
               {showInviteForm && (
                 <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-3">
                   <div>
-                    <label className={labelClass}>Name</label>
+                    <label className={labelClass}>{t('name')}</label>
                     <input value={inviteName} onChange={(e) => setInviteName(e.target.value)} className={inputClass} placeholder="Jane Doe" />
                   </div>
                   <div>
-                    <label className={labelClass}>Email</label>
+                    <label className={labelClass}>{t('email')}</label>
                     <input value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} className={inputClass} placeholder="jane@example.com" type="email" />
                   </div>
                   <div>
-                    <label className={labelClass}>Role</label>
+                    <label className={labelClass}>{t('role')}</label>
                     <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} className={inputClass}>
-                      <option value="coach">Coach</option>
-                      {isAdmin && <option value="admin">Admin</option>}
+                      <option value="coach">{t('coach')}</option>
+                      {isAdmin && <option value="admin">{t('admin')}</option>}
                     </select>
                   </div>
                   <button onClick={handleInvite} disabled={inviting || !inviteName.trim() || !inviteEmail.trim()} className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-600 disabled:opacity-50">
-                    {inviting ? 'Sending...' : 'Send Invite'}
+                    {inviting ? t('sending') : t('send_invite')}
                   </button>
                 </div>
               )}
@@ -886,18 +894,18 @@ export default function SettingsPage() {
               )}
 
               {loadingUsers ? (
-                <p className="text-sm text-gray-500">Loading users...</p>
+                <p className="text-sm text-gray-500">{t('loading_users')}</p>
               ) : users.length === 0 ? (
-                <p className="text-sm text-gray-500">No coaches or admins found.</p>
+                <p className="text-sm text-gray-500">{t('no_users')}</p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-gray-200 text-left text-gray-500">
-                        <th className="pb-2 font-medium">Name</th>
-                        <th className="pb-2 font-medium">Email</th>
-                        <th className="pb-2 font-medium">Role</th>
-                        {isAdmin && <th className="pb-2 font-medium">Actions</th>}
+                        <th className="pb-2 font-medium">{t('name')}</th>
+                        <th className="pb-2 font-medium">{t('email')}</th>
+                        <th className="pb-2 font-medium">{t('role')}</th>
+                        {isAdmin && <th className="pb-2 font-medium">{t('actions')}</th>}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -917,8 +925,8 @@ export default function SettingsPage() {
                                     disabled={isOnlyAdmin}
                                     className={`rounded border border-gray-300 px-2 py-1 text-sm ${isOnlyAdmin ? 'cursor-not-allowed opacity-50' : ''}`}
                                   >
-                                    <option value="coach">Coach</option>
-                                    <option value="admin">Admin</option>
+                                    <option value="coach">{t('coach')}</option>
+                                    <option value="admin">{t('admin')}</option>
                                   </select>
                                   {isOnlyAdmin && (
                                     <div className="relative">
@@ -932,7 +940,7 @@ export default function SettingsPage() {
                                       </button>
                                       {lastAdminInfoId === u.id && (
                                         <div className="absolute left-6 top-1/2 z-10 w-56 -translate-y-1/2 rounded-lg border border-gray-200 bg-white p-3 text-xs text-gray-600 shadow-lg">
-                                          There must always be at least one admin. Invite another admin first before changing this role.
+                                          {t('last_admin_warning')}
                                         </div>
                                       )}
                                     </div>
@@ -951,7 +959,7 @@ export default function SettingsPage() {
                                 onClick={() => handleResetPassword(u.id, u.email)}
                                 className="text-sm text-gray-500 underline hover:text-gray-700"
                               >
-                                Reset Password
+                                {t('reset_password_btn')}
                               </button>
                             </td>
                           )}
@@ -976,10 +984,10 @@ export default function SettingsPage() {
                 disabled={saving || !hasChanges}
                 className="rounded-xl bg-emerald-500 px-6 py-3 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-600 disabled:opacity-50"
               >
-                {saving ? 'Saving...' : 'Save Settings'}
+                {saving ? t('saving') : t('save_settings')}
               </button>
               {hasChanges && (
-                <span className="text-sm font-medium text-amber-600">Unsaved changes!</span>
+                <span className="text-sm font-medium text-amber-600">{t('unsaved_changes')}</span>
               )}
               {saveMsg && (
                 <span

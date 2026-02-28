@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { t, getLanguage } from '@/lib/i18n';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -25,6 +26,13 @@ interface FlatEntry extends TickerEntry {
 }
 
 export default function LiveTickerBar() {
+  const [, setLang] = useState(() => getLanguage());
+  useEffect(() => {
+    function onLangChange() { setLang(getLanguage()); }
+    window.addEventListener('languagechange', onLangChange);
+    return () => window.removeEventListener('languagechange', onLangChange);
+  }, []);
+
   const [entries, setEntries] = useState<FlatEntry[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -70,7 +78,7 @@ export default function LiveTickerBar() {
         <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
         <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
       </span>
-      <span className="font-semibold text-emerald-700">Live</span>
+      <span className="font-semibold text-emerald-700">{t('live')}</span>
       <span className="text-gray-700">
         {entry.homeTeam}{' '}
         <span className="font-bold">

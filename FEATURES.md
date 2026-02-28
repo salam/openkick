@@ -107,9 +107,9 @@
 
 ## Remaining — Data Privacy & GDPR (PRD 4.5.5)
 
-- [ ] Data export for guardians (GDPR right of access)
-- [ ] Data deletion for guardians (GDPR right to erasure)
-- [ ] Explicit consent tracking per guardian
+- [x] Data export for guardians (GDPR right of access)
+- [x] Data deletion for guardians (GDPR right to erasure)
+- [x] Explicit consent tracking per guardian
 
 ## Remaining — Data Protection Audit (PRD 4.5.6)
 

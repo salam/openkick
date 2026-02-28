@@ -1,5 +1,12 @@
 # OpenKick Release Notes
 
+## Version 1.3.0 (Feb 28, 2026, 22:50)
+
+* GDPR: Guardians can request a full data export (JSON + CSV) of their personal data and their children's attendance records
+* GDPR: Guardians can request account and data deletion — player data is anonymized, attendance statistics preserved
+* GDPR: Explicit consent tracking with timestamps — guardians can give or withdraw consent at any time
+* GDPR: All data requests go through an admin approval workflow for transparency and control
+
 ## Version 1.2.0 (Feb 28, 2026, 22:35)
 
 * Tournament results tracking — manually record placement, summary, and trophies after tournaments

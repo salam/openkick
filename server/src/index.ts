@@ -32,6 +32,7 @@ import { liveTickerRouter } from "./routes/live-ticker.routes.js";
 import { notificationsRouter } from "./routes/notifications.js";
 import { publicTournamentsRouter } from "./routes/public-tournaments.js";
 import { gameHistoryRouter } from "./routes/game-history.routes.js";
+import { createRsvpRouter } from "./routes/rsvp.js";
 
 const app = express();
 
@@ -88,6 +89,7 @@ async function main() {
   }
   const captchaProvider = new AltchaCaptchaProvider(hmacKey);
 
+  app.use("/api/rsvp", createRsvpRouter(captchaProvider));
   app.use("/api", generalLimiter);
   app.post("/api/guardians/login", verifyCaptchaMiddleware(captchaProvider));
   app.post("/api/attendance", verifyCaptchaMiddleware(captchaProvider));

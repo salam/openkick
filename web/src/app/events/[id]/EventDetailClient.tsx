@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState, useCallback } from 'react';
 import { apiFetch } from '@/lib/api';
 import AltchaWidget from '@/components/AltchaWidget';
+import TournamentResultsForm from '@/components/TournamentResultsForm';
 
 /* ── Types ──────────────────────────────────────────────────────────── */
 
@@ -32,6 +33,17 @@ interface EventDetail {
   attachmentUrl?: string;
   attendanceSummary: AttendanceSummary;
   seriesId?: number;
+  results?: {
+    id: number;
+    eventId: number;
+    placement: number | null;
+    totalTeams: number | null;
+    summary: string | null;
+    resultsUrl: string | null;
+    achievements: { type: string; label: string }[];
+    createdAt: string;
+    updatedAt: string;
+  } | null;
 }
 
 interface SeriesInfo {
@@ -747,6 +759,16 @@ export default function EventDetailClient() {
             </a>
           </div>
         </section>
+      )}
+
+      {/* ── Tournament results ── */}
+      {['tournament', 'match', 'friendly'].includes(event.type) && (
+        <TournamentResultsForm
+          eventId={event.id}
+          eventType={event.type}
+          isCoach={isCoach}
+          initialResults={event.results ?? null}
+        />
       )}
 
       {/* ── Back link ── */}

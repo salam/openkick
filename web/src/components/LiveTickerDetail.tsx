@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { t, getLanguage } from '@/lib/i18n';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -20,6 +21,13 @@ interface LiveTickerDetailProps {
 }
 
 export default function LiveTickerDetail({ tournamentId }: LiveTickerDetailProps) {
+  const [, setLang] = useState(() => getLanguage());
+  useEffect(() => {
+    function onLangChange() { setLang(getLanguage()); }
+    window.addEventListener('languagechange', onLangChange);
+    return () => window.removeEventListener('languagechange', onLangChange);
+  }, []);
+
   const [entries, setEntries] = useState<TickerEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -74,20 +82,20 @@ export default function LiveTickerDetail({ tournamentId }: LiveTickerDetailProps
             <span className="relative inline-flex h-3 w-3 rounded-full bg-emerald-500" />
           </span>
           <span className="text-sm font-semibold uppercase tracking-wide text-emerald-700">
-            Live
+            {t('live')}
           </span>
         </div>
 
         {lastUpdated && (
           <span className="text-xs text-gray-400">
-            Last updated: {secondsAgo}s ago
+            {t('last_updated')} {secondsAgo}{t('seconds_ago')}
           </span>
         )}
       </div>
 
       {/* Match grid */}
       {entries.length === 0 ? (
-        <p className="py-12 text-center text-gray-500">No matches available yet</p>
+        <p className="py-12 text-center text-gray-500">{t('no_matches')}</p>
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {entries.map((entry) => (

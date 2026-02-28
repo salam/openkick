@@ -7,6 +7,8 @@ import ClubProfileForm from '@/components/settings/ClubProfileForm';
 import SmtpForm from '@/components/settings/SmtpForm';
 import LlmConfigForm from '@/components/settings/LlmConfigForm';
 import WahaConfigForm from '@/components/settings/WahaConfigForm';
+import SeoSocialForm from '@/components/settings/SeoSocialForm';
+import SecurityContactForm from '@/components/settings/SecurityContactForm';
 
 const BOT_LANGUAGES = [
   { value: 'de', label: 'Deutsch' },
@@ -50,6 +52,13 @@ const SETTING_KEYS = [
   'feed_atprotocol_enabled',
   'feed_ics_enabled',
   'feed_sitemap_enabled',
+  'og_title', 'og_description', 'og_image',
+  'twitter_title', 'twitter_description', 'twitter_handle',
+  'meta_keywords',
+  'security_contact_email', 'security_contact_url',
+  'security_pgp_key_url', 'security_policy_url',
+  'security_acknowledgments_url', 'security_preferred_languages',
+  'security_canonical_url',
 ] as const;
 
 type SettingsMap = Record<string, string>;
@@ -953,6 +962,12 @@ export default function SettingsPage() {
                 </div>
               )}
             </div>
+
+            {/* SEO & Social Media */}
+            <SeoSocialForm settings={settings} onUpdate={update} />
+
+            {/* Security Contact */}
+            <SecurityContactForm settings={settings} onUpdate={update} />
 
             {/* Save */}
             <div className="flex items-center gap-4">

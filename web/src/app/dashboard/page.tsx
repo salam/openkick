@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
 import { t } from '@/lib/i18n';
 import EventCard from '@/components/EventCard';
+import OnboardingChecklist from '@/components/OnboardingChecklist';
 
 interface ApiEvent {
   id: string;
@@ -70,6 +71,8 @@ export default function DashboardPage() {
     <div>
       {/* Header */}
       <h1 className="mb-6 text-2xl font-bold text-gray-900">{t('dashboard')}</h1>
+
+      <OnboardingChecklist />
 
       {/* Quick stats */}
       <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">

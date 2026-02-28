@@ -585,7 +585,7 @@ export default function SettingsPage() {
             <SmtpForm settings={settings} onUpdate={update} onSaveKeys={saveKeys} />
 
             {/* Holiday Sources */}
-            <div className={cardClass}>
+            <div id="holidays" className={cardClass}>
               <h2 className="mb-4 text-lg font-semibold text-gray-900">
                 Holiday Sources
               </h2>
@@ -788,7 +788,7 @@ export default function SettingsPage() {
             </div>
 
             {/* Public Feeds */}
-            <div className={cardClass}>
+            <div id="feeds" className={cardClass}>
               <h2 className="mb-4 text-lg font-semibold text-gray-900">
                 Public Feeds
               </h2>

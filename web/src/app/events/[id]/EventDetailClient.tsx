@@ -3,6 +3,7 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState, useCallback } from 'react';
 import { apiFetch } from '@/lib/api';
+import { t, getLanguage } from '@/lib/i18n';
 import AltchaWidget from '@/components/AltchaWidget';
 import TournamentResultsForm from '@/components/TournamentResultsForm';
 
@@ -115,19 +116,19 @@ function deadlineCountdown(deadline: string): string {
   const now = new Date();
   const dl = new Date(deadline);
   const diff = dl.getTime() - now.getTime();
-  if (diff <= 0) return 'Deadline passed';
+  if (diff <= 0) return t('deadline_passed');
   const hours = Math.floor(diff / (1000 * 60 * 60));
   const days = Math.floor(hours / 24);
   const remainingHours = hours % 24;
-  if (days > 0) return `${days}d ${remainingHours}h remaining`;
-  return `${remainingHours}h remaining`;
+  if (days > 0) return `${days}d ${remainingHours}h ${t('remaining')}`;
+  return `${remainingHours}h ${t('remaining')}`;
 }
 
-const TYPE_LABELS: Record<string, string> = {
-  training: 'Training',
-  match: 'Match',
-  tournament: 'Tournament',
-  social: 'Social Event',
+const TYPE_I18N_KEYS: Record<string, string> = {
+  training: 'type_training',
+  match: 'type_match',
+  tournament: 'type_tournament',
+  social: 'type_social',
 };
 
 /* ── Skeleton ────────────────────────────────────────────────────────── */
@@ -166,7 +167,7 @@ function AttendanceTable({
   if (records.length === 0) {
     return (
       <p className="text-sm text-gray-500 italic">
-        No attendance records yet.
+        {t('no_attendance')}
       </p>
     );
   }
@@ -184,16 +185,16 @@ function AttendanceTable({
         <thead className="bg-gray-50">
           <tr>
             <th className="px-4 py-2 text-left font-medium text-gray-600">
-              Player
+              {t('player')}
             </th>
             <th className="px-4 py-2 text-left font-medium text-gray-600">
-              Status
+              {t('status')}
             </th>
             <th className="px-4 py-2 text-left font-medium text-gray-600">
-              Source
+              {t('source')}
             </th>
             <th className="px-4 py-2 text-left font-medium text-gray-600">
-              Reason
+              {t('reason')}
             </th>
           </tr>
         </thead>
@@ -201,7 +202,7 @@ function AttendanceTable({
           {records.map((r) => (
             <tr key={r.id}>
               <td className="px-4 py-2 font-medium">
-                {r.playerName || `Player #${r.playerId}`}
+                {r.playerName || `${t('player')} #${r.playerId}`}
               </td>
               <td className="px-4 py-2">
                 <span
@@ -258,6 +259,14 @@ export default function EventDetailClient() {
 
   // Reminder
   const [reminderSent, setReminderSent] = useState(false);
+
+  // Language reactivity
+  const [, setLang] = useState(() => getLanguage());
+  useEffect(() => {
+    function onLangChange() { setLang(getLanguage()); }
+    window.addEventListener('languagechange', onLangChange);
+    return () => window.removeEventListener('languagechange', onLangChange);
+  }, []);
 
   /* ── Decode token on mount ── */
   useEffect(() => {
@@ -406,7 +415,7 @@ export default function EventDetailClient() {
     const eventDate = event?.date || parsedDate;
     if (!sid || !eventDate) return;
 
-    if (!confirm('Cancel this event instance? It will be removed from the series.')) return;
+    if (!confirm(t('cancel_instance_confirm'))) return;
 
     try {
       await apiFetch(`/api/event-series/${sid}/exclude`, {
@@ -415,7 +424,7 @@ export default function EventDetailClient() {
       });
       router.push('/events/');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to cancel instance');
+      setError(err instanceof Error ? err.message : t('failed_cancel'));
     }
   }
 
@@ -428,9 +437,9 @@ export default function EventDetailClient() {
       <div className="flex min-h-[60vh] items-center justify-center p-6">
         <div className="rounded-xl border border-red-200 bg-red-50 p-8 text-center">
           <h2 className="mb-2 text-lg font-semibold text-red-800">
-            Failed to load event
+            {t('failed_load_event')}
           </h2>
-          <p className="text-sm text-red-600">{error || 'Event not found'}</p>
+          <p className="text-sm text-red-600">{error || t('event_not_found')}</p>
         </div>
       </div>
     );
@@ -452,7 +461,7 @@ export default function EventDetailClient() {
       <div>
         <div className="mb-2 flex flex-wrap items-center gap-2">
           <span className="inline-block rounded-full bg-emerald-100 px-3 py-0.5 text-xs font-semibold text-emerald-700">
-            {TYPE_LABELS[event.type] || event.type}
+            {TYPE_I18N_KEYS[event.type] ? t(TYPE_I18N_KEYS[event.type]) : event.type}
           </span>
           {event.deadline && (
             <span className="inline-block rounded-full bg-amber-100 px-3 py-0.5 text-xs font-semibold text-amber-800">
@@ -471,28 +480,28 @@ export default function EventDetailClient() {
           <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 0 0-3.7-3.7 48.678 48.678 0 0 0-7.324 0 4.006 4.006 0 0 0-3.7 3.7c-.017.22-.032.441-.046.662M19.5 12l3-3m-3 3-3-3m-12 3c0 1.232.046 2.453.138 3.662a4.006 4.006 0 0 0 3.7 3.7 48.656 48.656 0 0 0 7.324 0 4.006 4.006 0 0 0 3.7-3.7c.017-.22.032-.441.046-.662M4.5 12l3 3m-3-3-3 3" />
           </svg>
-          <span>Part of series: <strong>{seriesInfo?.title || 'Event Series'}</strong></span>
+          <span>{t('part_of_series')}: <strong>{seriesInfo?.title || t('series')}</strong></span>
         </div>
       )}
 
       {/* ── Info grid ── */}
       <section className="grid gap-4 sm:grid-cols-2">
-        <InfoItem label="Date" value={formatDate(event.date)} />
+        <InfoItem label={t('date')} value={formatDate(event.date)} />
         {event.startTime && (
-          <InfoItem label="Start time" value={event.startTime} />
+          <InfoItem label={t('start_time')} value={event.startTime} />
         )}
         {event.attendanceTime && (
-          <InfoItem label="Attendance time" value={event.attendanceTime} />
+          <InfoItem label={t('attendance_time')} value={event.attendanceTime} />
         )}
         {event.location && (
-          <InfoItem label="Location" value={event.location} />
+          <InfoItem label={t('location')} value={event.location} />
         )}
         {event.deadline && (
-          <InfoItem label="Deadline" value={formatDate(event.deadline)} />
+          <InfoItem label={t('deadline')} value={formatDate(event.deadline)} />
         )}
         {event.maxParticipants != null && (
           <InfoItem
-            label="Max participants"
+            label={t('max_participants')}
             value={String(event.maxParticipants)}
           />
         )}
@@ -502,7 +511,7 @@ export default function EventDetailClient() {
       {event.description && (
         <section>
           <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-gray-500">
-            Description
+            {t('description')}
           </h2>
           <p className="whitespace-pre-line text-gray-700">
             {event.description}
@@ -514,7 +523,7 @@ export default function EventDetailClient() {
       {categories.length > 0 && (
         <section>
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">
-            Categories
+            {t('categories')}
           </h2>
           <div className="flex flex-wrap gap-2">
             {categories.map((cat) => (
@@ -551,7 +560,7 @@ export default function EventDetailClient() {
                 d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"
               />
             </svg>
-            Download attachment (PDF)
+            {t('download_attachment')}
           </a>
         </section>
       )}
@@ -559,29 +568,29 @@ export default function EventDetailClient() {
       {/* ── Attendance summary (always visible) ── */}
       <section>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
-          Attendance summary
+          {t('attendance_summary')}
         </h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <StatCard
-            label="Attending"
+            label={t('attending')}
             value={summary.attending}
             color="green"
           />
-          <StatCard label="Absent" value={summary.absent} color="red" />
+          <StatCard label={t('absent')} value={summary.absent} color="red" />
           <StatCard
-            label="Waitlist"
+            label={t('waitlist')}
             value={summary.waitlist}
             color="yellow"
           />
           <StatCard
-            label="No response"
+            label={t('no_response')}
             value={summary.unknown}
             color="gray"
           />
         </div>
         {totalResponded > 0 && event.maxParticipants != null && (
           <p className="mt-2 text-xs text-gray-500">
-            {summary.attending} / {event.maxParticipants} spots filled
+            {summary.attending} / {event.maxParticipants} {t('spots_filled')}
           </p>
         )}
       </section>
@@ -590,7 +599,7 @@ export default function EventDetailClient() {
       {isParent && (
         <section className="rounded-xl border border-emerald-200 bg-emerald-50 p-6">
           <h2 className="mb-4 text-lg font-semibold text-emerald-800">
-            Your response
+            {t('your_response')}
           </h2>
 
           {rsvpStatus ? (
@@ -602,13 +611,13 @@ export default function EventDetailClient() {
                     : 'bg-red-200 text-red-900'
                 }`}
               >
-                {rsvpStatus === 'attending' ? 'Attending' : 'Absent'}
+                {rsvpStatus === 'attending' ? t('attending') : t('absent')}
               </span>
               <button
                 onClick={() => setRsvpStatus(null)}
                 className="text-sm text-emerald-600 underline hover:text-emerald-800"
               >
-                Change
+                {t('change')}
               </button>
             </div>
           ) : (
@@ -620,14 +629,14 @@ export default function EventDetailClient() {
                   disabled={rsvpLoading || !captchaPayload}
                   className="flex-1 rounded-xl bg-emerald-500 px-6 py-4 text-lg font-bold text-white shadow transition hover:bg-emerald-600 disabled:opacity-50"
                 >
-                  {rsvpLoading ? '...' : 'Attend'}
+                  {rsvpLoading ? '...' : t('attend')}
                 </button>
                 <button
                   onClick={() => handleRsvp('absent')}
                   disabled={rsvpLoading || !captchaPayload}
                   className="flex-1 rounded-xl bg-red-500 px-6 py-4 text-lg font-bold text-white shadow transition hover:bg-red-600 disabled:opacity-50"
                 >
-                  {rsvpLoading ? '...' : 'Absent'}
+                  {rsvpLoading ? '...' : t('absent')}
                 </button>
               </div>
             </div>
@@ -640,13 +649,13 @@ export default function EventDetailClient() {
         <section>
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
-              Attendance details
+              {t('attendance_details')}
             </h2>
             <button
               onClick={fetchAttendance}
               className="text-xs text-emerald-600 underline hover:text-emerald-800"
             >
-              Refresh
+              {t('refresh')}
             </button>
           </div>
           <AttendanceTable records={attendance} loading={attendanceLoading} />
@@ -657,12 +666,12 @@ export default function EventDetailClient() {
       {isCoach && (
         <section>
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
-            Team assignment
+            {t('team_assignment')}
           </h2>
 
           <div className="mb-4 flex flex-wrap items-end gap-3">
             <label className="text-sm text-gray-600">
-              Number of teams
+              {t('num_teams')}
               <input
                 type="number"
                 min={1}
@@ -679,7 +688,7 @@ export default function EventDetailClient() {
               disabled={assigningTeams}
               className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-600 disabled:opacity-50"
             >
-              {assigningTeams ? 'Assigning...' : 'Auto-assign teams'}
+              {assigningTeams ? t('assigning') : t('auto_assign')}
             </button>
           </div>
 
@@ -696,7 +705,7 @@ export default function EventDetailClient() {
                     {team.name}
                   </h3>
                   {team.players.length === 0 ? (
-                    <p className="text-xs italic text-gray-400">No players</p>
+                    <p className="text-xs italic text-gray-400">{t('no_players')}</p>
                   ) : (
                     <ul className="space-y-1">
                       {team.players.map((p) => (
@@ -714,7 +723,7 @@ export default function EventDetailClient() {
             </div>
           ) : (
             <p className="text-sm italic text-gray-500">
-              No teams assigned yet.
+              {t('no_teams')}
             </p>
           )}
         </section>
@@ -728,11 +737,11 @@ export default function EventDetailClient() {
             disabled={reminderSent}
             className="rounded-xl border border-emerald-300 bg-white px-4 py-2 text-sm font-medium text-emerald-600 transition hover:bg-emerald-50 disabled:opacity-50"
           >
-            {reminderSent ? 'Reminder sent' : 'Send reminder'}
+            {reminderSent ? t('reminder_sent') : t('send_reminder')}
           </button>
           {reminderSent && (
             <span className="text-xs text-emerald-600">
-              Reminder has been sent to all parents.
+              {t('reminder_sent_msg')}
             </span>
           )}
         </section>
@@ -742,20 +751,20 @@ export default function EventDetailClient() {
       {isCoach && (event.seriesId || seriesInfo) && (
         <section>
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
-            Series actions
+            {t('series_actions')}
           </h2>
           <div className="flex flex-wrap gap-3">
             <button
               onClick={handleCancelInstance}
               className="rounded-xl border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50"
             >
-              Cancel this instance
+              {t('cancel_instance')}
             </button>
             <a
               href="/events/"
               className="rounded-xl border border-emerald-300 bg-white px-4 py-2 text-sm font-medium text-emerald-600 transition hover:bg-emerald-50"
             >
-              View all events
+              {t('view_all_events')}
             </a>
           </div>
         </section>
@@ -777,7 +786,7 @@ export default function EventDetailClient() {
           href="/dashboard/"
           className="text-sm text-emerald-600 underline hover:text-emerald-800"
         >
-          Back to dashboard
+          {t('back_to_dashboard')}
         </a>
       </div>
     </main>

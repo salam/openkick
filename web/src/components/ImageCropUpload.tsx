@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import Cropper from 'react-easy-crop';
 import type { Area } from 'react-easy-crop';
 import { getCroppedImg } from '@/lib/crop-image';
+import { t, getLanguage } from '@/lib/i18n';
 
 interface ImageCropUploadProps {
   /** Crop mask shape */
@@ -34,6 +35,13 @@ export default function ImageCropUpload({
   initialImage,
   disabled = false,
 }: ImageCropUploadProps) {
+  const [, setLang] = useState(() => getLanguage());
+  useEffect(() => {
+    function onLangChange() { setLang(getLanguage()); }
+    window.addEventListener('languagechange', onLangChange);
+    return () => window.removeEventListener('languagechange', onLangChange);
+  }, []);
+
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -52,19 +60,19 @@ export default function ImageCropUpload({
     setError('');
 
     if (!ACCEPTED_TYPES.includes(file.type)) {
-      setError('Invalid file type. Use PNG, JPG, GIF, SVG, or WebP.');
+      setError(t('invalid_file_type'));
       return;
     }
 
     if (file.size > maxFileSize) {
       const mbLimit = Math.round(maxFileSize / (1024 * 1024));
-      setError(`File too large. Maximum ${mbLimit} MB.`);
+      setError(`${t('file_too_large')} ${mbLimit} MB.`);
       return;
     }
 
     const reader = new FileReader();
     reader.onload = () => setImageSrc(reader.result as string);
-    reader.onerror = () => setError('Failed to read file.');
+    reader.onerror = () => setError(t('failed_read_file'));
     reader.readAsDataURL(file);
   }
 
@@ -77,7 +85,7 @@ export default function ImageCropUpload({
       setCrop({ x: 0, y: 0 });
       setZoom(1);
     } catch {
-      setError('Failed to crop image. Please try again.');
+      setError(t('failed_crop'));
     }
   }
 
@@ -106,7 +114,7 @@ export default function ImageCropUpload({
           />
         </div>
         <div className="flex items-center gap-3">
-          <label className="text-xs text-gray-500 whitespace-nowrap">Zoom</label>
+          <label className="text-xs text-gray-500 whitespace-nowrap">{t('zoom')}</label>
           <input
             type="range"
             min={1}
@@ -123,14 +131,14 @@ export default function ImageCropUpload({
             onClick={handleConfirm}
             className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
           >
-            Crop &amp; Upload
+            {t('crop_upload')}
           </button>
           <button
             type="button"
             onClick={handleCancel}
             className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
           >
-            Cancel
+            {t('cancel')}
           </button>
         </div>
         {error && <p className="text-sm font-medium text-red-600">{error}</p>}
@@ -161,7 +169,7 @@ export default function ImageCropUpload({
           </div>
           <div>
             <label className="inline-block cursor-pointer rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
-              Change
+              {t('change')}
               <input
                 type="file"
                 accept=".png,.jpg,.jpeg,.gif,.svg,.webp"
@@ -189,7 +197,7 @@ export default function ImageCropUpload({
           className="text-sm text-gray-600 file:mr-3 file:rounded-md file:border file:border-gray-300 file:bg-white file:px-4 file:py-2 file:text-sm file:font-medium file:text-gray-700 file:shadow-sm hover:file:bg-gray-50"
         />
         <p className="mt-1 text-xs text-gray-400">
-          PNG, JPG, SVG, or WebP. Max {Math.round(maxFileSize / (1024 * 1024))} MB.
+          {t('file_hint')} {Math.round(maxFileSize / (1024 * 1024))} MB.
         </p>
       </div>
       {error && <p className="text-sm font-medium text-red-600">{error}</p>}

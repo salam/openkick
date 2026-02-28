@@ -17,10 +17,10 @@ import {
 
 let db: Database;
 
-function createGuardian(phone: string, language = "de", name = "Guardian"): number {
+function createGuardian(phone: string, language = "de", name = "Guardian", accessToken?: string): number {
   db.run(
-    "INSERT INTO guardians (phone, name, language, consentGiven) VALUES (?, ?, ?, 1)",
-    [phone, name, language],
+    "INSERT INTO guardians (phone, name, language, consentGiven, accessToken) VALUES (?, ?, ?, 1, ?)",
+    [phone, name, language, accessToken ?? null],
   );
   const result = db.exec("SELECT last_insert_rowid() AS id");
   return result[0].values[0][0] as number;
@@ -194,5 +194,43 @@ describe("reminders service", () => {
     stopReminderScheduler();
 
     vi.useRealTimers();
+  });
+
+  it("includes deep link URL in reminder message when guardian has accessToken", async () => {
+    const now = new Date();
+    const in12h = new Date(now.getTime() + 12 * 60 * 60 * 1000);
+    const deadlineStr = in12h.toISOString().replace("T", " ").slice(0, 19);
+
+    const eventId = createEvent({ title: "Evening Training", deadline: deadlineStr, date: "2026-03-01" });
+    const guardianId = createGuardian("+41791234567", "de", "Papa", "test-token-123");
+    const playerId = createPlayer("Max");
+    linkGuardianPlayer(guardianId, playerId);
+
+    const sent = await sendReminders();
+
+    expect(sent).toBe(1);
+    expect(sendMessage).toHaveBeenCalledTimes(1);
+    const call = vi.mocked(sendMessage).mock.calls[0];
+    expect(call[1]).toContain("/rsvp?token=test-token-123");
+    expect(call[1]).toContain(`&event=${eventId}`);
+  });
+
+  it("falls back to basic reminder when guardian has no accessToken", async () => {
+    const now = new Date();
+    const in12h = new Date(now.getTime() + 12 * 60 * 60 * 1000);
+    const deadlineStr = in12h.toISOString().replace("T", " ").slice(0, 19);
+
+    createEvent({ title: "Evening Training", deadline: deadlineStr });
+    const guardianId = createGuardian("+41791234567", "de", "Papa");
+    const playerId = createPlayer("Max");
+    linkGuardianPlayer(guardianId, playerId);
+
+    const sent = await sendReminders();
+
+    expect(sent).toBe(1);
+    expect(sendMessage).toHaveBeenCalledTimes(1);
+    const call = vi.mocked(sendMessage).mock.calls[0];
+    expect(call[1]).not.toContain("/rsvp?token=");
+    expect(call[1]).toContain("Erinnerung");
   });
 });

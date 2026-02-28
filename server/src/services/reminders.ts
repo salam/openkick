@@ -5,8 +5,10 @@ import { t } from "../utils/i18n.js";
 interface PendingReminder {
   eventId: number;
   eventTitle: string;
+  eventDate: string;
   guardianPhone: string;
   guardianLanguage: string;
+  guardianAccessToken: string | null;
   playerName: string;
 }
 
@@ -23,8 +25,10 @@ export function findPendingReminders(): PendingReminder[] {
     `SELECT
        e.id AS eventId,
        e.title AS eventTitle,
+       e.date AS eventDate,
        g.phone AS guardianPhone,
        g.language AS guardianLanguage,
+       g.accessToken AS guardianAccessToken,
        p.name AS playerName
      FROM events e
      JOIN players p
@@ -49,13 +53,28 @@ export function findPendingReminders(): PendingReminder[] {
   });
 }
 
+function getBaseUrl(): string {
+  return process.env.BASE_URL ?? "http://localhost:3000";
+}
+
 export async function sendReminders(): Promise<number> {
   const pending = findPendingReminders();
   let sent = 0;
+  const baseUrl = getBaseUrl();
   for (const reminder of pending) {
-    const message = t("reminder", reminder.guardianLanguage, {
-      event: reminder.eventTitle,
-    });
+    let message: string;
+    if (reminder.guardianAccessToken) {
+      const url = `${baseUrl}/rsvp?token=${reminder.guardianAccessToken}&event=${reminder.eventId}`;
+      message = t("whatsapp_reminder_with_link", reminder.guardianLanguage, {
+        eventTitle: reminder.eventTitle,
+        eventDate: reminder.eventDate ?? "",
+        url,
+      });
+    } else {
+      message = t("reminder", reminder.guardianLanguage, {
+        event: reminder.eventTitle,
+      });
+    }
     await sendMessage(reminder.guardianPhone, message);
     sent++;
   }

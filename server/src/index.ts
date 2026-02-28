@@ -19,6 +19,7 @@ import { calendarRouter } from "./routes/calendar.js";
 import { teamsRouter } from "./routes/teams.js";
 import { llmsRouter } from "./routes/llms.js";
 import { feedsRouter, wellKnownRouter } from "./routes/feeds.js";
+import { mcpRouter } from "./mcp/index.js";
 
 const app = express();
 
@@ -46,6 +47,7 @@ app.use("/api", calendarRouter);
 app.use("/api", teamsRouter);
 app.use(wellKnownRouter);
 app.use("/api", feedsRouter);
+app.use("/mcp", mcpRouter);
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
 const DB_PATH = process.env.DB_PATH || "./data/openkick.db";

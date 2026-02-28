@@ -89,7 +89,7 @@ export function listGdprRequests(status?: string): GdprRequest[] {
              FROM gdpr_requests r
              LEFT JOIN guardians g ON r.guardianId = g.id
              ORDER BY r.createdAt DESC`;
-  const params: unknown[] = [];
+  const params: (string | number | null)[] = [];
 
   if (status) {
     sql = `SELECT r.*, g.name AS guardianName, g.phone AS guardianPhone

@@ -32,3 +32,46 @@ usersRouter.get(
     res.json(rows);
   },
 );
+
+// PUT /api/users/:id/role — admin changes a user's role
+usersRouter.put(
+  "/users/:id/role",
+  authMiddleware,
+  requireRole("admin"),
+  (req: Request, res: Response) => {
+    const { role } = req.body;
+    const targetId = Number(req.params.id);
+
+    if (!role || !["admin", "coach"].includes(role)) {
+      res.status(400).json({ error: "role must be 'admin' or 'coach'" });
+      return;
+    }
+
+    const db = getDB();
+
+    const target = db.exec(
+      "SELECT id, role FROM guardians WHERE id = ? AND role IN ('admin', 'coach')",
+      [targetId],
+    );
+    if (target.length === 0 || target[0].values.length === 0) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    const currentRole = target[0].values[0][1] as string;
+
+    if (currentRole === "admin" && role === "coach") {
+      const adminCount = db.exec(
+        "SELECT COUNT(*) FROM guardians WHERE role = 'admin'",
+      );
+      const count = adminCount[0].values[0][0] as number;
+      if (count <= 1) {
+        res.status(409).json({ error: "Cannot demote the last admin" });
+        return;
+      }
+    }
+
+    db.run("UPDATE guardians SET role = ? WHERE id = ?", [role, targetId]);
+    res.json({ id: targetId, role });
+  },
+);

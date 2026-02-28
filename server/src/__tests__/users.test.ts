@@ -73,3 +73,74 @@ describe("GET /api/users", () => {
     expect(res.status).toBe(403);
   });
 });
+
+describe("PUT /api/users/:id/role", () => {
+  it("returns 401 without auth", async () => {
+    const res = await request(app).put("/api/users/1/role").send({ role: "coach" });
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 403 for a coach", async () => {
+    const coachId = insertUser("Coach", "coach@test.com", "coach");
+    const token = generateJWT({ id: coachId, role: "coach" });
+    const res = await request(app)
+      .put(`/api/users/${coachId}/role`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ role: "admin" });
+    expect(res.status).toBe(403);
+  });
+
+  it("changes role from coach to admin", async () => {
+    const adminId = insertUser("Admin", "admin@test.com", "admin");
+    const coachId = insertUser("Coach", "coach@test.com", "coach");
+    const token = generateJWT({ id: adminId, role: "admin" });
+
+    const res = await request(app)
+      .put(`/api/users/${coachId}/role`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ role: "admin" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.role).toBe("admin");
+  });
+
+  it("prevents last admin from self-demotion", async () => {
+    const adminId = insertUser("Admin", "admin@test.com", "admin");
+    const token = generateJWT({ id: adminId, role: "admin" });
+
+    const res = await request(app)
+      .put(`/api/users/${adminId}/role`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ role: "coach" });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatch(/last admin/i);
+  });
+
+  it("allows demotion when another admin exists", async () => {
+    const admin1 = insertUser("Admin1", "admin1@test.com", "admin");
+    insertUser("Admin2", "admin2@test.com", "admin");
+    const token = generateJWT({ id: admin1, role: "admin" });
+
+    const res = await request(app)
+      .put(`/api/users/${admin1}/role`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ role: "coach" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.role).toBe("coach");
+  });
+
+  it("rejects invalid role", async () => {
+    const adminId = insertUser("Admin", "admin@test.com", "admin");
+    const coachId = insertUser("Coach", "coach@test.com", "coach");
+    const token = generateJWT({ id: adminId, role: "admin" });
+
+    const res = await request(app)
+      .put(`/api/users/${coachId}/role`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ role: "parent" });
+
+    expect(res.status).toBe(400);
+  });
+});

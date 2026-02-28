@@ -15,11 +15,33 @@ function toIso(dateStr: string, timeStr?: string | null): string {
   return d.toISOString();
 }
 
+function ordinalSuffix(n: number): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return `${n}st`;
+  if (mod10 === 2 && mod100 !== 12) return `${n}nd`;
+  if (mod10 === 3 && mod100 !== 13) return `${n}rd`;
+  return `${n}th`;
+}
+
+export function formatTrophyText(item: FeedItem): string | null {
+  if (item.placement == null) return null;
+  let text = `\u{1F3C6} ${ordinalSuffix(item.placement)} place`;
+  if (item.totalTeams != null) {
+    text += ` (${item.totalTeams} teams)`;
+  }
+  if (item.achievements.length > 0) {
+    text += `. Achievements: ${item.achievements.map((a) => a.label).join(", ")}`;
+  }
+  return text;
+}
+
 export function toRss(items: FeedItem[], baseUrl: string, clubName: string): string {
   const itemsXml = items
     .map((item) => {
       const link = `${baseUrl}/events/${item.id}`;
-      const desc = item.description || `${item.type}: ${item.title}`;
+      const trophy = formatTrophyText(item);
+      const desc = [item.description || `${item.type}: ${item.title}`, trophy].filter(Boolean).join("\n");
       return `    <item>
       <title>${xmlEscape(item.title)}</title>
       <link>${xmlEscape(link)}</link>
@@ -46,7 +68,8 @@ export function toAtom(items: FeedItem[], baseUrl: string, clubName: string): st
   const entriesXml = items
     .map((item) => {
       const link = `${baseUrl}/events/${item.id}`;
-      const desc = item.description || `${item.type}: ${item.title}`;
+      const trophy = formatTrophyText(item);
+      const desc = [item.description || `${item.type}: ${item.title}`, trophy].filter(Boolean).join("\n");
       return `  <entry>
     <title>${xmlEscape(item.title)}</title>
     <link href="${xmlEscape(link)}" />
@@ -95,8 +118,10 @@ export function toIcs(items: FeedItem[], clubName: string): string {
         icsDate(item.date, item.startTime),
         foldLine(`SUMMARY:${item.title}`),
       ];
-      if (item.description) {
-        lines.push(foldLine(`DESCRIPTION:${item.description.replace(/\n/g, "\\n")}`));
+      const trophy = formatTrophyText(item);
+      if (item.description || trophy) {
+        const parts = [item.description, trophy].filter(Boolean).join("\\n");
+        lines.push(foldLine(`DESCRIPTION:${parts.replace(/\n/g, "\\n")}`));
       }
       if (item.location) {
         lines.push(foldLine(`LOCATION:${item.location}`));
@@ -131,19 +156,23 @@ export function toActivityPubOutbox(
     "@context": "https://www.w3.org/ns/activitystreams",
     type: "OrderedCollection",
     totalItems: items.length,
-    orderedItems: items.map((item) => ({
+    orderedItems: items.map((item) => {
+      const trophy = formatTrophyText(item);
+      const trophyHtml = trophy ? `<p>${trophy}</p>` : "";
+      return {
       type: "Create",
       actor: `${baseUrl}/api/feeds/activitypub/actor`,
       published: toIso(item.date, item.startTime),
       object: {
         type: "Note",
         id: `${baseUrl}/events/${item.id}`,
-        content: `<p><strong>${item.title}</strong></p><p>${item.description || item.type}</p>${item.location ? `<p>Location: ${item.location}</p>` : ""}`,
+        content: `<p><strong>${item.title}</strong></p><p>${item.description || item.type}</p>${item.location ? `<p>Location: ${item.location}</p>` : ""}${trophyHtml}`,
         url: `${baseUrl}/events/${item.id}`,
         published: toIso(item.date, item.startTime),
         attributedTo: `${baseUrl}/api/feeds/activitypub/actor`,
       },
-    })),
+    };
+    }),
   };
 }
 

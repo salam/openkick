@@ -1,6 +1,6 @@
 'use client';
 
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState, useCallback } from 'react';
 import { apiFetch } from '@/lib/api';
 import AltchaWidget from '@/components/AltchaWidget';
@@ -31,7 +31,24 @@ interface EventDetail {
   recurrenceRule?: string;
   attachmentUrl?: string;
   attendanceSummary: AttendanceSummary;
+  seriesId?: number;
 }
+
+interface SeriesInfo {
+  id: number;
+  title: string;
+  type: string;
+  description?: string;
+  startTime?: string;
+  attendanceTime?: string;
+  location?: string;
+  categoryRequirement?: string;
+  maxParticipants?: number;
+  minParticipants?: number;
+}
+
+/** Match synthetic series IDs like "series-1-2026-03-09" */
+const SERIES_ID_RE = /^series-(\d+)-(\d{4}-\d{2}-\d{2})$/;
 
 interface AttendanceRecord {
   id: number;
@@ -195,11 +212,18 @@ function AttendanceTable({
 
 export default function EventDetailClient() {
   const params = useParams();
+  const router = useRouter();
   const id = params?.id as string;
+
+  // Parse synthetic series ID if present
+  const seriesMatch = id ? SERIES_ID_RE.exec(id) : null;
+  const parsedSeriesId = seriesMatch ? Number(seriesMatch[1]) : null;
+  const parsedDate = seriesMatch ? seriesMatch[2] : null;
 
   const [event, setEvent] = useState<EventDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [seriesInfo, setSeriesInfo] = useState<SeriesInfo | null>(null);
 
   // Role
   const [role, setRole] = useState<string>('');
@@ -232,19 +256,54 @@ export default function EventDetailClient() {
     }
   }, []);
 
-  /* ── Fetch event ── */
+  /* ── Fetch event (or build virtual instance from series template) ── */
   useEffect(() => {
     if (!id) return;
 
     setLoading(true);
-    apiFetch<EventDetail>(`/api/events/${id}`)
-      .then((data) => {
-        setEvent(data);
-        setError(null);
-      })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
-  }, [id]);
+
+    if (parsedSeriesId && parsedDate) {
+      // Synthetic series ID — fetch the series template and build a virtual event
+      apiFetch<SeriesInfo>(`/api/event-series/${parsedSeriesId}`)
+        .then((series) => {
+          setSeriesInfo(series);
+          const virtual: EventDetail = {
+            id: 0, // virtual — RSVP uses the URL id param instead
+            type: series.type,
+            title: series.title,
+            description: series.description,
+            date: parsedDate,
+            startTime: series.startTime,
+            attendanceTime: series.attendanceTime,
+            location: series.location,
+            categoryRequirement: series.categoryRequirement,
+            maxParticipants: series.maxParticipants,
+            minParticipants: series.minParticipants,
+            seriesId: parsedSeriesId,
+            attendanceSummary: { attending: 0, absent: 0, waitlist: 0, unknown: 0 },
+          };
+          setEvent(virtual);
+          setError(null);
+        })
+        .catch((err) => setError(err.message))
+        .finally(() => setLoading(false));
+    } else {
+      // Regular numeric event ID
+      apiFetch<EventDetail>(`/api/events/${id}`)
+        .then((data) => {
+          setEvent(data);
+          // If the event belongs to a series, fetch series info for the banner
+          if (data.seriesId) {
+            apiFetch<SeriesInfo>(`/api/event-series/${data.seriesId}`)
+              .then(setSeriesInfo)
+              .catch(() => {}); // non-critical
+          }
+          setError(null);
+        })
+        .catch((err) => setError(err.message))
+        .finally(() => setLoading(false));
+    }
+  }, [id, parsedSeriesId, parsedDate]);
 
   /* ── Fetch attendance for coaches ── */
   const fetchAttendance = useCallback(() => {
@@ -286,7 +345,7 @@ export default function EventDetailClient() {
       await apiFetch('/api/attendance', {
         method: 'POST',
         body: JSON.stringify({
-          eventId: event.id,
+          eventId: id, // URL param — could be numeric string or synthetic series ID
           playerId,
           status,
           source: 'parent',
@@ -327,6 +386,25 @@ export default function EventDetailClient() {
       /* endpoint may not exist yet, still show feedback */
     }
     setReminderSent(true);
+  }
+
+  /* ── Cancel series instance (coach) ── */
+  async function handleCancelInstance() {
+    const sid = event?.seriesId || parsedSeriesId;
+    const eventDate = event?.date || parsedDate;
+    if (!sid || !eventDate) return;
+
+    if (!confirm('Cancel this event instance? It will be removed from the series.')) return;
+
+    try {
+      await apiFetch(`/api/event-series/${sid}/exclude`, {
+        method: 'POST',
+        body: JSON.stringify({ date: eventDate }),
+      });
+      router.push('/events/');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to cancel instance');
+    }
   }
 
   /* ── Render ── */
@@ -374,6 +452,16 @@ export default function EventDetailClient() {
           {event.title}
         </h1>
       </div>
+
+      {/* ── Series banner ── */}
+      {(event.seriesId || seriesInfo) && (
+        <div className="flex items-center gap-2 rounded-lg bg-gray-50 px-4 py-3 text-sm text-gray-600">
+          <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 0 0-3.7-3.7 48.678 48.678 0 0 0-7.324 0 4.006 4.006 0 0 0-3.7 3.7c-.017.22-.032.441-.046.662M19.5 12l3-3m-3 3-3-3m-12 3c0 1.232.046 2.453.138 3.662a4.006 4.006 0 0 0 3.7 3.7 48.656 48.656 0 0 0 7.324 0 4.006 4.006 0 0 0 3.7-3.7c.017-.22.032-.441.046-.662M4.5 12l3 3m-3-3-3 3" />
+          </svg>
+          <span>Part of series: <strong>{seriesInfo?.title || 'Event Series'}</strong></span>
+        </div>
+      )}
 
       {/* ── Info grid ── */}
       <section className="grid gap-4 sm:grid-cols-2">
@@ -635,6 +723,29 @@ export default function EventDetailClient() {
               Reminder has been sent to all parents.
             </span>
           )}
+        </section>
+      )}
+
+      {/* ── Coach: Series actions ── */}
+      {isCoach && (event.seriesId || seriesInfo) && (
+        <section>
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
+            Series actions
+          </h2>
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={handleCancelInstance}
+              className="rounded-xl border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50"
+            >
+              Cancel this instance
+            </button>
+            <a
+              href="/events/"
+              className="rounded-xl border border-emerald-300 bg-white px-4 py-2 text-sm font-medium text-emerald-600 transition hover:bg-emerald-50"
+            >
+              View all events
+            </a>
+          </div>
         </section>
       )}
 

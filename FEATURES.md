@@ -21,6 +21,14 @@
 - [x] i18n for de/fr/en
 - [x] Rate limiting (general, auth, mutation tiers via express-rate-limit)
 - [x] Altcha proof-of-work captcha on login and attendance (pluggable provider)
+- [x] RSS 2.0 feed for public events
+- [x] Atom 1.0 feed for public events
+- [x] ActivityPub read-only publisher (Mastodon/Fediverse)
+- [x] AT Protocol feed generator (Bluesky)
+- [x] ICS calendar subscriptions (combined + per-type)
+- [x] Dynamic sitemap with feed URLs
+- [x] robots.txt with sitemap reference
+- [x] WebFinger + DID well-known discovery endpoints
 
 ## Frontend (Web)
 
@@ -34,6 +42,8 @@
 - [x] Admin settings page (LLM, bot language, holidays, WAHA)
 - [x] Event creation with tournament import (URL/PDF)
 - [x] i18n with browser language detection (de/fr/en)
+- [x] Homepage subscribe card widget (calendar, RSS, social feeds)
+- [x] Admin feed toggle switches on settings page
 
 ## Infrastructure
 

@@ -1,5 +1,15 @@
 # OpenKick Release Notes
 
+## Version 1.0.2 (Feb 28, 2026, 22:00)
+
+* Public feeds: Subscribe to club events via RSS 2.0, Atom 1.0, or calendar (ICS)
+* Social feeds: Follow the club on Mastodon (ActivityPub) or Bluesky (AT Protocol)
+* Calendar subscriptions: Combined feed or per-type (tournaments, matches, trainings)
+* Homepage widget: Collapsible "Subscribe to updates" card with copy-to-clipboard URLs
+* Admin controls: Toggle each feed type on/off from the settings page
+* SEO: Dynamic sitemap listing all enabled feeds, robots.txt with sitemap reference
+* Discovery: WebFinger and DID well-known endpoints for federated social
+
 ## Version 1.0.1 (Feb 28, 2026, 18:00)
 
 * Bot protection: Altcha proof-of-work captcha on login and attendance — invisible, GDPR-friendly, no tracking cookies

@@ -2,6 +2,14 @@
 
 ## For Parents
 
+### How do I subscribe to the club's events?
+
+Visit the homepage and open the "Subscribe to updates" card. You can:
+
+- **Calendar**: Copy the ICS link and add it as a subscription in Google Calendar, Apple Calendar, or Outlook. You'll see all upcoming events automatically.
+- **RSS**: Use the RSS or Atom feed URL with any feed reader (Feedly, Thunderbird, NetNewsWire, etc.).
+- **Social**: Follow the club on Mastodon or Bluesky to get event updates in your feed.
+
 ### Do I need to install an app?
 
 No. Everything works through WhatsApp, which you probably already have. There's also an optional website you can open in your phone's browser — no download needed.

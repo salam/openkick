@@ -11,6 +11,7 @@ interface OnboardingStatus {
     hasTrainings: boolean;
     hasPlayers: boolean;
     hasGuardians: boolean;
+    hasTournaments: boolean;
     hasFeedsConfigured: boolean;
   };
 }
@@ -20,8 +21,14 @@ const CHECKLIST_ITEMS = [
   { key: 'hasTrainings', label: 'Create your first training', href: '/events/new/' },
   { key: 'hasPlayers', label: 'Add players to the roster', href: '/players/' },
   { key: 'hasGuardians', label: 'Invite parents & guardians', href: '/players/' },
+  { key: 'hasTournaments', label: 'Open your first tournament', href: '/events/new/' },
   { key: 'hasFeedsConfigured', label: 'Set up public feeds (optional)', href: '/settings#feeds' },
 ] as const;
+
+// Static tips shown below the checklist — not trackable, just helpful nudges
+const TIPS = [
+  { label: 'Log previous match results to build your club history', href: '/events/new/' },
+];
 
 const DISMISS_KEY = 'onboarding_checklist_dismissed';
 
@@ -134,6 +141,27 @@ export default function OnboardingChecklist() {
               );
             })}
           </ul>
+
+          {/* Static tips */}
+          {TIPS.length > 0 && (
+            <div className="mt-3 border-t border-gray-100 pt-3">
+              {TIPS.map((tip) => (
+                <div key={tip.label} className="flex items-center gap-3">
+                  <span className="flex h-5 w-5 items-center justify-center text-gray-300">
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 0 0 1.5-.189m-1.5.189a6.01 6.01 0 0 1-1.5-.189m3.75 7.478a12.06 12.06 0 0 1-4.5 0m3.75 2.383a14.406 14.406 0 0 1-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 1 0-7.517 0c.85.493 1.509 1.333 1.509 2.316V18" />
+                    </svg>
+                  </span>
+                  <Link
+                    href={tip.href}
+                    className="text-sm text-gray-500 hover:text-emerald-600"
+                  >
+                    {tip.label}
+                  </Link>
+                </div>
+              ))}
+            </div>
+          )}
 
           <div className="mt-4 flex justify-end">
             <button

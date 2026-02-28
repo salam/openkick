@@ -60,6 +60,7 @@ describe("Onboarding routes", () => {
       hasTrainings: false,
       hasPlayers: false,
       hasGuardians: false,
+      hasTournaments: false,
       hasFeedsConfigured: true,
     });
   });
@@ -159,6 +160,7 @@ describe("Onboarding routes", () => {
     expect(body.checklist.hasHolidays).toBe(true);
     expect(body.checklist.hasTrainings).toBe(true);
     expect(body.checklist.hasGuardians).toBe(true);
+    expect(body.checklist.hasTournaments).toBe(false);
     expect(body.checklist.hasFeedsConfigured).toBe(true);
   });
 });

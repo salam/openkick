@@ -36,6 +36,7 @@ function buildFullStatus() {
     hasTrainings: queryCount("SELECT COUNT(*) FROM event_series") > 0,
     hasPlayers: queryCount("SELECT COUNT(*) FROM players") > 0,
     hasGuardians: queryCount("SELECT COUNT(*) FROM guardians WHERE role = ?", ["parent"]) > 0,
+    hasTournaments: queryCount("SELECT COUNT(*) FROM events WHERE type = ?", ["tournament"]) > 0,
     // Feeds are enabled by default in DEFAULT_SETTINGS; always true
     hasFeedsConfigured: true,
   };

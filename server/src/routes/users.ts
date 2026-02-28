@@ -78,6 +78,73 @@ usersRouter.put(
   },
 );
 
+// POST /api/users/invite — invite a new coach or admin
+usersRouter.post(
+  "/users/invite",
+  authMiddleware,
+  requireRole("admin", "coach"),
+  async (req: Request, res: Response) => {
+    const { name, email, role } = req.body;
+
+    if (!name || !email || !role) {
+      res.status(400).json({ error: "name, email, and role are required" });
+      return;
+    }
+
+    if (!["admin", "coach"].includes(role)) {
+      res.status(400).json({ error: "role must be 'admin' or 'coach'" });
+      return;
+    }
+
+    // Coaches can only invite coaches
+    if (req.user!.role === "coach" && role === "admin") {
+      res.status(403).json({ error: "Coaches can only invite other coaches" });
+      return;
+    }
+
+    const db = getDB();
+
+    // Check for duplicate email (phone column stores email for coaches/admins)
+    const existing = db.exec(
+      "SELECT id FROM guardians WHERE email = ? OR phone = ?",
+      [email, email],
+    );
+    if (existing.length > 0 && existing[0].values.length > 0) {
+      res.status(409).json({ error: "A user with this email already exists" });
+      return;
+    }
+
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const resetTokenExpiry = new Date(
+      Date.now() + 24 * 60 * 60 * 1000,
+    ).toISOString();
+
+    db.run(
+      "INSERT INTO guardians (phone, name, email, role, resetToken, resetTokenExpiry) VALUES (?, ?, ?, ?, ?, ?)",
+      [email, name, email, role, resetToken, resetTokenExpiry],
+    );
+
+    const idResult = db.exec("SELECT last_insert_rowid()");
+    const id = idResult[0].values[0][0] as number;
+
+    const baseUrl =
+      process.env.CORS_ORIGIN?.split(",")[0] || "http://localhost:3000";
+    const resetUrl = `${baseUrl}/reset-password/${resetToken}/`;
+
+    try {
+      await sendEmail(
+        email,
+        "You've been invited to OpenKick",
+        `<p>Hi ${name},</p><p>You've been invited as a ${role}. Click <a href="${resetUrl}">here</a> to set your password and get started.</p>`,
+      );
+    } catch (err) {
+      console.error("Failed to send invite email:", err);
+    }
+
+    res.status(201).json({ id, name, email, role });
+  },
+);
+
 // POST /api/users/:id/reset-password — admin triggers password reset email
 usersRouter.post(
   "/users/:id/reset-password",

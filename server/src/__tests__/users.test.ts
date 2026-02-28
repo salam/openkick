@@ -185,3 +185,83 @@ describe("POST /api/users/:id/reset-password", () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe("POST /api/users/invite", () => {
+  it("admin invites a new coach", async () => {
+    const { sendEmail } = await import("../services/email.js");
+    const adminId = insertUser("Admin", "admin@test.com", "admin");
+    const token = generateJWT({ id: adminId, role: "admin" });
+
+    const res = await request(app)
+      .post("/api/users/invite")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "New Coach", email: "new@test.com", role: "coach" });
+
+    expect(res.status).toBe(201);
+    expect(res.body.name).toBe("New Coach");
+    expect(res.body.role).toBe("coach");
+    expect(sendEmail).toHaveBeenCalled();
+  });
+
+  it("admin invites a new admin", async () => {
+    const adminId = insertUser("Admin", "admin@test.com", "admin");
+    const token = generateJWT({ id: adminId, role: "admin" });
+
+    const res = await request(app)
+      .post("/api/users/invite")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "New Admin", email: "newadmin@test.com", role: "admin" });
+
+    expect(res.status).toBe(201);
+    expect(res.body.role).toBe("admin");
+  });
+
+  it("coach can invite a new coach", async () => {
+    const coachId = insertUser("Coach", "coach@test.com", "coach");
+    const token = generateJWT({ id: coachId, role: "coach" });
+
+    const res = await request(app)
+      .post("/api/users/invite")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "New Coach", email: "new@test.com", role: "coach" });
+
+    expect(res.status).toBe(201);
+    expect(res.body.role).toBe("coach");
+  });
+
+  it("coach cannot invite an admin", async () => {
+    const coachId = insertUser("Coach", "coach@test.com", "coach");
+    const token = generateJWT({ id: coachId, role: "coach" });
+
+    const res = await request(app)
+      .post("/api/users/invite")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "Bad Invite", email: "bad@test.com", role: "admin" });
+
+    expect(res.status).toBe(403);
+  });
+
+  it("rejects duplicate email", async () => {
+    const adminId = insertUser("Admin", "admin@test.com", "admin");
+    const token = generateJWT({ id: adminId, role: "admin" });
+
+    const res = await request(app)
+      .post("/api/users/invite")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "Dup", email: "admin@test.com", role: "coach" });
+
+    expect(res.status).toBe(409);
+  });
+
+  it("validates required fields", async () => {
+    const adminId = insertUser("Admin", "admin@test.com", "admin");
+    const token = generateJWT({ id: adminId, role: "admin" });
+
+    const res = await request(app)
+      .post("/api/users/invite")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "No Email" });
+
+    expect(res.status).toBe(400);
+  });
+});

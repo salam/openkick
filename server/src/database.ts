@@ -1,6 +1,7 @@
 import initSqlJs, { type Database } from "sql.js";
 import fs from "node:fs";
 import path from "node:path";
+import { CHECKLIST_TEMPLATE_SEEDS } from "./data/checklist-templates.js";
 
 let _db: Database | null = null;
 let _dbPath: string | undefined;
@@ -307,6 +308,47 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_survey_response_player
   ON survey_responses(survey_id, player_nickname)
   WHERE player_nickname IS NOT NULL;
 
+CREATE TABLE IF NOT EXISTS club_classifications (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  club_id INTEGER NOT NULL DEFAULT 1,
+  classification TEXT NOT NULL CHECK (classification IN ('sportamt_zurich','sfv','fvrz','custom')),
+  active INTEGER NOT NULL DEFAULT 1,
+  UNIQUE (club_id, classification)
+);
+
+CREATE TABLE IF NOT EXISTS checklist_templates (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  type TEXT NOT NULL CHECK (type IN ('admin','training','tournament')),
+  classification_filter TEXT,
+  items_json TEXT NOT NULL DEFAULT '[]',
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS checklist_instances (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  template_id INTEGER REFERENCES checklist_templates(id),
+  event_id INTEGER REFERENCES events(id),
+  semester TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','archived')),
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS checklist_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  instance_id INTEGER NOT NULL REFERENCES checklist_instances(id) ON DELETE CASCADE,
+  label TEXT NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  completed INTEGER NOT NULL DEFAULT 0,
+  completed_at TEXT,
+  completed_by INTEGER REFERENCES guardians(id),
+  is_custom INTEGER NOT NULL DEFAULT 0,
+  UNIQUE (instance_id, label)
+);
+
+CREATE INDEX IF NOT EXISTS idx_checklist_instances_event ON checklist_instances(event_id);
+CREATE INDEX IF NOT EXISTS idx_checklist_instances_semester ON checklist_instances(semester);
+CREATE INDEX IF NOT EXISTS idx_checklist_items_instance ON checklist_items(instance_id);
+
 `;
 
 const DEFAULT_SETTINGS: Record<string, string> = {
@@ -423,6 +465,17 @@ export async function initDB(dbPath?: string): Promise<Database> {
   // Seed default settings (INSERT OR IGNORE to avoid duplicates)
   for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) {
     db.run("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", [key, value]);
+  }
+
+  // Seed checklist templates if empty
+  const templateCount = db.exec("SELECT COUNT(*) FROM checklist_templates");
+  if ((templateCount[0]?.values[0]?.[0] as number) === 0) {
+    for (const seed of CHECKLIST_TEMPLATE_SEEDS) {
+      db.run(
+        "INSERT INTO checklist_templates (type, classification_filter, items_json) VALUES (?, ?, ?)",
+        [seed.type, seed.classificationFilter, JSON.stringify(seed.items)]
+      );
+    }
   }
 
   _dbPath = dbPath;

@@ -1,5 +1,8 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { t, getLanguage } from '@/lib/i18n';
+
 interface AttendanceRow {
   playerId: string;
   playerName: string;
@@ -20,14 +23,21 @@ const statusStyles: Record<string, string> = {
   unknown: 'bg-gray-100 text-gray-600',
 };
 
-const statusLabels: Record<string, string> = {
-  attending: 'Attending',
-  absent: 'Absent',
-  waitlist: 'Waitlist',
-  unknown: 'Unknown',
+const statusI18nKeys: Record<string, string> = {
+  attending: 'attending',
+  absent: 'absent',
+  waitlist: 'waitlist',
+  unknown: 'unknown',
 };
 
 export default function AttendanceTable({ rows }: AttendanceTableProps) {
+  const [, setLang] = useState(() => getLanguage());
+  useEffect(() => {
+    function onLangChange() { setLang(getLanguage()); }
+    window.addEventListener('languagechange', onLangChange);
+    return () => window.removeEventListener('languagechange', onLangChange);
+  }, []);
+
   return (
     <>
       {/* Desktop table */}
@@ -36,19 +46,19 @@ export default function AttendanceTable({ rows }: AttendanceTableProps) {
           <thead className="bg-gray-50">
             <tr>
               <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                Player
+                {t('player')}
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                Category
+                {t('category')}
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                Status
+                {t('status')}
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                Responded
+                {t('responded')}
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                Source
+                {t('source')}
               </th>
             </tr>
           </thead>
@@ -63,7 +73,7 @@ export default function AttendanceTable({ rows }: AttendanceTableProps) {
                   <span
                     className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${statusStyles[row.status]}`}
                   >
-                    {statusLabels[row.status]}
+                    {t(statusI18nKeys[row.status])}
                   </span>
                 </td>
                 <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">
@@ -77,7 +87,7 @@ export default function AttendanceTable({ rows }: AttendanceTableProps) {
             {rows.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-4 py-8 text-center text-sm text-gray-400">
-                  No attendance data available
+                  {t('no_attendance_data')}
                 </td>
               </tr>
             )}
@@ -88,7 +98,7 @@ export default function AttendanceTable({ rows }: AttendanceTableProps) {
       {/* Mobile card layout */}
       <div className="space-y-3 md:hidden">
         {rows.length === 0 && (
-          <p className="py-8 text-center text-sm text-gray-400">No attendance data available</p>
+          <p className="py-8 text-center text-sm text-gray-400">{t('no_attendance_data')}</p>
         )}
         {rows.map((row) => (
           <div key={row.playerId} className="rounded-lg border border-gray-200 bg-white p-4">
@@ -97,13 +107,13 @@ export default function AttendanceTable({ rows }: AttendanceTableProps) {
               <span
                 className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${statusStyles[row.status]}`}
               >
-                {statusLabels[row.status]}
+                {t(statusI18nKeys[row.status])}
               </span>
             </div>
             <div className="space-y-1 text-xs text-gray-500">
-              <div>Category: {row.category}</div>
-              {row.respondedAt && <div>Responded: {row.respondedAt}</div>}
-              {row.source && <div>Source: {row.source}</div>}
+              <div>{t('category')}: {row.category}</div>
+              {row.respondedAt && <div>{t('responded')}: {row.respondedAt}</div>}
+              {row.source && <div>{t('source')}: {row.source}</div>}
             </div>
           </div>
         ))}

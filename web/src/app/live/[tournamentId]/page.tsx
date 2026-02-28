@@ -1,9 +1,9 @@
-'use client';
+import LiveTickerClient from './LiveTickerClient';
 
-import { use } from 'react';
-import LiveTickerDetail from '@/components/LiveTickerDetail';
+export async function generateStaticParams() {
+  return [{ tournamentId: '_placeholder' }];
+}
 
-export default function LivePage({ params }: { params: Promise<{ tournamentId: string }> }) {
-  const { tournamentId } = use(params);
-  return <LiveTickerDetail tournamentId={tournamentId} />;
+export default function LivePage() {
+  return <LiveTickerClient />;
 }

@@ -2,6 +2,8 @@ import Docker from "dockerode";
 
 const CONTAINER_NAME = "openkick-waha";
 const IMAGE_NAME = "devlikeapro/waha";
+const WAHA_INTERNAL_PORT = 3000;
+const DAEMON_TIMEOUT_MS = 5000;
 
 export type DaemonCheckResult =
   | { available: true }
@@ -32,7 +34,12 @@ export class DockerService {
    */
   async checkDaemon(): Promise<DaemonCheckResult> {
     try {
-      await this.docker.ping();
+      await Promise.race([
+        this.docker.ping(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Docker daemon timeout")), DAEMON_TIMEOUT_MS),
+        ),
+      ]);
       return { available: true };
     } catch (err: unknown) {
       const message =
@@ -50,15 +57,17 @@ export class DockerService {
       filters: { name: [CONTAINER_NAME] },
     });
 
-    if (containers.length === 0) {
+    const container = containers.find((c) =>
+      c.Names.some((n) => n === `/${CONTAINER_NAME}`),
+    );
+
+    if (!container) {
       return { status: "not_found" };
     }
 
-    const container = containers[0];
-
     if (container.State === "running") {
       const portMapping = container.Ports?.find(
-        (p: { PrivatePort: number }) => p.PrivatePort === 3000,
+        (p: { PrivatePort: number }) => p.PrivatePort === WAHA_INTERNAL_PORT,
       );
       return {
         status: "running",
@@ -77,6 +86,14 @@ export class DockerService {
     config: WahaInstallConfig,
     onProgress?: (msg: string) => void,
   ): Promise<void> {
+    // Remove any existing container to allow re-runs
+    try {
+      const existing = this.docker.getContainer(CONTAINER_NAME);
+      await existing.remove({ force: true });
+    } catch {
+      // Container doesn't exist, which is fine
+    }
+
     // Pull the image
     const stream = await this.docker.pull(IMAGE_NAME);
 
@@ -150,10 +167,14 @@ export class DockerService {
       filters: { name: [CONTAINER_NAME] },
     });
 
-    if (containers.length === 0) {
+    const container = containers.find((c) =>
+      c.Names.some((n) => n === `/${CONTAINER_NAME}`),
+    );
+
+    if (!container) {
       throw new Error(`Container ${CONTAINER_NAME} not found`);
     }
 
-    return containers[0];
+    return container;
   }
 }

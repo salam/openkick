@@ -9,6 +9,7 @@ import type { Database } from "sql.js";
 vi.mock("../../services/whatsapp.js", () => ({
   parseAttendanceMessage: vi.fn(),
   sendMessage: vi.fn(),
+  reactToMessage: vi.fn(),
 }));
 
 // Mock the whisper service
@@ -77,6 +78,10 @@ describe("WhatsApp webhook route", () => {
     vi.mocked(parseAttendanceMessage).mockReset();
     vi.mocked(sendMessage).mockReset();
     vi.mocked(sendMessage).mockResolvedValue(undefined);
+
+    const { reactToMessage } = await import("../../services/whatsapp.js");
+    vi.mocked(reactToMessage).mockReset();
+    vi.mocked(reactToMessage).mockResolvedValue(undefined);
 
     const { transcribeAudio } = await import("../../services/whisper.js");
     vi.mocked(transcribeAudio).mockReset();
@@ -248,5 +253,82 @@ describe("WhatsApp webhook route", () => {
     // Should NOT have tried to parse or send messages
     expect(vi.mocked(parseAttendanceMessage)).not.toHaveBeenCalled();
     expect(vi.mocked(sendMessage)).not.toHaveBeenCalled();
+  });
+
+  it("processes group message: reacts with eyes emoji and DMs sender", async () => {
+    const phone = "41791234570";
+    seedGuardianAndPlayer(phone, "Mia");
+    seedFutureEvent("Training Donnerstag");
+
+    const { parseAttendanceMessage, sendMessage, reactToMessage } = await import(
+      "../../services/whatsapp.js"
+    );
+    vi.mocked(parseAttendanceMessage).mockResolvedValueOnce({
+      playerName: "Mia",
+      status: "absent",
+      reason: "Ferien",
+    });
+
+    const res = await fetch(`${baseUrl}/api/whatsapp/webhook`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        event: "message",
+        payload: {
+          id: "false_120363xxxxx@g.us_AAAAAA",
+          from: "120363xxxxx@g.us",
+          author: `${phone}@c.us`,
+          body: "Mia hat Ferien",
+          hasMedia: false,
+          isGroupMsg: true,
+        },
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.status).toBe("ok");
+
+    // Reacted with eyes emoji on the group message
+    expect(vi.mocked(reactToMessage)).toHaveBeenCalledWith(
+      "false_120363xxxxx@g.us_AAAAAA",
+      "👀",
+    );
+
+    // DM sent to sender's personal chat, NOT the group
+    expect(vi.mocked(sendMessage)).toHaveBeenCalledWith(
+      phone,
+      expect.stringContaining("Mia"),
+    );
+  });
+
+  it("ignores group message from unknown sender without error", async () => {
+    const { parseAttendanceMessage, sendMessage, reactToMessage } = await import(
+      "../../services/whatsapp.js"
+    );
+
+    const res = await fetch(`${baseUrl}/api/whatsapp/webhook`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        event: "message",
+        payload: {
+          id: "false_120363xxxxx@g.us_BBBBBB",
+          from: "120363xxxxx@g.us",
+          author: "99999999999@c.us",
+          body: "random message",
+          hasMedia: false,
+          isGroupMsg: true,
+        },
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.status).toBe("unknown_sender");
+
+    expect(vi.mocked(parseAttendanceMessage)).not.toHaveBeenCalled();
+    expect(vi.mocked(sendMessage)).not.toHaveBeenCalled();
+    expect(vi.mocked(reactToMessage)).not.toHaveBeenCalled();
   });
 });

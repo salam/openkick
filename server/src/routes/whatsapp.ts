@@ -3,6 +3,7 @@ import { getDB } from "../database.js";
 import {
   parseAttendanceMessage,
   sendMessage,
+  reactToMessage,
 } from "../services/whatsapp.js";
 import { setAttendance } from "../services/attendance.js";
 import { transcribeAudio } from "../services/whisper.js";
@@ -12,9 +13,12 @@ export const whatsappRouter = Router();
 interface WAHAWebhookPayload {
   event: string;
   payload: {
+    id: string;
     from: string;
+    author?: string;
     body: string;
     hasMedia: boolean;
+    isGroupMsg?: boolean;
     media?: {
       data: string; // base64-encoded
       mimetype: string;
@@ -77,7 +81,15 @@ whatsappRouter.post(
       return;
     }
 
-    const phone = stripPhoneSuffix(body.payload.from);
+    const isGroup = body.payload.from.endsWith("@g.us") || body.payload.isGroupMsg === true;
+    const senderChatId = isGroup ? body.payload.author : body.payload.from;
+
+    if (!senderChatId) {
+      res.status(200).json({ status: "ignored" });
+      return;
+    }
+
+    const phone = senderChatId.replace(/@c\.us$/, "");
     const guardian = findGuardianByPhone(phone);
 
     if (!guardian) {
@@ -149,6 +161,13 @@ whatsappRouter.post(
         phone,
         `${playerNames} wurde für "${event.title}" ${statusText}.`,
       );
+
+      // If group message, react with eyes emoji on the original message
+      if (isGroup && body.payload.id) {
+        reactToMessage(body.payload.id, "👀").catch(() => {
+          // Best-effort reaction — don't fail the webhook
+        });
+      }
 
       res.status(200).json({ status: "ok" });
     } catch (error) {

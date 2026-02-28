@@ -4,11 +4,12 @@ import {
   setAttendance,
   getAttendanceForEvent,
 } from "../services/attendance.js";
+import { mutationLimiter } from "../middleware/rateLimiter.js";
 
 export const attendanceRouter = Router();
 
 // POST /api/attendance — set attendance for a player at an event
-attendanceRouter.post("/attendance", (req: Request, res: Response) => {
+attendanceRouter.post("/attendance", mutationLimiter, (req: Request, res: Response) => {
   const { eventId, playerId, status, source, reason } = req.body;
 
   if (!eventId || !playerId || !status || !source) {

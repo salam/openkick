@@ -7,6 +7,7 @@ import {
   generateJWT,
   generateAccessToken,
 } from "../auth.js";
+import { authLimiter } from "../middleware/rateLimiter.js";
 
 export const playersRouter = Router();
 
@@ -273,7 +274,7 @@ playersRouter.post("/guardians/:id/players", (req: Request, res: Response) => {
 });
 
 // POST /api/guardians/login — email + password login
-playersRouter.post("/guardians/login", async (req: Request, res: Response) => {
+playersRouter.post("/guardians/login", authLimiter, async (req: Request, res: Response) => {
   const { email, password } = req.body;
   if (!email || !password) {
     res.status(400).json({ error: "email and password are required" });

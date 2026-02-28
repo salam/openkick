@@ -45,6 +45,7 @@ describe("MCP Server", () => {
     expect(names).toContain("list_upcoming_events");
     expect(names).toContain("get_attendance_stats");
     expect(names).toContain("get_player_categories");
+    expect(names).toContain("get_trophy_cabinet");
     await client.close();
   });
 
@@ -161,6 +162,63 @@ describe("MCP Server", () => {
     const u14 = categories.find((c) => c.category === "U14");
     expect(u12?.count).toBe(2);
     expect(u14?.count).toBe(1);
+    await client.close();
+  });
+
+  it("get_trophy_cabinet returns trophy data", async () => {
+    const d = getDB();
+    d.run(
+      "INSERT INTO events (id, type, title, date) VALUES (1, 'tournament', 'Summer Cup', '2026-06-15')"
+    );
+    d.run(
+      `INSERT INTO tournament_results (eventId, placement, totalTeams, summary, achievements)
+       VALUES (1, 2, 12, 'Well played', '[{"type":"fair_play","label":"Fair Play"}]')`
+    );
+
+    const { client } = await createClient();
+    const result = await client.callTool({
+      name: "get_trophy_cabinet",
+      arguments: {},
+    });
+    const entries = parseToolResult(result) as Array<Record<string, unknown>>;
+    expect(entries.length).toBe(1);
+    expect(entries[0].eventTitle).toBe("Summer Cup");
+    expect(entries[0].placement).toBe(2);
+    expect(entries[0].totalTeams).toBe(12);
+    expect(entries[0].achievements).toEqual([
+      { type: "fair_play", label: "Fair Play" },
+    ]);
+    await client.close();
+  });
+
+  it("get_trophy_cabinet respects limit", async () => {
+    const d = getDB();
+    d.run(
+      "INSERT INTO events (id, type, title, date) VALUES (1, 'tournament', 'Cup A', '2026-01-01')"
+    );
+    d.run(
+      "INSERT INTO events (id, type, title, date) VALUES (2, 'tournament', 'Cup B', '2026-02-01')"
+    );
+    d.run(
+      "INSERT INTO events (id, type, title, date) VALUES (3, 'tournament', 'Cup C', '2026-03-01')"
+    );
+    d.run(
+      "INSERT INTO tournament_results (eventId, placement, totalTeams, achievements) VALUES (1, 1, 8, '[]')"
+    );
+    d.run(
+      "INSERT INTO tournament_results (eventId, placement, totalTeams, achievements) VALUES (2, 3, 10, '[]')"
+    );
+    d.run(
+      "INSERT INTO tournament_results (eventId, placement, totalTeams, achievements) VALUES (3, 2, 6, '[]')"
+    );
+
+    const { client } = await createClient();
+    const result = await client.callTool({
+      name: "get_trophy_cabinet",
+      arguments: { limit: 2 },
+    });
+    const entries = parseToolResult(result) as Array<Record<string, unknown>>;
+    expect(entries.length).toBe(2);
     await client.close();
   });
 });

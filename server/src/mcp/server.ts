@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { getDB } from "../database.js";
+import { getTrophyCabinet } from "../services/tournament-results.js";
 
 function getSetting(key: string, fallback: string): string {
   const db = getDB();
@@ -124,6 +125,25 @@ export function createMcpServer() {
       return {
         content: [
           { type: "text" as const, text: JSON.stringify(categories, null, 2) },
+        ],
+      };
+    }
+  );
+
+  server.tool(
+    "get_trophy_cabinet",
+    "Get the club's trophy cabinet with placements and achievements",
+    {
+      limit: z
+        .number()
+        .optional()
+        .describe("Max entries to return (default 50)"),
+    },
+    async ({ limit }) => {
+      const entries = getTrophyCabinet(limit ?? 50);
+      return {
+        content: [
+          { type: "text" as const, text: JSON.stringify(entries, null, 2) },
         ],
       };
     }

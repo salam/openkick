@@ -24,6 +24,8 @@ import { feedsRouter, wellKnownRouter } from "./routes/feeds.js";
 import { mcpRouter } from "./mcp/index.js";
 import { securityAuditRouter } from "./routes/security-audit.js";
 import { setupWahaRouter } from "./routes/setup-waha.js";
+import { onboardingRouter } from "./routes/onboarding.js";
+import { runHolidaySync, startHolidaySyncScheduler } from "./services/holiday-scheduler.js";
 
 const app = express();
 
@@ -54,6 +56,7 @@ app.use("/api", teamsRouter);
 app.use(wellKnownRouter);
 app.use("/api", feedsRouter);
 app.use("/api", securityAuditRouter);
+app.use("/api", onboardingRouter);
 app.use("/api/setup-waha", setupWahaRouter);
 app.use("/mcp", mcpRouter);
 
@@ -78,6 +81,10 @@ async function main() {
   app.post("/api/guardians/login", verifyCaptchaMiddleware(captchaProvider));
   app.post("/api/attendance", verifyCaptchaMiddleware(captchaProvider));
   app.use("/api", captchaRouter(captchaProvider));
+
+  // Run initial holiday sync and start daily scheduler
+  runHolidaySync();
+  startHolidaySyncScheduler();
 
   app.listen(PORT, () => {
     console.log(`Server listening on port ${PORT}`);

@@ -35,6 +35,7 @@ import { publicTournamentsRouter } from "./routes/public-tournaments.js";
 import { gameHistoryRouter } from "./routes/game-history.routes.js";
 import { createRsvpRouter } from "./routes/rsvp.js";
 import { securityTxtRouter } from "./routes/security-txt.js";
+import { htmlInjector } from "./middleware/html-injector.js";
 
 const app = express();
 
@@ -45,6 +46,7 @@ app.use(express.raw({ type: "application/pdf", limit: "10mb" }));
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 app.use(securityTxtRouter);
+app.use(htmlInjector);
 app.use(express.static(path.resolve(__dirname, "../../public")));
 
 app.use("/", llmsRouter);

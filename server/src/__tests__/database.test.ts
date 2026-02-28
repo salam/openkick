@@ -70,8 +70,18 @@ describe("initDB", () => {
   it("all tables have correct columns", async () => {
     db = await initDB();
 
-    const columns = (table: string) => {
-      const info = db!.exec(`PRAGMA table_info(${table})`);
+    const KNOWN_TABLES = [
+      "players", "guardians", "guardian_players", "events",
+      "attendance", "teams", "team_players", "vacation_periods",
+      "training_schedule", "settings", "broadcasts",
+    ] as const;
+
+    const columns = (table: typeof KNOWN_TABLES[number]) => {
+      if (!KNOWN_TABLES.includes(table)) {
+        throw new Error(`Unknown table: ${table}`);
+      }
+      // Use pragma_table_info() table-valued function for safe parameterised access
+      const info = db!.exec("SELECT * FROM pragma_table_info(?)", [table]);
       return info[0].values.map((row) => row[1] as string);
     };
 
@@ -84,7 +94,8 @@ describe("initDB", () => {
     expect(columns("guardians")).toEqual(
       expect.arrayContaining([
         "id", "phone", "name", "email", "passwordHash", "role",
-        "language", "consentGiven", "accessToken", "createdAt",
+        "language", "consentGiven", "accessToken", "resetToken",
+        "resetTokenExpiry", "createdAt",
       ])
     );
 

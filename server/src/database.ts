@@ -25,6 +25,8 @@ CREATE TABLE IF NOT EXISTS guardians (
   language TEXT NOT NULL DEFAULT 'de',
   consentGiven INTEGER NOT NULL DEFAULT 0,
   accessToken TEXT,
+  resetToken TEXT,
+  resetTokenExpiry TEXT,
   createdAt TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -137,6 +139,15 @@ export async function initDB(dbPath?: string): Promise<Database> {
 
   // Create all tables
   db.run(SCHEMA);
+
+  // Migrate existing databases: add columns if absent
+  const cols = db.exec("PRAGMA table_info(guardians)")[0]?.values.map(r => r[1]) ?? [];
+  if (!cols.includes('resetToken')) {
+    db.run("ALTER TABLE guardians ADD COLUMN resetToken TEXT");
+  }
+  if (!cols.includes('resetTokenExpiry')) {
+    db.run("ALTER TABLE guardians ADD COLUMN resetTokenExpiry TEXT");
+  }
 
   // Seed default settings (INSERT OR IGNORE to avoid duplicates)
   for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) {

@@ -152,7 +152,6 @@ CREATE TABLE IF NOT EXISTS tournament_results (
   createdAt TEXT NOT NULL DEFAULT (datetime('now')),
   updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
 );
-
 `;
 
 const DEFAULT_SETTINGS: Record<string, string> = {

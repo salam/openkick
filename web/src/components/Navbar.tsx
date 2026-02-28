@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { t } from '@/lib/i18n';
+import LanguageToggle from '@/components/LanguageToggle';
 
 const navLinks = [
   { href: '/dashboard/', label: 'dashboard' },
@@ -55,13 +56,16 @@ export default function Navbar() {
             })}
           </div>
 
-          {/* Desktop logout */}
-          <button
-            onClick={handleLogout}
-            className="hidden rounded-md px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900 md:block"
-          >
-            {t('logout')}
-          </button>
+          {/* Desktop actions */}
+          <div className="hidden items-center gap-1 md:flex">
+            <LanguageToggle />
+            <button
+              onClick={handleLogout}
+              className="rounded-md px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
+            >
+              {t('logout')}
+            </button>
+          </div>
 
           {/* Mobile hamburger */}
           <button
@@ -101,6 +105,9 @@ export default function Navbar() {
                 </Link>
               );
             })}
+            <div className="border-t border-gray-200 pt-2 mt-2">
+              <LanguageToggle />
+            </div>
             <button
               onClick={handleLogout}
               className="block w-full rounded-md px-3 py-2 text-left text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900"

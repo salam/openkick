@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
+import { t, getLanguage } from '@/lib/i18n';
 
 interface TrophyCabinetEntry {
   id: number;
@@ -27,7 +28,7 @@ function placementLabel(placement: number, totalTeams: number | null): string {
   else if (placement === 2) suffix = 'nd';
   else if (placement === 3) suffix = 'rd';
   const base = `${placement}${suffix}`;
-  return totalTeams ? `${base} out of ${totalTeams}` : base;
+  return totalTeams ? `${base} ${t('out_of')} ${totalTeams}` : base;
 }
 
 function placementBadgeClass(placement: number): string {
@@ -82,6 +83,12 @@ export default function TrophyCabinetPage() {
   const [entries, setEntries] = useState<TrophyCabinetEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [, setLang] = useState(() => getLanguage());
+  useEffect(() => {
+    function onLangChange() { setLang(getLanguage()); }
+    window.addEventListener('languagechange', onLangChange);
+    return () => window.removeEventListener('languagechange', onLangChange);
+  }, []);
 
   useEffect(() => {
     apiFetch<TrophyCabinetEntry[]>('/api/trophy-cabinet')
@@ -89,7 +96,7 @@ export default function TrophyCabinetPage() {
         setEntries(data);
       })
       .catch((err) => {
-        setError(err instanceof Error ? err.message : 'Failed to load trophy cabinet');
+        setError(err instanceof Error ? err.message : t('failed_load_trophies'));
       })
       .finally(() => {
         setLoading(false);
@@ -98,14 +105,14 @@ export default function TrophyCabinetPage() {
 
   return (
     <main className="mx-auto max-w-3xl space-y-6 px-4 py-8 sm:px-6">
-      <h1 className="text-2xl font-bold text-gray-900">Trophy Cabinet</h1>
+      <h1 className="text-2xl font-bold text-gray-900">{t('trophy_cabinet')}</h1>
 
       {loading && <LoadingSkeleton />}
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
       {!loading && !error && entries.length === 0 && (
-        <p className="text-sm text-gray-500">No tournament results recorded yet.</p>
+        <p className="text-sm text-gray-500">{t('no_trophies')}</p>
       )}
 
       {!loading && !error && entries.length > 0 && (
@@ -159,7 +166,7 @@ export default function TrophyCabinetPage() {
                   rel="noopener noreferrer"
                   className="inline-flex items-center text-sm text-emerald-600 hover:text-emerald-800"
                 >
-                  View results &rarr;
+                  {t('view_results')}
                 </a>
               )}
             </div>

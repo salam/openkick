@@ -51,6 +51,32 @@ export interface ParsedAttendance {
   reason: string | null;
 }
 
+export interface ParsedIntent {
+  intent: "attending" | "absent" | "unknown";
+  playerName: string | null;
+  reason: string | null;
+}
+
+export async function parseIntent(text: string): Promise<ParsedIntent> {
+  const response = await chatCompletion([
+    {
+      role: "system",
+      content: `You are a football team attendance bot. Classify the parent's message.
+Return JSON only: { "intent": "attending"|"absent"|"unknown", "playerName": string|null, "reason": string|null }
+- "attending": the parent confirms their child will attend
+- "absent": the parent reports their child cannot attend
+- "unknown": the message is unrelated to attendance
+Extract the child's name if mentioned. Extract the reason if given.`,
+    },
+    { role: "user", content: text },
+  ]);
+  try {
+    return JSON.parse(response.content);
+  } catch {
+    return { intent: "unknown", playerName: null, reason: null };
+  }
+}
+
 export async function parseAttendanceMessage(
   text: string,
 ): Promise<ParsedAttendance> {

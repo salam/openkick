@@ -129,4 +129,64 @@ describe("whatsapp service", () => {
       expect(body.session).toBe("default");
     });
   });
+
+  describe("parseIntent", () => {
+    it("classifies 'Luca kommt' as attending with playerName", async () => {
+      const { chatCompletion } = await import("../llm.js");
+      const chatCompletionMock = vi.mocked(chatCompletion);
+      chatCompletionMock.mockResolvedValueOnce({
+        content: JSON.stringify({ intent: "attending", playerName: "Luca", reason: null }),
+        model: "gpt-4o",
+      });
+
+      const { parseIntent } = await import("../whatsapp.js");
+      const result = await parseIntent("Luca kommt");
+
+      expect(result.intent).toBe("attending");
+      expect(result.playerName).toBe("Luca");
+    });
+
+    it("classifies 'nicht dabei' as absent without playerName", async () => {
+      const { chatCompletion } = await import("../llm.js");
+      const chatCompletionMock = vi.mocked(chatCompletion);
+      chatCompletionMock.mockResolvedValueOnce({
+        content: JSON.stringify({ intent: "absent", playerName: null, reason: null }),
+        model: "gpt-4o",
+      });
+
+      const { parseIntent } = await import("../whatsapp.js");
+      const result = await parseIntent("nicht dabei");
+
+      expect(result.intent).toBe("absent");
+      expect(result.playerName).toBeNull();
+    });
+
+    it("classifies unrelated message as unknown", async () => {
+      const { chatCompletion } = await import("../llm.js");
+      const chatCompletionMock = vi.mocked(chatCompletion);
+      chatCompletionMock.mockResolvedValueOnce({
+        content: JSON.stringify({ intent: "unknown", playerName: null, reason: null }),
+        model: "gpt-4o",
+      });
+
+      const { parseIntent } = await import("../whatsapp.js");
+      const result = await parseIntent("Was gibt es zum Mittagessen?");
+
+      expect(result.intent).toBe("unknown");
+    });
+
+    it("returns unknown on invalid JSON response", async () => {
+      const { chatCompletion } = await import("../llm.js");
+      const chatCompletionMock = vi.mocked(chatCompletion);
+      chatCompletionMock.mockResolvedValueOnce({
+        content: "not valid json",
+        model: "gpt-4o",
+      });
+
+      const { parseIntent } = await import("../whatsapp.js");
+      const result = await parseIntent("something");
+
+      expect(result.intent).toBe("unknown");
+    });
+  });
 });

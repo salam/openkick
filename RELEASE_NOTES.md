@@ -1,5 +1,15 @@
 # OpenKick Release Notes
 
+## Version 1.8 (Sat, Mar 1 2026)
+
+* Administrative checklists with semester-based auto-reset (Feb 1 / Aug 1)
+* Per-training checklists auto-created when a training event is created
+* Per-tournament checklists auto-created when a tournament event is created
+* Classification-based filtering for relevant items (Sportamt Zurich, SFV, FVRZ)
+* Custom checklist items preserved across semester resets
+* Per-item completion tracking (who completed it and when)
+* Classification management API for admins
+
 ## Version 1.7.1 (Mar 1, 2026, 00:35)
 
 * Trophy data now appears in all feed outputs (RSS, Atom, ICS, ActivityPub) — placement, team count, and achievements are shown alongside tournament events

@@ -163,14 +163,17 @@
 - [ ] Public homepage club statistics (cached)
 - [ ] CSV/PDF export for club board reporting
 
-## Remaining — Administrative Checklists (PRD 4.5.10, blueprint: CHECKLISTS.md)
+## Administrative Checklists (PRD 4.5.10, blueprint: CHECKLISTS.md)
 
-- [ ] Admin checklists (semester-based, auto-reset Feb 1 / Aug 1)
-- [ ] Per-training checklists (auto-created per training event)
-- [ ] Per-tournament checklists (auto-created per tournament)
-- [ ] Checklist templates with classification filtering (Sportamt, SFV, FVRZ)
-- [ ] Custom checklist items preserved across resets
-- [ ] Per-item completion tracking with user/timestamp
+- [x] Admin checklists (semester-based, auto-reset Feb 1 / Aug 1)
+- [x] Per-training checklists (auto-created per training event)
+- [x] Per-tournament checklists (auto-created per tournament)
+- [x] Checklist templates with classification filtering (Sportamt, SFV, FVRZ)
+- [x] Custom checklist items preserved across resets
+- [x] Per-item completion tracking with user/timestamp
+- [x] Classification management endpoints (GET/PUT)
+- [ ] Reminder/n8n integration (future)
+- [ ] Frontend UI (future)
 
 ## Remaining — Surveys & Questionnaires (PRD 4.5.11, blueprint: SURVEYS.md)
 

@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 let _db: Database | null = null;
+let _dbPath: string | undefined;
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS players (
@@ -163,6 +164,18 @@ export async function initDB(dbPath?: string): Promise<Database> {
   // Seed default settings (INSERT OR IGNORE to avoid duplicates)
   for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) {
     db.run("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", [key, value]);
+  }
+
+  _dbPath = dbPath;
+
+  // Auto-persist: wrap db.run so every mutation is saved to disk
+  if (dbPath) {
+    const originalRun = db.run.bind(db);
+    db.run = (...args: Parameters<typeof db.run>) => {
+      const result = originalRun(...args);
+      saveDB(db, dbPath);
+      return result;
+    };
   }
 
   _db = db;

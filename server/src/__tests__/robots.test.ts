@@ -1,52 +1,48 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import http from "node:http";
-import app from "../index.js";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import express from "express";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { createServer, type Server } from "node:http";
+import type { AddressInfo } from "node:net";
 
-let server: http.Server;
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+let server: Server;
 let baseUrl: string;
 
-beforeAll(async () => {
-  await new Promise<void>((resolve) => {
-    server = app.listen(0, () => {
-      const addr = server.address();
-      if (addr && typeof addr === "object") {
-        baseUrl = `http://127.0.0.1:${addr.port}`;
-      }
-      resolve();
-    });
-  });
-});
+async function createTestApp() {
+  const app = express();
+  app.use(express.static(path.resolve(__dirname, "../../../public")));
+  server = createServer(app);
+  await new Promise<void>((resolve) => server.listen(0, resolve));
+  const { port } = server.address() as AddressInfo;
+  baseUrl = `http://localhost:${port}`;
+}
 
-afterAll(async () => {
-  await new Promise<void>((resolve) => {
-    server.close(() => resolve());
-  });
-});
-
-function get(path: string): Promise<{ status: number; body: string }> {
-  return new Promise((resolve, reject) => {
-    http.get(`${baseUrl}${path}`, (res) => {
-      let data = "";
-      res.on("data", (chunk) => (data += chunk));
-      res.on("end", () => resolve({ status: res.statusCode ?? 0, body: data }));
-      res.on("error", reject);
-    });
-  });
+async function teardown() {
+  await new Promise<void>((resolve, reject) =>
+    server.close((err) => (err ? reject(err) : resolve()))
+  );
 }
 
 describe("GET /robots.txt", () => {
+  beforeEach(async () => { await createTestApp(); });
+  afterEach(async () => { await teardown(); });
+
   it("returns 200", async () => {
-    const res = await get("/robots.txt");
+    const res = await fetch(`${baseUrl}/robots.txt`);
     expect(res.status).toBe(200);
   });
 
   it("contains User-agent: *", async () => {
-    const res = await get("/robots.txt");
-    expect(res.body).toContain("User-agent: *");
+    const res = await fetch(`${baseUrl}/robots.txt`);
+    const text = await res.text();
+    expect(text).toContain("User-agent: *");
   });
 
   it("contains Disallow: /api/settings", async () => {
-    const res = await get("/robots.txt");
-    expect(res.body).toContain("Disallow: /api/settings");
+    const res = await fetch(`${baseUrl}/robots.txt`);
+    const text = await res.text();
+    expect(text).toContain("Disallow: /api/settings");
   });
 });

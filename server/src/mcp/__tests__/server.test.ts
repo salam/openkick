@@ -53,7 +53,7 @@ describe("MCP Server", () => {
     const result = await client.callTool({ name: "get_club_info", arguments: {} });
     const data = parseToolResult(result) as Record<string, unknown>;
     expect(data.club_name).toBe("My Club");
-    expect(data.club_description).toContain("OpenKick");
+    expect(data.club_description).toBe("A youth football club.");
     expect(data.languages).toEqual(["de", "en", "fr"]);
     await client.close();
   });

@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import AuthGuard from '@/components/AuthGuard';
 import { apiFetch } from '@/lib/api';
 
 interface SettingRecord {
@@ -15,11 +14,49 @@ const LLM_PROVIDERS = [
   { value: 'euria', label: 'Infomaniak Euria' },
 ];
 
+interface ModelOption {
+  id: string;
+  label: string;
+  pricing: string;
+  tier: 'latest' | 'budget' | 'more';
+}
+
+const MODEL_SUGGESTIONS: Record<string, ModelOption[]> = {
+  openai: [
+    { id: 'gpt-4o', label: 'GPT-4o', pricing: '$2.50 / $10', tier: 'latest' },
+    { id: 'gpt-4o-mini', label: 'GPT-4o Mini', pricing: '$0.15 / $0.60', tier: 'budget' },
+    { id: 'gpt-5', label: 'GPT-5', pricing: '$1.25 / $10', tier: 'more' },
+    { id: 'gpt-5-mini', label: 'GPT-5 Mini', pricing: '$0.30 / $1.10', tier: 'more' },
+    { id: 'o3-mini', label: 'o3-mini', pricing: '$1.10 / $4.40', tier: 'more' },
+  ],
+  anthropic: [
+    { id: 'claude-sonnet-4-6-20260220', label: 'Claude Sonnet 4.6', pricing: '$3 / $15', tier: 'latest' },
+    { id: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5', pricing: '$1 / $5', tier: 'budget' },
+    { id: 'claude-opus-4-6-20260220', label: 'Claude Opus 4.6', pricing: '$15 / $75', tier: 'more' },
+    { id: 'claude-sonnet-4-5-20250514', label: 'Claude Sonnet 4.5', pricing: '$3 / $15', tier: 'more' },
+  ],
+  euria: [
+    { id: 'euria', label: 'Euria', pricing: 'Included', tier: 'latest' },
+  ],
+};
+
+const PROVIDER_DASHBOARD_LINKS: Record<string, { url: string; label: string }> = {
+  openai: { url: 'https://platform.openai.com/api-keys', label: 'OpenAI Dashboard' },
+  anthropic: { url: 'https://console.anthropic.com/settings/keys', label: 'Anthropic Console' },
+  euria: { url: 'https://manager.infomaniak.com', label: 'Infomaniak Manager' },
+};
+
 const BOT_LANGUAGES = [
   { value: 'de', label: 'Deutsch' },
   { value: 'fr', label: 'Francais' },
   { value: 'en', label: 'English' },
 ];
+
+const BOT_PREVIEW_MESSAGES: Record<string, { userMsg: string; botMsg: string }> = {
+  de: { userMsg: 'Frida kommt diese Woche', botMsg: '✔︎ Frida, Mi 26. Feb, 14:00' },
+  fr: { userMsg: 'Frida vient cette semaine', botMsg: '✔︎ Frida, mer 26 fév, 14:00' },
+  en: { userMsg: 'Frida is coming this week', botMsg: '✔︎ Frida, Wed Feb 26, 2:00 PM' },
+};
 
 const CAPTCHA_PROVIDERS = [
   { value: 'altcha', label: 'Altcha (Proof-of-Work)' },
@@ -28,6 +65,10 @@ const CAPTCHA_PROVIDERS = [
 ];
 
 const SETTING_KEYS = [
+  'club_name',
+  'club_description',
+  'contact_info',
+  'club_logo',
   'llm_provider',
   'llm_model',
   'llm_api_key',
@@ -67,6 +108,10 @@ export default function SettingsPage() {
   const [smtpTestTo, setSmtpTestTo] = useState('');
   const [testingSmtp, setTestingSmtp] = useState(false);
   const [smtpTestResult, setSmtpTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [showMoreModels, setShowMoreModels] = useState(false);
+  const [useCustomModel, setUseCustomModel] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [logoMsg, setLogoMsg] = useState('');
 
   const loadSettings = useCallback(async () => {
     try {
@@ -225,6 +270,40 @@ export default function SettingsPage() {
     }
   }
 
+  async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingLogo(true);
+    setLogoMsg('');
+    try {
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => {
+          const result = reader.result as string;
+          resolve(result.split(',')[1]);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const res = await apiFetch<{ key: string; value: string }>(
+        '/api/settings/upload-logo',
+        {
+          method: 'POST',
+          body: JSON.stringify({ data: base64, filename: file.name }),
+        },
+      );
+      update('club_logo', res.value);
+      setOriginal((prev) => ({ ...prev, club_logo: res.value }));
+      setLogoMsg('Logo uploaded successfully.');
+    } catch {
+      setLogoMsg('Failed to upload logo.');
+    } finally {
+      setUploadingLogo(false);
+      e.target.value = '';
+      setTimeout(() => setLogoMsg(''), 3000);
+    }
+  }
+
   const hasChanges = SETTING_KEYS.some((k) => settings[k] !== original[k]);
 
   const cardClass = 'rounded-lg border border-gray-200 bg-white p-6';
@@ -235,7 +314,6 @@ export default function SettingsPage() {
     'rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50';
 
   return (
-    <AuthGuard>
       <div className="mx-auto max-w-3xl">
         <h1 className="mb-6 text-2xl font-bold text-gray-900">Settings</h1>
 
@@ -245,6 +323,91 @@ export default function SettingsPage() {
           </div>
         ) : (
           <div className="space-y-6">
+            {/* Club Profile */}
+            <div className={cardClass}>
+              <h2 className="mb-4 text-lg font-semibold text-gray-900">
+                Club Profile
+              </h2>
+              <p className="mb-3 text-sm text-gray-500">
+                Public information shown on your club page, llms.txt, and feeds.
+              </p>
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="club_name" className={labelClass}>
+                    Club Name
+                  </label>
+                  <input
+                    id="club_name"
+                    type="text"
+                    value={settings.club_name || ''}
+                    onChange={(e) => update('club_name', e.target.value)}
+                    placeholder="FC My Club"
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="club_description" className={labelClass}>
+                    Description
+                  </label>
+                  <textarea
+                    id="club_description"
+                    value={settings.club_description || ''}
+                    onChange={(e) => update('club_description', e.target.value)}
+                    placeholder="A short description of your club..."
+                    rows={3}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="contact_info" className={labelClass}>
+                    Contact Info
+                  </label>
+                  <input
+                    id="contact_info"
+                    type="text"
+                    value={settings.contact_info || ''}
+                    onChange={(e) => update('contact_info', e.target.value)}
+                    placeholder="info@yourclub.ch or a URL"
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Club Logo</label>
+                  <div className="flex items-center gap-4">
+                    {settings.club_logo && (
+                      <img
+                        src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${settings.club_logo}`}
+                        alt="Club logo"
+                        className="h-16 w-16 rounded-lg border border-gray-200 object-contain bg-white"
+                      />
+                    )}
+                    <div>
+                      <input
+                        id="upload_logo"
+                        type="file"
+                        accept=".png,.jpg,.jpeg,.gif,.svg,.webp"
+                        onChange={handleLogoUpload}
+                        disabled={uploadingLogo}
+                        className="text-sm text-gray-600 file:mr-3 file:rounded-md file:border file:border-gray-300 file:bg-white file:px-4 file:py-2 file:text-sm file:font-medium file:text-gray-700 file:shadow-sm hover:file:bg-gray-50"
+                      />
+                      <p className="mt-1 text-xs text-gray-400">
+                        PNG, JPG, SVG, or WebP. Max 2 MB.
+                      </p>
+                    </div>
+                  </div>
+                  {logoMsg && (
+                    <p
+                      className={`mt-2 text-sm font-medium ${
+                        logoMsg.includes('Failed') ? 'text-red-600' : 'text-emerald-600'
+                      }`}
+                    >
+                      {logoMsg}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
             {/* LLM Configuration */}
             <div className={cardClass}>
               <h2 className="mb-4 text-lg font-semibold text-gray-900">
@@ -274,14 +437,139 @@ export default function SettingsPage() {
                   <label htmlFor="llm_model" className={labelClass}>
                     Model
                   </label>
-                  <input
-                    id="llm_model"
-                    type="text"
-                    value={settings.llm_model || ''}
-                    onChange={(e) => update('llm_model', e.target.value)}
-                    placeholder="e.g. gpt-4o-mini, claude-sonnet-4-20250514, qwen3"
-                    className={inputClass}
-                  />
+                  {(() => {
+                    const provider = settings.llm_provider || '';
+                    const models = MODEL_SUGGESTIONS[provider] || [];
+                    const primaryModels = models.filter((m) => m.tier !== 'more');
+                    const moreModels = models.filter((m) => m.tier === 'more');
+                    const currentValue = settings.llm_model || '';
+                    const isKnownModel = models.some((m) => m.id === currentValue);
+
+                    if (!provider || useCustomModel) {
+                      return (
+                        <div className="space-y-1">
+                          <input
+                            id="llm_model"
+                            type="text"
+                            value={currentValue}
+                            onChange={(e) => update('llm_model', e.target.value)}
+                            placeholder="e.g. gpt-4o-mini, claude-sonnet-4-6-20260220"
+                            className={inputClass}
+                          />
+                          {provider && (
+                            <button
+                              type="button"
+                              onClick={() => setUseCustomModel(false)}
+                              className="text-xs text-blue-600 hover:text-blue-800"
+                            >
+                              ← Back to suggested models
+                            </button>
+                          )}
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="space-y-2">
+                        <div className="space-y-1">
+                          {primaryModels.map((m) => (
+                            <label
+                              key={m.id}
+                              className={`flex items-center justify-between rounded-md border px-3 py-2 cursor-pointer transition-colors ${
+                                currentValue === m.id
+                                  ? 'border-blue-500 bg-blue-50'
+                                  : 'border-gray-200 hover:border-gray-300 bg-white'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="radio"
+                                  name="llm_model"
+                                  value={m.id}
+                                  checked={currentValue === m.id}
+                                  onChange={() => update('llm_model', m.id)}
+                                  className="text-blue-600"
+                                />
+                                <span className="text-sm font-medium text-gray-900">
+                                  {m.label}
+                                </span>
+                                {m.tier === 'latest' && (
+                                  <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 uppercase">
+                                    Latest
+                                  </span>
+                                )}
+                                {m.tier === 'budget' && (
+                                  <span className="rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold text-green-700 uppercase">
+                                    Budget
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-xs text-gray-500">
+                                {m.pricing} /M tokens
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+
+                        {moreModels.length > 0 && (
+                          <div>
+                            <button
+                              type="button"
+                              onClick={() => setShowMoreModels(!showMoreModels)}
+                              className="text-xs text-gray-500 hover:text-gray-700"
+                            >
+                              {showMoreModels ? '▾ Hide more models' : '▸ More models...'}
+                            </button>
+                            {showMoreModels && (
+                              <div className="mt-1 space-y-1">
+                                {moreModels.map((m) => (
+                                  <label
+                                    key={m.id}
+                                    className={`flex items-center justify-between rounded-md border px-3 py-2 cursor-pointer transition-colors ${
+                                      currentValue === m.id
+                                        ? 'border-blue-500 bg-blue-50'
+                                        : 'border-gray-200 hover:border-gray-300 bg-white'
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <input
+                                        type="radio"
+                                        name="llm_model"
+                                        value={m.id}
+                                        checked={currentValue === m.id}
+                                        onChange={() => update('llm_model', m.id)}
+                                        className="text-blue-600"
+                                      />
+                                      <span className="text-sm text-gray-700">
+                                        {m.label}
+                                      </span>
+                                    </div>
+                                    <span className="text-xs text-gray-500">
+                                      {m.pricing} /M tokens
+                                    </span>
+                                  </label>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => setUseCustomModel(true)}
+                          className="text-xs text-gray-400 hover:text-gray-600"
+                        >
+                          Enter custom model ID...
+                        </button>
+
+                        {!isKnownModel && currentValue && (
+                          <p className="text-xs text-amber-600">
+                            Custom model: {currentValue}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 <div>
@@ -296,6 +584,21 @@ export default function SettingsPage() {
                     placeholder="Enter API key"
                     className={inputClass}
                   />
+                  {settings.llm_provider && PROVIDER_DASHBOARD_LINKS[settings.llm_provider] && (
+                    <div className="mt-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2">
+                      <p className="text-xs text-blue-800">
+                        Get your API key from the{' '}
+                        <a
+                          href={PROVIDER_DASHBOARD_LINKS[settings.llm_provider].url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-medium underline hover:text-blue-900"
+                        >
+                          {PROVIDER_DASHBOARD_LINKS[settings.llm_provider].label} →
+                        </a>
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {settings.llm_provider === 'euria' && (
@@ -361,6 +664,40 @@ export default function SettingsPage() {
                   </label>
                 ))}
               </div>
+
+              {/* WhatsApp-style preview */}
+              {settings.bot_language && BOT_PREVIEW_MESSAGES[settings.bot_language] && (
+                <div className="mt-4">
+                  <p className="mb-2 text-xs font-medium text-gray-400 uppercase tracking-wide">
+                    Preview
+                  </p>
+                  <div className="mx-auto max-w-xs rounded-lg bg-[#e5ddd5] p-3 space-y-2"
+                       style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'200\' height=\'200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cdefs%3E%3Cpattern id=\'p\' width=\'40\' height=\'40\' patternUnits=\'userSpaceOnUse\'%3E%3Cpath d=\'M0 20h40M20 0v40\' fill=\'none\' stroke=\'%23d4ccc4\' stroke-width=\'.3\'/%3E%3C/pattern%3E%3C/defs%3E%3Crect fill=\'url(%23p)\' width=\'200\' height=\'200\'/%3E%3C/svg%3E")' }}>
+                    {/* User message (right-aligned, green bubble) */}
+                    <div className="flex justify-end">
+                      <div className="max-w-[80%] rounded-lg rounded-tr-none bg-[#dcf8c6] px-3 py-1.5 shadow-sm">
+                        <p className="text-sm text-gray-900">
+                          {BOT_PREVIEW_MESSAGES[settings.bot_language].userMsg}
+                        </p>
+                        <p className="mt-0.5 text-right text-[10px] text-gray-500">
+                          09:14
+                        </p>
+                      </div>
+                    </div>
+                    {/* Bot response (left-aligned, white bubble) */}
+                    <div className="flex justify-start">
+                      <div className="max-w-[80%] rounded-lg rounded-tl-none bg-white px-3 py-1.5 shadow-sm">
+                        <p className="text-sm text-gray-900">
+                          {BOT_PREVIEW_MESSAGES[settings.bot_language].botMsg}
+                        </p>
+                        <p className="mt-0.5 text-right text-[10px] text-gray-500">
+                          09:14
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* WAHA Configuration */}
@@ -703,6 +1040,5 @@ export default function SettingsPage() {
           </div>
         )}
       </div>
-    </AuthGuard>
   );
 }

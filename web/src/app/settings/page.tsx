@@ -21,6 +21,12 @@ const BOT_LANGUAGES = [
   { value: 'en', label: 'English' },
 ];
 
+const CAPTCHA_PROVIDERS = [
+  { value: 'altcha', label: 'Altcha (Proof-of-Work)' },
+  { value: 'hcaptcha', label: 'hCaptcha' },
+  { value: 'friendly', label: 'Friendly Captcha' },
+];
+
 const SETTING_KEYS = [
   'llm_provider',
   'llm_model',
@@ -33,6 +39,7 @@ const SETTING_KEYS = [
   'smtp_user',
   'smtp_pass',
   'smtp_from',
+  'captcha_provider',
 ] as const;
 
 type SettingsMap = Record<string, string>;
@@ -544,6 +551,81 @@ export default function SettingsPage() {
                   >
                     {holidayMsg}
                   </p>
+                )}
+              </div>
+            </div>
+
+            {/* Bot Protection (Captcha) */}
+            <div className={cardClass}>
+              <h2 className="mb-4 text-lg font-semibold text-gray-900">
+                Bot Protection
+              </h2>
+              <p className="mb-4 text-sm text-gray-500">
+                Protects login and attendance forms from automated bots. The captcha runs when a parent responds to an event or a coach logs in.
+              </p>
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="captcha_provider" className={labelClass}>
+                    Captcha Provider
+                  </label>
+                  <select
+                    id="captcha_provider"
+                    value={settings.captcha_provider || 'altcha'}
+                    onChange={(e) => update('captcha_provider', e.target.value)}
+                    className={inputClass}
+                  >
+                    {CAPTCHA_PROVIDERS.map((p) => (
+                      <option key={p.value} value={p.value}>
+                        {p.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Provider info boxes */}
+                {(settings.captcha_provider || 'altcha') === 'altcha' && (
+                  <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-gray-700">
+                    <p className="mb-2 font-semibold text-emerald-800">Altcha (Proof-of-Work)</p>
+                    <ul className="list-inside list-disc space-y-1 text-gray-600">
+                      <li><strong>How it works:</strong> The user&apos;s browser solves a small math puzzle in the background. Invisible to users, no clicking or image selection required.</li>
+                      <li><strong>Privacy:</strong> Fully self-hosted. No data leaves your server. No cookies, no tracking. GDPR and WCAG 2.2 AA compliant.</li>
+                      <li><strong>Cost:</strong> Free and open-source. No external account or API key needed.</li>
+                      <li><strong>Strength:</strong> Good protection against simple bots. Determined attackers with significant compute power could brute-force the puzzle, but combined with rate limiting this is well mitigated.</li>
+                      <li><strong>Best for:</strong> Clubs that want zero-cost, zero-config, privacy-first protection.</li>
+                    </ul>
+                  </div>
+                )}
+
+                {settings.captcha_provider === 'hcaptcha' && (
+                  <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-gray-700">
+                    <p className="mb-2 font-semibold text-blue-800">hCaptcha</p>
+                    <ul className="list-inside list-disc space-y-1 text-gray-600">
+                      <li><strong>How it works:</strong> Users sometimes see a visual challenge (select images of bicycles, etc.). Invisible mode available but may still trigger challenges for suspicious requests.</li>
+                      <li><strong>Privacy:</strong> More private than Google reCAPTCHA but still sends data to hCaptcha&apos;s servers. Sets cookies. GDPR compliant with their DPA.</li>
+                      <li><strong>Cost:</strong> Free tier available (up to 1M verifications/month). Requires creating an account at hcaptcha.com and adding your site key and secret key.</li>
+                      <li><strong>Strength:</strong> Stronger than proof-of-work. Uses machine learning to distinguish bots from humans. Harder to bypass programmatically.</li>
+                      <li><strong>Best for:</strong> Clubs facing persistent, sophisticated bot attacks where proof-of-work alone is insufficient.</li>
+                    </ul>
+                    <p className="mt-3 text-xs text-blue-600">
+                      Not yet implemented. Selecting this option saves the preference for when hCaptcha support is added.
+                    </p>
+                  </div>
+                )}
+
+                {settings.captcha_provider === 'friendly' && (
+                  <div className="rounded-lg border border-purple-200 bg-purple-50 p-4 text-sm text-gray-700">
+                    <p className="mb-2 font-semibold text-purple-800">Friendly Captcha</p>
+                    <ul className="list-inside list-disc space-y-1 text-gray-600">
+                      <li><strong>How it works:</strong> Similar to Altcha, uses proof-of-work in the browser. Completely invisible to users. No visual challenges ever.</li>
+                      <li><strong>Privacy:</strong> EU-based company, strong GDPR compliance. Can be self-hosted or use their cloud. No tracking cookies.</li>
+                      <li><strong>Cost:</strong> Free tier for small sites (up to 1,000 requests/month). Paid plans start at ~35 EUR/month. Open-source self-hosted option available for free.</li>
+                      <li><strong>Strength:</strong> Similar to Altcha but with additional server-side intelligence in cloud mode. Self-hosted mode is equivalent to Altcha.</li>
+                      <li><strong>Best for:</strong> Clubs in the EU that want a middle ground between fully self-hosted and managed service, with professional support available.</li>
+                    </ul>
+                    <p className="mt-3 text-xs text-purple-600">
+                      Not yet implemented. Selecting this option saves the preference for when Friendly Captcha support is added.
+                    </p>
+                  </div>
                 )}
               </div>
             </div>

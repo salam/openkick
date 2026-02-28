@@ -226,6 +226,77 @@ describe("Attendance routes", () => {
     expect(body.eventId).toBe(existingEventId);
   });
 
+  it("should create notification when tournament reaches 80% capacity", async () => {
+    // Create a guardian so createdBy FK is satisfied
+    db.run("INSERT INTO guardians (phone, name) VALUES (?, ?)", ["+41790000001", "Coach"]);
+    const guardianResult = db.exec("SELECT last_insert_rowid() AS id");
+    const guardianId = guardianResult[0].values[0][0] as number;
+
+    // Create a tournament event with maxParticipants=5
+    db.run(
+      "INSERT INTO events (type, title, date, maxParticipants, createdBy) VALUES (?, ?, ?, ?, ?)",
+      ["tournament", "Cup", "2026-06-15", 5, guardianId],
+    );
+    const eventIdResult = db.exec("SELECT last_insert_rowid() AS id");
+    const eventId = eventIdResult[0].values[0][0] as number;
+
+    // RSVP 4 players (80% of 5) to trigger "filling_up" alert
+    for (let i = 0; i < 4; i++) {
+      const pid = createPlayer(`P${i}`);
+      await fetch(`${baseUrl}/api/attendance`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventId, playerId: pid, status: "attending", source: "web" }),
+      });
+    }
+
+    const notifs = db.exec("SELECT * FROM notifications WHERE type = 'filling_up'");
+    expect(notifs.length).toBeGreaterThan(0);
+    expect(notifs[0].values.length).toBeGreaterThan(0);
+  });
+
+  it("should create 'full' notification when tournament reaches 100% capacity", async () => {
+    db.run("INSERT INTO guardians (phone, name) VALUES (?, ?)", ["+41790000002", "Coach2"]);
+    const guardianResult = db.exec("SELECT last_insert_rowid() AS id");
+    const guardianId = guardianResult[0].values[0][0] as number;
+
+    db.run(
+      "INSERT INTO events (type, title, date, maxParticipants, createdBy) VALUES (?, ?, ?, ?, ?)",
+      ["tournament", "Final Cup", "2026-06-20", 3, guardianId],
+    );
+    const eventIdResult = db.exec("SELECT last_insert_rowid() AS id");
+    const eventId = eventIdResult[0].values[0][0] as number;
+
+    // RSVP 3 players (100% of 3)
+    for (let i = 0; i < 3; i++) {
+      const pid = createPlayer(`Full${i}`);
+      await fetch(`${baseUrl}/api/attendance`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventId, playerId: pid, status: "attending", source: "web" }),
+      });
+    }
+
+    const notifs = db.exec("SELECT * FROM notifications WHERE type = 'full'");
+    expect(notifs.length).toBeGreaterThan(0);
+    expect(notifs[0].values.length).toBeGreaterThan(0);
+  });
+
+  it("should not create notification for non-tournament events", async () => {
+    const eventId = createEvent(5); // type is "training", not "tournament"
+    for (let i = 0; i < 4; i++) {
+      const pid = createPlayer(`Train${i}`);
+      await fetch(`${baseUrl}/api/attendance`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventId, playerId: pid, status: "attending", source: "web" }),
+      });
+    }
+
+    const notifs = db.exec("SELECT * FROM notifications WHERE eventId = ?", [eventId]);
+    expect(notifs.length === 0 || notifs[0].values.length === 0).toBe(true);
+  });
+
   it("DELETE /api/attendance/:id — removes attendance record", async () => {
     const eventId = createEvent();
     const playerId = createPlayer("Del");

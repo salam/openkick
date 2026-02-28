@@ -5,6 +5,9 @@ import {
   getAttendanceForEvent,
 } from "../services/attendance.js";
 import { mutationLimiter } from "../middleware/rateLimiter.js";
+import { checkThresholds } from "../services/tournament-alerts.js";
+import { createNotification } from "../services/notifications.js";
+import { sendMessage } from "../services/whatsapp.js";
 
 export const attendanceRouter = Router();
 
@@ -99,6 +102,31 @@ attendanceRouter.post("/attendance", mutationLimiter, (req: Request, res: Respon
   }
 
   const result = setAttendance(eventId, playerId, status, source, reason);
+
+  // Check tournament thresholds and create notifications (best-effort)
+  try {
+    const alert = checkThresholds(eventId);
+    if (alert) {
+      // In-app notification for event creator
+      const db = getDB();
+      const eventRow = db.exec("SELECT createdBy FROM events WHERE id = ?", [eventId]);
+      if (eventRow.length && eventRow[0].values.length) {
+        const createdBy = eventRow[0].values[0][0] as number;
+        createNotification({ userId: createdBy, eventId, type: alert.type, message: alert.message });
+      }
+      // WhatsApp alert (best-effort, don't fail RSVP on error)
+      const phoneRow = db.exec(
+        "SELECT g.phone FROM guardians g JOIN events e ON e.createdBy = g.id WHERE e.id = ?",
+        [eventId],
+      );
+      if (phoneRow.length && phoneRow[0].values.length) {
+        sendMessage(phoneRow[0].values[0][0] as string, alert.message).catch(() => {
+          /* WhatsApp delivery is best-effort */
+        });
+      }
+    }
+  } catch { /* Threshold check should never break RSVP */ }
+
   res.json({ ...result, eventId });
 });
 

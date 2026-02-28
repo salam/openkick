@@ -6,6 +6,8 @@ import type {
   SubmitResponsePayload,
   QuestionParsed,
   QuestionType,
+  AggregatedResults,
+  AggregatedQuestion,
 } from "../models/survey.model.js";
 
 // ---------------------------------------------------------------------------
@@ -235,4 +237,159 @@ export function submitResponse(
     player_nickname: (row.player_nickname as string) ?? null,
     submitted_at: row.submitted_at as string,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Aggregation
+// ---------------------------------------------------------------------------
+
+export function getAggregatedResults(surveyId: number): AggregatedResults {
+  const db = getDB();
+
+  const survey = getSurveyById(surveyId);
+  if (!survey) throw new Error("Survey not found");
+
+  const questions = getQuestions(surveyId);
+
+  // Count total responses
+  const countResult = db.exec(
+    "SELECT COUNT(*) as cnt FROM survey_responses WHERE survey_id = ?",
+    [surveyId],
+  );
+  const total_responses =
+    countResult.length > 0 ? (countResult[0].values[0][0] as number) : 0;
+
+  const aggregatedQuestions: AggregatedQuestion[] = questions.map((question) => {
+    // Fetch all answer values for this question
+    const answerResult = db.exec(
+      `SELECT sa.value FROM survey_answers sa
+       JOIN survey_responses sr ON sr.id = sa.response_id
+       WHERE sa.question_id = ? AND sr.survey_id = ?`,
+      [question.id, surveyId],
+    );
+    const values: string[] =
+      answerResult.length > 0
+        ? answerResult[0].values.map((row) => row[0] as string)
+        : [];
+
+    const agg: AggregatedQuestion = { question };
+
+    switch (question.type) {
+      case "star_rating": {
+        if (values.length > 0) {
+          const sum = values.reduce((acc, v) => acc + Number(v), 0);
+          agg.average_rating = Math.round((sum / values.length) * 10) / 10;
+        } else {
+          agg.average_rating = 0;
+        }
+        break;
+      }
+      case "single_choice":
+      case "size_picker": {
+        const options = question.options ?? [];
+        const distribution: Record<string, number> = {};
+        for (const opt of options) {
+          distribution[opt] = 0;
+        }
+        for (const v of values) {
+          if (v in distribution) {
+            distribution[v]++;
+          }
+        }
+        agg.distribution = distribution;
+        break;
+      }
+      case "multiple_choice": {
+        const options = question.options ?? [];
+        const distribution: Record<string, number> = {};
+        for (const opt of options) {
+          distribution[opt] = 0;
+        }
+        for (const v of values) {
+          const selected: string[] = JSON.parse(v);
+          for (const s of selected) {
+            if (s in distribution) {
+              distribution[s]++;
+            }
+          }
+        }
+        agg.distribution = distribution;
+        break;
+      }
+      case "free_text": {
+        agg.text_responses = values;
+        break;
+      }
+    }
+
+    return agg;
+  });
+
+  return {
+    survey,
+    total_responses,
+    questions: aggregatedQuestions,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Templates
+// ---------------------------------------------------------------------------
+
+export function createTrikotOrderTemplate(
+  teamId: number | null,
+  createdBy: number | null,
+): Survey {
+  return createSurvey(
+    "Trikot & Cap Order",
+    teamId,
+    false,
+    null,
+    null,
+    createdBy,
+    [
+      { type: "free_text", label: "Player name", sort_order: 0 },
+      {
+        type: "size_picker",
+        label: "Trikot size",
+        options_json: JSON.stringify([
+          "116", "128", "140", "152", "164",
+          "XS", "S", "M", "L", "XL", "XXL",
+        ]),
+        sort_order: 1,
+      },
+      {
+        type: "single_choice",
+        label: "Cap size",
+        options_json: JSON.stringify(["Adjustable", "S-M", "L-XL"]),
+        sort_order: 2,
+      },
+      {
+        type: "free_text",
+        label: "Name or number to print on back (optional)",
+        sort_order: 3,
+      },
+    ],
+  );
+}
+
+export function createFeedbackTemplate(
+  teamId: number | null,
+  createdBy: number | null,
+): Survey {
+  return createSurvey(
+    "End-of-Semester Feedback",
+    teamId,
+    true,
+    null,
+    null,
+    createdBy,
+    [
+      { type: "star_rating", label: "Overall satisfaction", sort_order: 0 },
+      { type: "star_rating", label: "Training quality", sort_order: 1 },
+      { type: "star_rating", label: "Communication", sort_order: 2 },
+      { type: "free_text", label: "What should we improve?", sort_order: 3 },
+      { type: "free_text", label: "What did you enjoy most?", sort_order: 4 },
+    ],
+  );
 }

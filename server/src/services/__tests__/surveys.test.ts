@@ -8,6 +8,9 @@ import {
   closeSurvey,
   listSurveys,
   submitResponse,
+  getAggregatedResults,
+  createTrikotOrderTemplate,
+  createFeedbackTemplate,
 } from "../survey.service.js";
 
 let db: Database;
@@ -242,5 +245,134 @@ describe("survey service — submitResponse", () => {
         ],
       }),
     ).toThrow(/not a valid option/i);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// aggregation
+// ---------------------------------------------------------------------------
+
+describe("survey service — aggregation", () => {
+  beforeEach(async () => {
+    db = await initDB();
+  });
+
+  afterEach(() => {
+    db.close();
+  });
+
+  it("star rating average", () => {
+    const survey = createSurvey("Stars", null, true, null, null, null, [
+      { type: "star_rating", label: "Rate us", sort_order: 0 },
+    ]);
+    const questions = getQuestions(survey.id);
+
+    submitResponse(survey.id, {
+      answers: [{ question_id: questions[0].id, value: "4" }],
+    });
+    submitResponse(survey.id, {
+      answers: [{ question_id: questions[0].id, value: "2" }],
+    });
+
+    const results = getAggregatedResults(survey.id);
+    expect(results.total_responses).toBe(2);
+    expect(results.questions[0].average_rating).toBe(3.0);
+  });
+
+  it("size picker distribution", () => {
+    const survey = createSurvey("Sizes", null, true, null, null, null, [
+      {
+        type: "size_picker",
+        label: "Pick size",
+        options_json: JSON.stringify(["S", "M", "L"]),
+        sort_order: 0,
+      },
+    ]);
+    const questions = getQuestions(survey.id);
+
+    submitResponse(survey.id, {
+      answers: [{ question_id: questions[0].id, value: "M" }],
+    });
+    submitResponse(survey.id, {
+      answers: [{ question_id: questions[0].id, value: "M" }],
+    });
+    submitResponse(survey.id, {
+      answers: [{ question_id: questions[0].id, value: "L" }],
+    });
+
+    const results = getAggregatedResults(survey.id);
+    expect(results.total_responses).toBe(3);
+    expect(results.questions[0].distribution).toEqual({ S: 0, M: 2, L: 1 });
+  });
+
+  it("free text collection", () => {
+    const survey = createSurvey("Texts", null, true, null, null, null, [
+      { type: "free_text", label: "Comment", sort_order: 0 },
+    ]);
+    const questions = getQuestions(survey.id);
+
+    submitResponse(survey.id, {
+      answers: [{ question_id: questions[0].id, value: "Great" }],
+    });
+    submitResponse(survey.id, {
+      answers: [{ question_id: questions[0].id, value: "OK" }],
+    });
+
+    const results = getAggregatedResults(survey.id);
+    expect(results.total_responses).toBe(2);
+    expect(results.questions[0].text_responses).toEqual(["Great", "OK"]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// templates
+// ---------------------------------------------------------------------------
+
+describe("survey service — templates", () => {
+  beforeEach(async () => {
+    db = await initDB();
+  });
+
+  afterEach(() => {
+    db.close();
+  });
+
+  /** Insert a guardian row so FK on created_by is satisfied. */
+  function insertGuardian(id: number): void {
+    db.run(
+      "INSERT INTO guardians (id, phone, role) VALUES (?, ?, 'coach')",
+      [id, `+4179000000${id}`],
+    );
+  }
+
+  it("createTrikotOrderTemplate creates identified survey with 4 questions", () => {
+    insertGuardian(42);
+    const survey = createTrikotOrderTemplate(null, 42);
+    expect(survey.title).toBe("Trikot & Cap Order");
+    expect(survey.anonymous).toBe(false);
+    expect(survey.created_by).toBe(42);
+
+    const questions = getQuestions(survey.id);
+    expect(questions.length).toBe(4);
+    expect(questions[0].type).toBe("free_text");
+    expect(questions[1].type).toBe("size_picker");
+    expect(questions[2].type).toBe("single_choice");
+    expect(questions[3].type).toBe("free_text");
+  });
+
+  it("createFeedbackTemplate creates anonymous survey with 5 questions", () => {
+    insertGuardian(99);
+    const survey = createFeedbackTemplate(null, 99);
+    expect(survey.title).toBe("End-of-Semester Feedback");
+    expect(survey.anonymous).toBe(true);
+    expect(survey.created_by).toBe(99);
+
+    const questions = getQuestions(survey.id);
+    expect(questions.length).toBe(5);
+    expect(questions[0].type).toBe("star_rating");
+    expect(questions[1].type).toBe("star_rating");
+    expect(questions[2].type).toBe("star_rating");
+    expect(questions[3].type).toBe("free_text");
+    expect(questions[4].type).toBe("free_text");
   });
 });

@@ -52,6 +52,10 @@ describe("Settings routes", () => {
       feed_atprotocol_enabled: "true",
       feed_ics_enabled: "true",
       feed_sitemap_enabled: "true",
+      club_name: "My Club",
+      club_description: "A youth football club.",
+      contact_info: "",
+      club_logo: "",
     });
   });
 

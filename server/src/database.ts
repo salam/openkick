@@ -127,6 +127,10 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   feed_atprotocol_enabled: "true",
   feed_ics_enabled: "true",
   feed_sitemap_enabled: "true",
+  club_name: "My Club",
+  club_description: "A youth football club.",
+  contact_info: "",
+  club_logo: "",
 };
 
 export async function initDB(dbPath?: string): Promise<Database> {

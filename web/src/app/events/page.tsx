@@ -20,11 +20,6 @@ interface ApiEvent {
   seriesId?: number;
 }
 
-interface ApiPlayer {
-  id: string;
-  name: string;
-}
-
 type FilterType = 'all' | 'training' | 'tournament' | 'match';
 
 const filterButtons: { value: FilterType; label: string }[] = [
@@ -34,63 +29,38 @@ const filterButtons: { value: FilterType; label: string }[] = [
   { value: 'match', label: 'Match' },
 ];
 
-export default function DashboardPage() {
+export default function EventsPage() {
   const [events, setEvents] = useState<ApiEvent[]>([]);
-  const [players, setPlayers] = useState<ApiPlayer[]>([]);
   const [filter, setFilter] = useState<FilterType>('all');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function loadData() {
+    async function loadEvents() {
       try {
-        const [eventsData, playersData] = await Promise.all([
-          apiFetch<ApiEvent[]>('/api/events'),
-          apiFetch<ApiPlayer[]>('/api/players'),
-        ]);
-        setEvents(eventsData);
-        setPlayers(playersData);
+        const data = await apiFetch<ApiEvent[]>('/api/events');
+        setEvents(data);
       } catch {
-        // API not available yet - use empty state
+        // API not available yet
       } finally {
         setLoading(false);
       }
     }
-    loadData();
+    loadEvents();
   }, []);
 
   const filteredEvents =
     filter === 'all' ? events : events.filter((e) => e.type === filter);
 
-  const pendingResponses = events.reduce(
-    (sum, e) => sum + (e.totalPlayers - e.attendingCount),
-    0,
-  );
-
   return (
     <div>
-      {/* Header */}
-      <h1 className="mb-6 text-2xl font-bold text-gray-900">{t('dashboard')}</h1>
-
-      {/* Quick stats */}
-      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="rounded-lg border border-gray-200 bg-white p-5">
-          <p className="text-sm text-gray-500">{t('players')}</p>
-          <p className="mt-1 text-2xl font-semibold text-gray-900">
-            {loading ? '-' : players.length}
-          </p>
-        </div>
-        <div className="rounded-lg border border-gray-200 bg-white p-5">
-          <p className="text-sm text-gray-500">{t('events')}</p>
-          <p className="mt-1 text-2xl font-semibold text-gray-900">
-            {loading ? '-' : events.length}
-          </p>
-        </div>
-        <div className="rounded-lg border border-gray-200 bg-white p-5">
-          <p className="text-sm text-gray-500">Pending Responses</p>
-          <p className="mt-1 text-2xl font-semibold text-gray-900">
-            {loading ? '-' : pendingResponses}
-          </p>
-        </div>
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-gray-900">{t('events')}</h1>
+        <Link
+          href="/events/new/"
+          className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-600"
+        >
+          + New Event
+        </Link>
       </div>
 
       {/* Filter buttons */}

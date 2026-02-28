@@ -173,6 +173,94 @@ CREATE TABLE IF NOT EXISTS tournament_alerts (
   FOREIGN KEY (eventId) REFERENCES events(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS tournament_results_url (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tournamentId INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  url TEXT NOT NULL,
+  crawlIntervalMin INTEGER NOT NULL DEFAULT 10,
+  lastCrawledAt TEXT,
+  isActive INTEGER NOT NULL DEFAULT 1,
+  UNIQUE(tournamentId, url)
+);
+
+CREATE TABLE IF NOT EXISTS live_ticker_entries (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tournamentId INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  matchLabel TEXT,
+  homeTeam TEXT NOT NULL,
+  awayTeam TEXT NOT NULL,
+  score TEXT,
+  matchTime TEXT,
+  source TEXT NOT NULL DEFAULT 'crawl',
+  crawledAt TEXT NOT NULL DEFAULT (datetime('now')),
+  updatedAt TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(tournamentId, homeTeam, awayTeam, matchLabel)
+);
+
+CREATE TABLE IF NOT EXISTS game_history (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tournamentName TEXT NOT NULL,
+  date TEXT NOT NULL,
+  createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS game_history_players (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  historyId INTEGER NOT NULL REFERENCES game_history(id) ON DELETE CASCADE,
+  playerInitial TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS game_history_matches (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  historyId INTEGER NOT NULL REFERENCES game_history(id) ON DELETE CASCADE,
+  homeTeam TEXT NOT NULL,
+  awayTeam TEXT NOT NULL,
+  score TEXT
+);
+
+CREATE TABLE IF NOT EXISTS whatsapp_sessions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  phone TEXT NOT NULL UNIQUE,
+  state TEXT NOT NULL DEFAULT 'idle',
+  context TEXT DEFAULT '{}',
+  wahaMessageId TEXT,
+  updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS message_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  wahaMessageId TEXT UNIQUE,
+  phone TEXT NOT NULL,
+  direction TEXT NOT NULL DEFAULT 'in',
+  body TEXT,
+  intent TEXT,
+  createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS rsvp_tokens (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  token TEXT NOT NULL UNIQUE,
+  playerId INTEGER NOT NULL REFERENCES players(id),
+  eventId INTEGER NOT NULL REFERENCES events(id),
+  createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+  expiresAt TEXT NOT NULL,
+  used INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS gdpr_requests (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  guardianId INTEGER NOT NULL REFERENCES guardians(id),
+  type TEXT NOT NULL CHECK(type IN ('export', 'deletion')),
+  status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'approved', 'rejected', 'completed')),
+  reason TEXT,
+  adminNote TEXT,
+  processedBy INTEGER REFERENCES guardians(id),
+  createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+  processedAt TEXT,
+  completedAt TEXT,
+  resultPath TEXT
+);
+
 `;
 
 const DEFAULT_SETTINGS: Record<string, string> = {
@@ -218,6 +306,12 @@ export async function initDB(dbPath?: string): Promise<Database> {
   }
   if (!cols.includes('resetTokenExpiry')) {
     db.run("ALTER TABLE guardians ADD COLUMN resetTokenExpiry TEXT");
+  }
+  if (!cols.includes('consentGivenAt')) {
+    db.run("ALTER TABLE guardians ADD COLUMN consentGivenAt TEXT");
+  }
+  if (!cols.includes('consentWithdrawnAt')) {
+    db.run("ALTER TABLE guardians ADD COLUMN consentWithdrawnAt TEXT");
   }
 
   // Migrate: add seriesId to events if absent

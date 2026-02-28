@@ -27,6 +27,9 @@ import { securityAuditRouter } from "./routes/security-audit.js";
 import { setupWahaRouter } from "./routes/setup-waha.js";
 import { onboardingRouter } from "./routes/onboarding.js";
 import { runHolidaySync, startHolidaySyncScheduler } from "./services/holiday-scheduler.js";
+import { startCrawlScheduler } from "./services/crawl-scheduler.js";
+import { liveTickerRouter } from "./routes/live-ticker.routes.js";
+import { notificationsRouter } from "./routes/notifications.js";
 
 const app = express();
 
@@ -60,6 +63,8 @@ app.use("/api", feedsRouter);
 app.use("/api", securityAuditRouter);
 app.use("/api", onboardingRouter);
 app.use("/api/setup-waha", setupWahaRouter);
+app.use("/api", liveTickerRouter);
+app.use("/api", notificationsRouter);
 app.use("/mcp", mcpRouter);
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
@@ -87,6 +92,9 @@ async function main() {
   // Run initial holiday sync and start daily scheduler
   runHolidaySync();
   startHolidaySyncScheduler();
+
+  // Start live ticker crawl scheduler (checks every minute)
+  startCrawlScheduler();
 
   app.listen(PORT, () => {
     console.log(`Server listening on port ${PORT}`);

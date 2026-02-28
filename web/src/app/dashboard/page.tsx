@@ -6,7 +6,9 @@ import { apiFetch } from '@/lib/api';
 import { t } from '@/lib/i18n';
 import EventCard from '@/components/EventCard';
 import OnboardingChecklist from '@/components/OnboardingChecklist';
+import NotificationBell from '@/components/NotificationBell';
 import RecentTrophies from '@/components/RecentTrophies';
+import UpcomingTournaments from '@/components/UpcomingTournaments';
 
 interface ApiEvent {
   id: string;
@@ -71,9 +73,14 @@ export default function DashboardPage() {
   return (
     <div>
       {/* Header */}
-      <h1 className="mb-6 text-2xl font-bold text-gray-900">{t('dashboard')}</h1>
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-gray-900">{t('dashboard')}</h1>
+        <NotificationBell />
+      </div>
 
       <OnboardingChecklist />
+
+      <UpcomingTournaments />
 
       {/* Quick stats */}
       <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">

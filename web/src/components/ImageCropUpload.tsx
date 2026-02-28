@@ -189,7 +189,7 @@ export default function ImageCropUpload({
           className="text-sm text-gray-600 file:mr-3 file:rounded-md file:border file:border-gray-300 file:bg-white file:px-4 file:py-2 file:text-sm file:font-medium file:text-gray-700 file:shadow-sm hover:file:bg-gray-50"
         />
         <p className="mt-1 text-xs text-gray-400">
-          PNG, JPG, SVG, or WebP. Max 10 MB.
+          PNG, JPG, SVG, or WebP. Max {Math.round(maxFileSize / (1024 * 1024))} MB.
         </p>
       </div>
       {error && <p className="text-sm font-medium text-red-600">{error}</p>}

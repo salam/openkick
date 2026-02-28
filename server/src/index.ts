@@ -17,6 +17,7 @@ import { whatsappRouter } from "./routes/whatsapp.js";
 import { broadcastsRouter } from "./routes/broadcasts.js";
 import { calendarRouter } from "./routes/calendar.js";
 import { teamsRouter } from "./routes/teams.js";
+import { llmsRouter } from "./routes/llms.js";
 
 const app = express();
 
@@ -26,6 +27,8 @@ app.use(express.json());
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 app.use(express.static(path.resolve(__dirname, "../../public")));
+
+app.use("/", llmsRouter);
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });

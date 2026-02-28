@@ -2,10 +2,18 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { apiFetch } from '@/lib/api';
+import { t, getLanguage } from '@/lib/i18n';
 import PlayerList, { type Player } from '@/components/PlayerList';
 
 const SFV_CATEGORIES = ['G', 'F', 'E', 'D-7', 'D-9', 'C', 'B', 'A'] as const;
 const POSITIONS = ['goalkeeper', 'defender', 'midfielder', 'forward'] as const;
+
+const POSITION_KEYS: Record<string, string> = {
+  goalkeeper: 'pos_goalkeeper',
+  defender: 'pos_defender',
+  midfielder: 'pos_midfielder',
+  forward: 'pos_forward',
+};
 
 interface Guardian {
   id: number;
@@ -62,6 +70,13 @@ function computeCategory(yearOfBirth: number): string {
 }
 
 export default function PlayersPage() {
+  const [, setLang] = useState(() => getLanguage());
+  useEffect(() => {
+    function onLangChange() { setLang(getLanguage()); }
+    window.addEventListener('languagechange', onLangChange);
+    return () => window.removeEventListener('languagechange', onLangChange);
+  }, []);
+
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -87,7 +102,7 @@ export default function PlayersPage() {
       const data = await apiFetch<Player[]>('/api/players');
       setPlayers(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load players');
+      setError(err instanceof Error ? err.message : t('failed_load_players'));
     } finally {
       setLoading(false);
     }
@@ -131,7 +146,7 @@ export default function PlayersPage() {
       setGuardianPhone('');
       setModalOpen(true);
     } catch {
-      setError('Failed to load player details');
+      setError(t('failed_load_details'));
     }
   }
 
@@ -167,7 +182,7 @@ export default function PlayersPage() {
       setModalOpen(false);
       await fetchPlayers();
     } catch {
-      setError('Failed to save player');
+      setError(t('failed_save_player'));
     } finally {
       setSaving(false);
     }
@@ -180,7 +195,7 @@ export default function PlayersPage() {
       setDeletingPlayer(null);
       await fetchPlayers();
     } catch {
-      setError('Failed to delete player');
+      setError(t('failed_delete_player'));
     }
   }
 
@@ -204,7 +219,7 @@ export default function PlayersPage() {
       setGuardianName('');
       setGuardianPhone('');
     } catch {
-      setError('Failed to link guardian');
+      setError(t('failed_link_guardian'));
     } finally {
       setLinkingGuardian(false);
     }
@@ -214,12 +229,12 @@ export default function PlayersPage() {
     <div className="mx-auto max-w-5xl">
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Players</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{t('players')}</h1>
         <button
           onClick={openAddModal}
           className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-600"
         >
-          Add Player
+          {t('add_player')}
         </button>
       </div>
 
@@ -228,14 +243,14 @@ export default function PlayersPage() {
         <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">
           {error}
           <button onClick={() => setError(null)} className="ml-2 font-medium underline">
-            Dismiss
+            {t('dismiss')}
           </button>
         </div>
       )}
 
       {/* Content */}
       {loading ? (
-        <p className="py-8 text-center text-gray-500">Loading players...</p>
+        <p className="py-8 text-center text-gray-500">{t('loading_players')}</p>
       ) : (
         <PlayerList
           players={players}
@@ -249,13 +264,13 @@ export default function PlayersPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
             <h2 className="mb-4 text-lg font-bold text-gray-900">
-              {editingPlayer ? 'Edit Player' : 'Add Player'}
+              {editingPlayer ? t('edit_player') : t('add_player')}
             </h2>
 
             <div className="flex flex-col gap-4">
               {/* Name */}
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Name *</label>
+                <label className="mb-1 block text-sm font-medium text-gray-700">{t('name')} *</label>
                 <input
                   type="text"
                   value={form.name}
@@ -268,7 +283,7 @@ export default function PlayersPage() {
               {/* Year of Birth */}
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700">
-                  Year of Birth *
+                  {t('year_of_birth')} *
                 </label>
                 <input
                   type="number"
@@ -285,10 +300,10 @@ export default function PlayersPage() {
               {/* Category */}
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700">
-                  Category
+                  {t('category')}
                   {autoCategory && (
                     <span className="ml-1 text-xs font-normal text-gray-500">
-                      (auto: {autoCategory})
+                      ({t('auto')}: {autoCategory})
                     </span>
                   )}
                 </label>
@@ -298,7 +313,7 @@ export default function PlayersPage() {
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                 >
                   <option value="">
-                    {autoCategory ? `Auto (${autoCategory})` : 'Select category'}
+                    {autoCategory ? `${t('auto')} (${autoCategory})` : t('select_category')}
                   </option>
                   {SFV_CATEGORIES.map((cat) => (
                     <option key={cat} value={cat}>
@@ -310,16 +325,16 @@ export default function PlayersPage() {
 
               {/* Position */}
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Position</label>
+                <label className="mb-1 block text-sm font-medium text-gray-700">{t('position')}</label>
                 <select
                   value={form.position}
                   onChange={(e) => setForm({ ...form, position: e.target.value })}
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                 >
-                  <option value="">None</option>
+                  <option value="">{t('none')}</option>
                   {POSITIONS.map((pos) => (
                     <option key={pos} value={pos}>
-                      {pos.charAt(0).toUpperCase() + pos.slice(1)}
+                      {t(POSITION_KEYS[pos])}
                     </option>
                   ))}
                 </select>
@@ -328,7 +343,7 @@ export default function PlayersPage() {
               {/* Last Name Initial */}
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700">
-                  Last Name Initial
+                  {t('last_name_initial')}
                 </label>
                 <input
                   type="text"
@@ -339,13 +354,13 @@ export default function PlayersPage() {
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                 />
                 <p className="mt-1 text-xs text-gray-500">
-                  Used for disambiguation when players share the same first name
+                  {t('last_name_initial_hint')}
                 </p>
               </div>
 
               {/* Notes */}
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Notes</label>
+                <label className="mb-1 block text-sm font-medium text-gray-700">{t('notes')}</label>
                 <textarea
                   value={form.notes}
                   onChange={(e) => setForm({ ...form, notes: e.target.value })}
@@ -357,7 +372,7 @@ export default function PlayersPage() {
               {/* Guardian linking (edit mode only) */}
               {editingPlayer && (
                 <div className="border-t border-gray-200 pt-4">
-                  <h3 className="mb-2 text-sm font-semibold text-gray-700">Guardians</h3>
+                  <h3 className="mb-2 text-sm font-semibold text-gray-700">{t('guardians')}</h3>
 
                   {editingPlayer.guardians && editingPlayer.guardians.length > 0 ? (
                     <ul className="mb-3 flex flex-col gap-1">
@@ -367,14 +382,14 @@ export default function PlayersPage() {
                           className="flex items-center gap-2 rounded bg-gray-50 px-3 py-1.5 text-sm"
                         >
                           <span className="font-medium text-gray-800">
-                            {g.name || 'Unnamed'}
+                            {g.name || t('unnamed')}
                           </span>
                           <span className="text-gray-500">{g.phone}</span>
                         </li>
                       ))}
                     </ul>
                   ) : (
-                    <p className="mb-3 text-xs text-gray-500">No guardians linked yet.</p>
+                    <p className="mb-3 text-xs text-gray-500">{t('no_guardians')}</p>
                   )}
 
                   <div className="flex gap-2">
@@ -382,14 +397,14 @@ export default function PlayersPage() {
                       type="text"
                       value={guardianName}
                       onChange={(e) => setGuardianName(e.target.value)}
-                      placeholder="Guardian name"
+                      placeholder={t('guardian_name')}
                       className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                     />
                     <input
                       type="tel"
                       value={guardianPhone}
                       onChange={(e) => setGuardianPhone(e.target.value)}
-                      placeholder="Phone *"
+                      placeholder={`${t('phone')} *`}
                       className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                     />
                     <button
@@ -397,7 +412,7 @@ export default function PlayersPage() {
                       disabled={!guardianPhone.trim() || linkingGuardian}
                       className="rounded-xl bg-emerald-500 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-emerald-600 disabled:opacity-50"
                     >
-                      {linkingGuardian ? 'Adding...' : 'Add'}
+                      {linkingGuardian ? t('adding') : t('add')}
                     </button>
                   </div>
                 </div>
@@ -410,14 +425,14 @@ export default function PlayersPage() {
                 onClick={() => setModalOpen(false)}
                 className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
               >
-                Cancel
+                {t('cancel')}
               </button>
               <button
                 onClick={handleSave}
                 disabled={!form.name.trim() || saving}
                 className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-600 disabled:opacity-50"
               >
-                {saving ? 'Saving...' : editingPlayer ? 'Update' : 'Create'}
+                {saving ? t('saving') : editingPlayer ? t('update') : t('create')}
               </button>
             </div>
           </div>
@@ -428,24 +443,23 @@ export default function PlayersPage() {
       {deletingPlayer && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
-            <h2 className="mb-2 text-lg font-bold text-gray-900">Delete Player</h2>
+            <h2 className="mb-2 text-lg font-bold text-gray-900">{t('delete_player')}</h2>
             <p className="mb-4 text-sm text-gray-600">
-              Are you sure you want to delete{' '}
-              <span className="font-medium">{deletingPlayer.name}</span>? This action cannot be
-              undone.
+              {t('delete_confirm_prefix')}{' '}
+              <span className="font-medium">{deletingPlayer.name}</span>{t('delete_confirm_suffix')}
             </p>
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setDeletingPlayer(null)}
                 className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
               >
-                Cancel
+                {t('cancel')}
               </button>
               <button
                 onClick={handleDelete}
                 className="rounded-xl bg-red-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-600"
               >
-                Delete
+                {t('delete')}
               </button>
             </div>
           </div>

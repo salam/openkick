@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { t } from '@/lib/i18n';
+import { t, getLanguage } from '@/lib/i18n';
 import LanguageToggle from '@/components/LanguageToggle';
 
 const navLinks = [
@@ -16,8 +16,16 @@ const navLinks = [
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [, setLang] = useState(() => getLanguage());
   const pathname = usePathname();
   const router = useRouter();
+
+  // Re-render when language changes so nav labels update
+  useEffect(() => {
+    function onLangChange() { setLang(getLanguage()); }
+    window.addEventListener('languagechange', onLangChange);
+    return () => window.removeEventListener('languagechange', onLangChange);
+  }, []);
 
   function handleLogout() {
     localStorage.removeItem('token');

@@ -36,6 +36,10 @@ import { gameHistoryRouter } from "./routes/game-history.routes.js";
 import { createRsvpRouter } from "./routes/rsvp.js";
 import { securityTxtRouter } from "./routes/security-txt.js";
 import { htmlInjector } from "./middleware/html-injector.js";
+import { checklistsRouter } from "./routes/checklists.routes.js";
+import { resetAdminChecklists } from "./services/checklist.service.js";
+import { surveysRouter } from "./routes/surveys.routes.js";
+import { surveyRespondRouter } from "./routes/public/survey-respond.routes.js";
 
 const app = express();
 
@@ -77,6 +81,9 @@ app.use("/api/setup-waha", setupWahaRouter);
 app.use("/api", liveTickerRouter);
 app.use("/api", notificationsRouter);
 app.use("/api", gameHistoryRouter);
+app.use("/api", checklistsRouter);
+app.use("/api", surveysRouter);
+app.use("/api/public", surveyRespondRouter);
 app.use("/mcp", mcpRouter);
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
@@ -101,6 +108,9 @@ async function main() {
   app.post("/api/guardians/login", verifyCaptchaMiddleware(captchaProvider));
   app.post("/api/attendance", verifyCaptchaMiddleware(captchaProvider));
   app.use("/api", captchaRouter(captchaProvider));
+
+  // Auto-reset admin checklists on semester boundaries
+  resetAdminChecklists();
 
   // Run initial holiday sync and start daily scheduler
   runHolidaySync();

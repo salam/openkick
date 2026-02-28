@@ -2,6 +2,9 @@ import { Router, type Request, type Response } from "express";
 import { getDB, getLastInsertId } from "../database.js";
 import { expandSeries, type SeriesTemplate, type VacationPeriod, type MaterializedEvent } from "../services/event-series.js";
 import { getResults } from "../services/tournament-results.js";
+import { ensureTrainingChecklist, ensureTournamentChecklist } from "../services/checklist.service.js";
+// tournament-import uses pdfjs-dist which requires DOM globals — lazy-import to
+// avoid breaking Node.js test environments that don't polyfill DOMMatrix.
 
 export const eventsRouter = Router();
 
@@ -256,4 +259,40 @@ eventsRouter.delete("/events/:id", (req: Request, res: Response) => {
   db.run("DELETE FROM attendance WHERE eventId = ?", [id]);
   db.run("DELETE FROM events WHERE id = ?", [id]);
   res.status(204).end();
+});
+
+// ── Tournament Import ───────────────────────────────────────────────
+
+// POST /api/events/import-url
+eventsRouter.post("/events/import-url", async (req: Request, res: Response) => {
+  const { url } = req.body;
+  if (!url) {
+    res.status(400).json({ error: "url is required" });
+    return;
+  }
+
+  try {
+    const { extractFromUrl } = await import("../services/tournament-import.js");
+    const data = await extractFromUrl(url);
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+// POST /api/events/import-pdf
+eventsRouter.post("/events/import-pdf", async (req: Request, res: Response) => {
+  const body = req.body as Buffer;
+  if (!body || body.length === 0) {
+    res.status(400).json({ error: "PDF body is required" });
+    return;
+  }
+
+  try {
+    const { extractFromPdf } = await import("../services/tournament-import.js");
+    const data = await extractFromPdf(Buffer.from(body));
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
 });

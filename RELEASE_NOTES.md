@@ -1,5 +1,11 @@
 # OpenKick Release Notes
 
+## Version 1.0.1 (Feb 28, 2026, 18:00)
+
+* Bot protection: Altcha proof-of-work captcha on login and attendance — invisible, GDPR-friendly, no tracking cookies
+* Rate limiting: 100 req/15min general, 10/15min login, 30/15min data mutations
+* Captcha provider architecture is pluggable for future hCaptcha or Friendly Captcha support
+
 ## Version 1.0.0 (Feb 28, 2026, 17:00)
 
 * Initial release of OpenKick attendance and tournament management system

@@ -19,6 +19,8 @@
 - [x] Tournament import from PDF and URL via LLM
 - [x] Team auto-assignment for tournaments
 - [x] i18n for de/fr/en
+- [x] Rate limiting (general, auth, mutation tiers via express-rate-limit)
+- [x] Altcha proof-of-work captcha on login and attendance (pluggable provider)
 
 ## Frontend (Web)
 
@@ -36,4 +38,4 @@
 ## Infrastructure
 
 - [x] Docker compose for WAHA
-- [x] 191 server tests (Vitest)
+- [x] 416 server tests (Vitest)

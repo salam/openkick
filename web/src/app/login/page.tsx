@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import { setToken } from '@/lib/auth';
-import { t } from '@/lib/i18n';
+import { t, getLanguage } from '@/lib/i18n';
 import AltchaWidget from '@/components/AltchaWidget';
 
 interface LoginResponse {
@@ -19,6 +19,12 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [captchaPayload, setCaptchaPayload] = useState('');
   const [checking, setChecking] = useState(true);
+  const [, setLang] = useState(() => getLanguage());
+  useEffect(() => {
+    function onLangChange() { setLang(getLanguage()); }
+    window.addEventListener('languagechange', onLangChange);
+    return () => window.removeEventListener('languagechange', onLangChange);
+  }, []);
 
   useEffect(() => {
     const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -69,7 +75,7 @@ export default function LoginPage() {
         {/* Branding */}
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold text-emerald-600">OpenKick</h1>
-          <p className="mt-1 text-sm text-gray-500">Youth Football Management</p>
+          <p className="mt-1 text-sm text-gray-500">{t('youth_football_mgmt')}</p>
         </div>
 
         {/* Card */}
@@ -88,7 +94,7 @@ export default function LoginPage() {
           )}
 
           <label className="mb-1 block text-sm font-medium text-gray-700">
-            Email
+            {t('email')}
           </label>
           <input
             type="email"

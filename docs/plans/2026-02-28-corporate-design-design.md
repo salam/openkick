@@ -23,6 +23,8 @@
 
 Distinct from Spotify (`#1DB954`) and WhatsApp (`#25D366`) — our jade sits between both, leaning cooler and deeper.
 
+> **Per-club customisation:** Each club can override the primary tint via the admin API. The backend generates a full 50–900 scale from any hex colour using `chroma-js`. See `docs/blueprints/BRANDING.md` for the API, database schema, and colour generation logic.
+
 | Token | Hex | Usage |
 |---|---|---|
 | `primary-50` | `#ECFDF5` | Subtle backgrounds, hover states |

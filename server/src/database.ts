@@ -268,6 +268,45 @@ CREATE TABLE IF NOT EXISTS gdpr_requests (
   resultPath TEXT
 );
 
+CREATE TABLE IF NOT EXISTS surveys (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  team_id INTEGER,
+  anonymous INTEGER NOT NULL DEFAULT 1,
+  status TEXT NOT NULL DEFAULT 'open',
+  deadline TEXT,
+  price_per_item REAL,
+  created_by INTEGER REFERENCES guardians(id),
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS survey_questions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  survey_id INTEGER NOT NULL REFERENCES surveys(id) ON DELETE CASCADE,
+  type TEXT NOT NULL,
+  label TEXT NOT NULL,
+  options_json TEXT,
+  sort_order INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS survey_responses (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  survey_id INTEGER NOT NULL REFERENCES surveys(id) ON DELETE CASCADE,
+  player_nickname TEXT,
+  submitted_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS survey_answers (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  response_id INTEGER NOT NULL REFERENCES survey_responses(id) ON DELETE CASCADE,
+  question_id INTEGER NOT NULL REFERENCES survey_questions(id) ON DELETE CASCADE,
+  value TEXT NOT NULL
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_survey_response_player
+  ON survey_responses(survey_id, player_nickname)
+  WHERE player_nickname IS NOT NULL;
+
 `;
 
 const DEFAULT_SETTINGS: Record<string, string> = {

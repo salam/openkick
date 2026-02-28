@@ -156,6 +156,97 @@ Parents currently notify coaches about training attendance and tournament partic
 | **Technical complexity** | Start with core features (attendance and simple tournament registration). Use open-source components to reduce development time. |
 | **User adoption** | Provide training for coaches and clear onboarding for parents; allow fallback to manual communication until adoption stabilises. |
 
+### 4.10 Deployment & Installation
+
+The system must be easy to deploy both on a personal machine (for testing and development) and on a production server (for the club). All deployment paths use Docker so the club does not need to install individual services manually.
+
+#### 4.10.1 Prerequisites
+
+| Requirement | Minimum |
+|---|---|
+| **Operating system** | Linux (Ubuntu 22.04+), macOS 13+, or Windows 11 with WSL 2 |
+| **Docker** | Docker Engine 24+ and Docker Compose v2+ |
+| **Hardware** | 2 CPU cores, 2 GB RAM, 10 GB disk (production: 4 cores / 4 GB recommended) |
+| **Domain (production)** | A domain or subdomain pointing to the server's IP (for HTTPS) |
+| **WhatsApp number** | A dedicated phone number for the club's WhatsApp account |
+
+#### 4.10.2 Local Development Setup
+
+A single script (`tools/setup-local.sh`) must perform the following steps:
+
+1. Check that Docker and Docker Compose are installed; print instructions if not.
+2. Copy `.env.example` to `.env` and prompt the user to fill in required values (see Section 4.11).
+3. Run `docker compose -f docker-compose.dev.yml up --build` to start all services (WAHA, chatbot, n8n, web app, database).
+4. Print a summary with URLs: web app (`http://localhost:3000`), n8n dashboard (`http://localhost:5678`), WAHA API (`http://localhost:3001`).
+5. Open the WAHA QR-code page so the user can pair their WhatsApp number.
+
+#### 4.10.3 Production Deployment
+
+A deployment script (`tools/deploy-production.sh`) must handle:
+
+1. **Server provisioning check** — verify SSH access, Docker installation, and available disk space on the target server.
+2. **TLS / HTTPS** — use Caddy or Traefik as a reverse proxy with automatic Let's Encrypt certificates. The user provides their domain name during setup.
+3. **Environment configuration** — interactively prompt for all required environment variables (database password, WhatsApp number, admin credentials) and write them to `.env` on the server. Secrets are never committed to the repository.
+4. **Container orchestration** — run `docker compose -f docker-compose.prod.yml up -d` on the server. Production compose file includes restart policies (`unless-stopped`), health checks, volume mounts for persistent data, and log rotation.
+5. **Database migrations** — automatically run pending migrations on startup.
+6. **Backup schedule** — configure a daily database backup via cron (`tools/backup-db.sh`) that stores compressed dumps in `/backups/` with 14-day retention.
+7. **Update procedure** — a separate script (`tools/update.sh`) pulls the latest images, runs migrations, and restarts containers with zero downtime using rolling restarts.
+
+#### 4.10.4 Docker Compose Services
+
+| Service | Image / Build | Ports | Purpose |
+|---|---|---|---|
+| `web` | Custom (Node.js or Python) | 3000 | Web application (frontend + API) |
+| `waha` | `devlikeapro/waha` | 3001 | WhatsApp HTTP API |
+| `chatbot` | Custom (Node.js) | 3002 | Message parsing and chatbot logic |
+| `n8n` | `n8nio/n8n` | 5678 | Workflow automation |
+| `db` | `postgres:16-alpine` | 5432 | PostgreSQL database |
+| `proxy` | `caddy:2-alpine` | 80, 443 | Reverse proxy with auto-TLS (production only) |
+
+#### 4.10.5 Deployment Scripts Summary
+
+| Script | Purpose |
+|---|---|
+| `tools/setup-local.sh` | One-command local development setup |
+| `tools/deploy-production.sh` | Interactive production deployment to a remote server |
+| `tools/update.sh` | Pull latest version and restart with zero downtime |
+| `tools/backup-db.sh` | Database backup with retention policy |
+| `tools/restore-db.sh` | Restore database from a backup file |
+| `tools/health-check.sh` | Verify all services are running and responsive |
+
+### 4.11 Account Setup & Credential Onboarding
+
+Setting up the system requires a few external accounts and API keys. The setup wizard (launched by `tools/setup-local.sh` or `tools/deploy-production.sh`) guides the user through each step interactively.
+
+#### 4.11.1 Setup Wizard Flow
+
+The setup wizard runs in the terminal and walks the user through each credential step-by-step. It:
+
+1. Displays a checklist of what is needed before starting.
+2. For each service, explains **what** the account/key is, **why** it is needed, and provides a direct link to the sign-up or settings page.
+3. Validates each credential immediately after entry (e.g., pings the WAHA API, tests the database connection).
+4. Writes validated values to `.env` (never to version control).
+5. Prints a final summary showing which services are configured and ready.
+
+#### 4.11.2 Required Credentials
+
+| Credential | Where to Get It | Why It Is Needed |
+|---|---|---|
+| **WhatsApp phone number** | Any mobile provider; a separate SIM or virtual number is recommended | WAHA connects to WhatsApp Web using this number. It becomes the club's "bot" number that parents message. |
+| **WAHA API key** | Generated during WAHA setup (`WHATSAPP_API_KEY` in `.env`) | Secures the WAHA REST API so only your system can send/receive messages. |
+| **Database password** | Generated by the setup wizard (random 32-char string) | Protects the PostgreSQL database. The wizard generates a strong password automatically. |
+| **Admin account** | Created during first-run setup in the web app | The first user to log in becomes the club administrator. They set their own email and password. |
+| **n8n credentials** | Set during setup (`N8N_BASIC_AUTH_USER`, `N8N_BASIC_AUTH_PASSWORD`) | Protects the n8n workflow dashboard from unauthorised access. |
+| **SMTP server (optional)** | Club's email provider or a free service like Mailgun/Brevo | Sends email notifications and password-reset emails. Not required if the club only uses WhatsApp. |
+| **Domain name (production)** | Any domain registrar (e.g., Cloudflare, Namecheap) | Required for HTTPS in production. The reverse proxy obtains a certificate automatically via Let's Encrypt. |
+
+#### 4.11.3 Credential Security
+
+- All secrets are stored only in `.env`, which is listed in `.gitignore`.
+- The setup wizard generates strong random values for database passwords and API keys.
+- Credentials can be rotated by re-running the relevant section of the setup wizard.
+- No credentials are ever logged, printed in full, or sent to external services.
+
 ## Conclusion
 
 Existing sports management platforms like Teamy, Spond and TeamSnap offer robust attendance and event management functions but expect users to sign up and do not parse free-form WhatsApp messages[4][8]. Self-hosted open-source components such as WAHA, BuilderBot and n8n make it feasible to build a lightweight system that maintains the simplicity of WhatsApp communication while adding structure. Combining these tools with a responsive web interface and minimal data storage can meet the youth football club's needs for easy attendance tracking and tournament management.

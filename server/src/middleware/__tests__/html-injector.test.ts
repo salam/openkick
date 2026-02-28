@@ -1,21 +1,27 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import express from "express";
+import fs from "node:fs";
+import path from "node:path";
+import os from "node:os";
 import { initDB, getDB } from "../../database.js";
-import { htmlInjector } from "../html-injector.js";
+import { createHtmlInjector } from "../html-injector.js";
 
 describe("htmlInjector middleware", () => {
   let port: number;
   let server: ReturnType<ReturnType<typeof express>["listen"]>;
+  let tmpDir: string;
 
   beforeEach(async () => {
     await initDB(); // in-memory
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "html-injector-test-"));
   });
 
   afterEach(() => {
     if (server) server.close();
+    fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it("injects meta tags and settings script into HTML responses", async () => {
+  it("injects meta tags and settings script into HTML served by express.static", async () => {
     const db = getDB();
     db.run("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", [
       "club_name",
@@ -26,19 +32,20 @@ describe("htmlInjector middleware", () => {
       "A test club",
     ]);
 
+    // Write a test HTML file
+    fs.writeFileSync(
+      path.join(tmpDir, "index.html"),
+      "<html><head><title>Old Title</title></head><body>Hello</body></html>",
+    );
+
     const app = express();
-    app.use(htmlInjector);
-    app.get("/test", (_req, res) => {
-      res
-        .type("html")
-        .send(
-          "<html><head><title>Old Title</title></head><body>Hello</body></html>",
-        );
-    });
+    // Use the injector + static, same as production
+    app.use(createHtmlInjector(tmpDir));
+    app.use(express.static(tmpDir));
     server = app.listen(0);
     port = (server.address() as any).port;
 
-    const res = await fetch(`http://localhost:${port}/test`);
+    const res = await fetch(`http://localhost:${port}/`);
     const body = await res.text();
 
     expect(body).toContain("<title>Test FC - A test club</title>");
@@ -52,7 +59,7 @@ describe("htmlInjector middleware", () => {
 
   it("does not modify non-HTML responses", async () => {
     const app = express();
-    app.use(htmlInjector);
+    app.use(createHtmlInjector(tmpDir));
     app.get("/api/test", (_req, res) => {
       res.json({ hello: "world" });
     });
@@ -75,22 +82,49 @@ describe("htmlInjector middleware", () => {
       "Custom OG Title",
     ]);
 
+    fs.writeFileSync(
+      path.join(tmpDir, "index.html"),
+      "<html><head><title>X</title></head><body></body></html>",
+    );
+
     const app = express();
-    app.use(htmlInjector);
-    app.get("/test", (_req, res) => {
-      res
-        .type("html")
-        .send(
-          "<html><head><title>X</title></head><body></body></html>",
-        );
-    });
+    app.use(createHtmlInjector(tmpDir));
+    app.use(express.static(tmpDir));
     server = app.listen(0);
     port = (server.address() as any).port;
 
-    const res = await fetch(`http://localhost:${port}/test`);
+    const res = await fetch(`http://localhost:${port}/`);
     const body = await res.text();
 
     expect(body).toContain('property="og:title" content="Custom OG Title"');
     expect(body).toContain("<title>Custom OG Title -");
+  });
+
+  it("injects into nested page HTML files", async () => {
+    const db = getDB();
+    db.run("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", [
+      "club_name",
+      "Nested FC",
+    ]);
+
+    // Create nested directory with index.html (like Next.js static export)
+    const subDir = path.join(tmpDir, "dashboard");
+    fs.mkdirSync(subDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(subDir, "index.html"),
+      "<html><head><title>Dashboard</title></head><body>Dashboard</body></html>",
+    );
+
+    const app = express();
+    app.use(createHtmlInjector(tmpDir));
+    app.use(express.static(tmpDir));
+    server = app.listen(0);
+    port = (server.address() as any).port;
+
+    const res = await fetch(`http://localhost:${port}/dashboard/`);
+    const body = await res.text();
+
+    expect(body).toContain("Nested FC");
+    expect(body).toContain("window.__CLUB_SETTINGS__=");
   });
 });

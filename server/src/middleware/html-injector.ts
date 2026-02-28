@@ -1,5 +1,11 @@
 import { type Request, type Response, type NextFunction } from "express";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { getDB } from "../database.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const DEFAULT_PUBLIC_DIR = path.resolve(__dirname, "../../../public");
 
 interface ClubSettings {
   club_name: string;
@@ -55,17 +61,17 @@ function buildInjection(s: ClubSettings, baseUrl: string): string {
   const parts: string[] = [];
 
   // Favicon links
-  parts.push(`<link rel="icon" href="${baseUrl}/uploads/favicon.ico">`);
+  parts.push(`<link rel="icon" href="/uploads/favicon.ico">`);
   parts.push(
-    `<link rel="icon" type="image/png" sizes="16x16" href="${baseUrl}/uploads/favicon-16x16.png">`,
+    `<link rel="icon" type="image/png" sizes="16x16" href="/uploads/favicon-16x16.png">`,
   );
   parts.push(
-    `<link rel="icon" type="image/png" sizes="32x32" href="${baseUrl}/uploads/favicon-32x32.png">`,
+    `<link rel="icon" type="image/png" sizes="32x32" href="/uploads/favicon-32x32.png">`,
   );
   parts.push(
-    `<link rel="apple-touch-icon" sizes="180x180" href="${baseUrl}/uploads/apple-touch-icon.png">`,
+    `<link rel="apple-touch-icon" sizes="180x180" href="/uploads/apple-touch-icon.png">`,
   );
-  parts.push(`<link rel="manifest" href="${baseUrl}/uploads/site.webmanifest">`);
+  parts.push(`<link rel="manifest" href="/uploads/site.webmanifest">`);
 
   // Meta tags
   parts.push(`<meta name="description" content="${esc(description)}">`);
@@ -97,33 +103,73 @@ function buildInjection(s: ClubSettings, baseUrl: string): string {
   return parts.join("\n");
 }
 
-export function htmlInjector(
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): void {
-  const originalSend = res.send.bind(res);
+/**
+ * Creates middleware that intercepts requests for HTML files, reads them from
+ * disk, injects club settings / meta tags / favicons into <head>, and serves
+ * the modified HTML. Non-HTML requests pass through to the next middleware.
+ */
+export function createHtmlInjector(publicDir?: string) {
+  const dir = publicDir || DEFAULT_PUBLIC_DIR;
 
-  res.send = function (body: any) {
-    const contentType = res.get("Content-Type") || "";
-    if (typeof body === "string" && contentType.includes("text/html")) {
+  return function htmlInjector(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): void {
+    // Only handle GET/HEAD for potential HTML pages
+    if (req.method !== "GET" && req.method !== "HEAD") {
+      next();
+      return;
+    }
+
+    // Skip API and known non-HTML paths
+    if (req.path.startsWith("/api") || req.path.startsWith("/mcp")) {
+      next();
+      return;
+    }
+
+    // Resolve the file path on disk
+    const urlPath = req.path.endsWith("/") ? req.path + "index.html" : req.path;
+
+    // Try exact path first, then with .html extension, then as directory/index.html
+    const candidates = [
+      path.join(dir, urlPath),
+      path.join(dir, urlPath + ".html"),
+      path.join(dir, urlPath, "index.html"),
+    ];
+
+    const found = candidates.find(
+      (c) => c.endsWith(".html") && fs.existsSync(c) && fs.statSync(c).isFile(),
+    );
+
+    if (!found) {
+      next();
+      return;
+    }
+
+    try {
+      let html = fs.readFileSync(found, "utf-8");
       const settings = getSettings();
       const baseUrl = `${req.protocol}://${req.get("host") || "localhost"}`;
       const injection = buildInjection(settings, baseUrl);
 
-      // Replace <title> with dynamic title
+      // Replace <title>
       const title = settings.og_title || settings.club_name;
       const fullTitle = `${title} - ${settings.club_description || "Youth Football Management"}`;
-      body = body.replace(
+      html = html.replace(
         /<title>[^<]*<\/title>/,
         `<title>${esc(fullTitle)}</title>`,
       );
 
       // Inject before </head>
-      body = body.replace("</head>", `${injection}\n</head>`);
-    }
-    return originalSend(body);
-  } as any;
+      html = html.replace("</head>", `${injection}\n</head>`);
 
-  next();
+      res.type("html").send(html);
+    } catch {
+      next();
+    }
+  };
 }
+
+/** Default middleware using the standard public directory */
+export const htmlInjector = createHtmlInjector();

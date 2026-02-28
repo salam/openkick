@@ -302,10 +302,11 @@ describe("WhatsApp webhook route", () => {
     );
   });
 
-  it("ignores group message from unknown sender without error", async () => {
+  it("reacts with ⁉️ to group message from unknown sender but does nothing else", async () => {
     const { parseAttendanceMessage, sendMessage, reactToMessage } = await import(
       "../../services/whatsapp.js"
     );
+    vi.mocked(reactToMessage).mockResolvedValueOnce(undefined);
 
     const res = await fetch(`${baseUrl}/api/whatsapp/webhook`, {
       method: "POST",
@@ -327,8 +328,14 @@ describe("WhatsApp webhook route", () => {
     const body = await res.json();
     expect(body.status).toBe("unknown_sender");
 
+    // Reacted with ⁉️ emoji on the group message
+    expect(vi.mocked(reactToMessage)).toHaveBeenCalledWith(
+      "false_120363xxxxx@g.us_BBBBBB",
+      "⁉️",
+    );
+
+    // Did NOT parse or send DM
     expect(vi.mocked(parseAttendanceMessage)).not.toHaveBeenCalled();
     expect(vi.mocked(sendMessage)).not.toHaveBeenCalled();
-    expect(vi.mocked(reactToMessage)).not.toHaveBeenCalled();
   });
 });

@@ -93,7 +93,10 @@ whatsappRouter.post(
     const guardian = findGuardianByPhone(phone);
 
     if (!guardian) {
-      // Unknown sender — ignore gracefully
+      // Unknown sender in group — react with ⁉️ but do nothing else
+      if (isGroup && body.payload.id) {
+        reactToMessage(body.payload.id, "⁉️").catch(() => {});
+      }
       res.status(200).json({ status: "unknown_sender" });
       return;
     }

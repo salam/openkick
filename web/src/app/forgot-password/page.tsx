@@ -1,12 +1,19 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { apiFetch } from '@/lib/api';
+import { t, getLanguage } from '@/lib/i18n';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [, setLang] = useState(() => getLanguage());
+  useEffect(() => {
+    function onLangChange() { setLang(getLanguage()); }
+    window.addEventListener('languagechange', onLangChange);
+    return () => window.removeEventListener('languagechange', onLangChange);
+  }, []);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -30,30 +37,30 @@ export default function ForgotPasswordPage() {
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold text-emerald-600">OpenKick</h1>
-          <p className="mt-1 text-sm text-gray-500">Youth Football Management</p>
+          <p className="mt-1 text-sm text-gray-500">{t('youth_football_mgmt')}</p>
         </div>
 
         <div className="rounded-xl bg-white p-6 shadow-md">
           <h2 className="mb-6 text-xl font-semibold text-gray-800">
-            Forgot Password
+            {t('forgot_password')}
           </h2>
 
           {submitted ? (
             <div>
               <p className="mb-4 text-sm text-gray-700">
-                If an account with that email exists, we&apos;ve sent a reset link.
+                {t('forgot_password_sent')}
               </p>
               <a
                 href="/login/"
                 className="text-sm text-emerald-600 hover:underline"
               >
-                Back to Login
+                {t('back_to_login')}
               </a>
             </div>
           ) : (
             <form onSubmit={handleSubmit}>
               <label className="mb-1 block text-sm font-medium text-gray-700">
-                Email
+                {t('email')}
               </label>
               <input
                 type="email"
@@ -70,7 +77,7 @@ export default function ForgotPasswordPage() {
                 disabled={loading}
                 className="w-full rounded-xl bg-emerald-500 px-6 py-3 text-sm font-medium text-white transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 disabled:opacity-50"
               >
-                {loading ? '...' : 'Send Reset Link'}
+                {loading ? '...' : t('send_reset_link')}
               </button>
 
               <div className="mt-4 text-center">
@@ -78,7 +85,7 @@ export default function ForgotPasswordPage() {
                   href="/login/"
                   className="text-sm text-emerald-600 hover:underline"
                 >
-                  Back to Login
+                  {t('back_to_login')}
                 </a>
               </div>
             </form>

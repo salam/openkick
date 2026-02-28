@@ -3,6 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { useState, useEffect, Suspense } from "react";
 import AltchaWidget from "@/components/AltchaWidget";
+import { t, getLanguage } from "@/lib/i18n";
 
 /* ── Types ──────────────────────────────────────────────────────────── */
 
@@ -73,6 +74,12 @@ function RsvpInner() {
 
   const [state, setState] = useState<PageState>("loading");
   const [errorMsg, setErrorMsg] = useState("");
+  const [, setLang] = useState(() => getLanguage());
+  useEffect(() => {
+    function onLangChange() { setLang(getLanguage()); }
+    window.addEventListener("languagechange", onLangChange);
+    return () => window.removeEventListener("languagechange", onLangChange);
+  }, []);
 
   // Personalized mode data
   const [players, setPlayers] = useState<PlayerInfo[]>([]);
@@ -95,7 +102,7 @@ function RsvpInner() {
   /* ── Personalized mode: resolve token on mount ── */
   useEffect(() => {
     if (!eventId) {
-      setErrorMsg("Dieser Link ist ungueltig oder abgelaufen.");
+      setErrorMsg(t("rsvp_link_invalid"));
       setState("error");
       return;
     }
@@ -118,7 +125,7 @@ function RsvpInner() {
           }
         })
         .catch(() => {
-          setErrorMsg("Dieser Link ist ungueltig oder abgelaufen.");
+          setErrorMsg(t("rsvp_link_invalid"));
           setState("error");
         });
     } else {
@@ -156,9 +163,9 @@ function RsvpInner() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : "";
       if (msg.includes("not_found") || msg.includes("No player") || msg.includes("404")) {
-        setErrorMsg("Kein Spieler mit diesem Namen gefunden.");
+        setErrorMsg(t("rsvp_no_player_found"));
       } else {
-        setErrorMsg("Ein Fehler ist aufgetreten. Bitte versuche es erneut.");
+        setErrorMsg(t("rsvp_error_generic"));
       }
       setState("error");
     } finally {
@@ -184,7 +191,7 @@ function RsvpInner() {
       setFinalStatus(data.finalStatus);
       setState("done");
     } catch {
-      setErrorMsg("Ein Fehler ist aufgetreten. Bitte versuche es erneut.");
+      setErrorMsg(t("rsvp_error_generic"));
       setState("error");
     } finally {
       setConfirmLoading(false);
@@ -212,13 +219,13 @@ function RsvpInner() {
     return (
       <main className="flex min-h-[60vh] items-center justify-center px-4">
         <div className="w-full max-w-md rounded-xl border border-red-200 bg-red-50 p-8 text-center">
-          <h2 className="mb-2 text-lg font-semibold text-red-800">Fehler</h2>
+          <h2 className="mb-2 text-lg font-semibold text-red-800">{t("rsvp_error")}</h2>
           <p className="text-sm text-red-600">{errorMsg}</p>
           <button
             onClick={() => window.location.reload()}
             className="mt-4 rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-600 transition hover:bg-red-100"
           >
-            Erneut versuchen
+            {t("rsvp_retry")}
           </button>
         </div>
       </main>
@@ -230,10 +237,10 @@ function RsvpInner() {
       <main className="flex min-h-[60vh] items-center justify-center px-4">
         <div className="w-full max-w-md rounded-xl border border-gray-200 bg-white p-8 shadow-sm">
           <h1 className="mb-2 text-xl font-bold text-gray-900">
-            Anwesenheit melden
+            {t("rsvp_report_attendance")}
           </h1>
           <p className="mb-6 text-sm text-gray-500">
-            Gib den Namen deines Kindes ein, um die Anwesenheit zu melden.
+            {t("rsvp_enter_child_name")}
           </p>
 
           <form onSubmit={handleSearch} className="space-y-4">
@@ -242,14 +249,14 @@ function RsvpInner() {
                 htmlFor="child-name"
                 className="mb-1 block text-sm font-medium text-gray-700"
               >
-                Name deines Kindes
+                {t("rsvp_child_name_label")}
               </label>
               <input
                 id="child-name"
                 type="text"
                 value={childName}
                 onChange={(e) => setChildName(e.target.value)}
-                placeholder="Vor- oder Nachname"
+                placeholder={t("rsvp_child_name_placeholder")}
                 required
                 className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
               />
@@ -262,7 +269,7 @@ function RsvpInner() {
               disabled={searchLoading || !captchaPayload || !childName.trim()}
               className="w-full rounded-xl bg-emerald-500 px-6 py-3 text-sm font-bold text-white shadow transition hover:bg-emerald-600 disabled:opacity-50"
             >
-              {searchLoading ? "Suche..." : "Weiter"}
+              {searchLoading ? t("rsvp_searching") : t("rsvp_continue")}
             </button>
           </form>
         </div>
@@ -275,10 +282,10 @@ function RsvpInner() {
       <main className="flex min-h-[60vh] items-center justify-center px-4">
         <div className="w-full max-w-md rounded-xl border border-gray-200 bg-white p-8 shadow-sm">
           <h1 className="mb-2 text-xl font-bold text-gray-900">
-            Spieler auswaehlen
+            {t("rsvp_select_player")}
           </h1>
           <p className="mb-6 text-sm text-gray-500">
-            Fuer welches Kind moechtest du die Anwesenheit melden?
+            {t("rsvp_select_player_hint")}
           </p>
 
           <div className="space-y-3">
@@ -305,7 +312,7 @@ function RsvpInner() {
       <main className="flex min-h-[60vh] items-center justify-center px-4">
         <div className="w-full max-w-md rounded-xl border border-gray-200 bg-white p-8 shadow-sm text-center">
           <h1 className="mb-2 text-xl font-bold text-gray-900">
-            Kommt {displayName} zum {displayEventTitle}?
+            {t("rsvp_confirm_question").replace("{name}", displayName).replace("{event}", displayEventTitle)}
           </h1>
           {displayEventDate && (
             <p className="mb-6 text-sm text-gray-500">
@@ -319,14 +326,14 @@ function RsvpInner() {
               disabled={confirmLoading}
               className="flex-1 rounded-xl bg-emerald-500 px-6 py-4 text-lg font-bold text-white shadow transition hover:bg-emerald-600 disabled:opacity-50"
             >
-              {confirmLoading ? "..." : "Anwesend"}
+              {confirmLoading ? "..." : t("rsvp_attending")}
             </button>
             <button
               onClick={() => handleConfirm("absent")}
               disabled={confirmLoading}
               className="flex-1 rounded-xl bg-red-500 px-6 py-4 text-lg font-bold text-white shadow transition hover:bg-red-600 disabled:opacity-50"
             >
-              {confirmLoading ? "..." : "Abwesend"}
+              {confirmLoading ? "..." : t("rsvp_absent")}
             </button>
           </div>
 
@@ -336,7 +343,7 @@ function RsvpInner() {
               onClick={() => setState("select_player")}
               className="mt-4 text-sm text-emerald-600 underline hover:text-emerald-800"
             >
-              Anderen Spieler auswaehlen
+              {t("rsvp_select_other")}
             </button>
           )}
         </div>
@@ -357,18 +364,13 @@ function RsvpInner() {
             <span className="text-3xl">{isAttending ? "\u2713" : "\u2717"}</span>
           </div>
           <h1 className="mb-2 text-xl font-bold text-gray-900">
-            {isAttending ? "Angemeldet!" : "Abgemeldet!"}
+            {isAttending ? t("rsvp_registered") : t("rsvp_unregistered")}
           </h1>
           <p className="text-sm text-gray-500">
-            {displayName} wurde als{" "}
-            <span
-              className={`font-semibold ${
-                isAttending ? "text-emerald-600" : "text-red-600"
-              }`}
-            >
-              {isAttending ? "anwesend" : "abwesend"}
-            </span>{" "}
-            fuer {displayEventTitle} eingetragen.
+            {t("rsvp_recorded_as")
+              .replace("{name}", displayName)
+              .replace("{status}", isAttending ? t("rsvp_status_attending") : t("rsvp_status_absent"))
+              .replace("{event}", displayEventTitle)}
           </p>
 
           {/* Allow confirming another player if multiple */}
@@ -377,7 +379,7 @@ function RsvpInner() {
               onClick={() => setState("select_player")}
               className="mt-6 rounded-lg border border-emerald-300 px-4 py-2 text-sm font-medium text-emerald-600 transition hover:bg-emerald-50"
             >
-              Weiteren Spieler eintragen
+              {t("rsvp_confirm_another")}
             </button>
           )}
         </div>

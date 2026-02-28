@@ -1,5 +1,13 @@
 # OpenKick Release Notes
 
+## Version 1.1.0 (Feb 28, 2026, 21:55)
+
+* Admin onboarding wizard: after creating your account, a 5-step guide walks you through the essential setup — club profile, email, AI assistant, WhatsApp, and inviting your team
+* Only the club profile step is required; all others can be skipped and configured later from Settings
+* Dashboard checklist: once the wizard is done, a "Getting Started" card shows what to do next — add holidays, create a training, add players, and invite parents
+* The checklist auto-hides once everything is set up (or you can dismiss it)
+* Settings page: form sections are now reusable components shared between the wizard and settings
+
 ## Version 1.0.9 (Feb 28, 2026, 21:45)
 
 * Event series: create recurring weekly events (e.g. "every Monday") with a start and end date

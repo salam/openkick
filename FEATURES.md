@@ -40,6 +40,7 @@
 - [x] Admin-only GET /api/security-audit endpoint
 - [x] User management API (list, role changes, password reset, invite) with role-based permissions
 - [x] WAHA Docker setup wizard API (install Docker, pull/start/stop WAHA, QR proxy, session status)
+- [x] Onboarding status API (derives step/checklist completion from existing data, public GET for AuthGuard)
 
 ## Frontend (Web)
 
@@ -62,8 +63,11 @@
 - [x] Security audit widget on settings page (run/re-run, status badges, expandable results)
 - [x] User management widget on settings page (list, role changes, password reset, invites)
 - [x] WAHA Docker setup wizard in onboarding (4-step: Docker check, configure, install, QR connect)
+- [x] Admin onboarding stepper (5-step wizard: Club Profile, SMTP, LLM, WAHA, Invite Team)
+- [x] Reusable settings form components (ClubProfile, SMTP, LLM, WAHA extracted from settings page)
+- [x] Dashboard onboarding checklist (holidays, training, players, parents, feeds — auto-hides when done)
 
 ## Infrastructure
 
 - [x] Docker compose for WAHA
-- [x] 416 server tests (Vitest)
+- [x] 421 server tests (Vitest)

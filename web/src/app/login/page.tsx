@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
+import { useState, useEffect, useCallback, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import { setToken } from '@/lib/auth';
 import { t } from '@/lib/i18n';
+import AltchaWidget from '@/components/AltchaWidget';
 
 interface LoginResponse {
   token: string;
@@ -16,6 +17,23 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [captchaPayload, setCaptchaPayload] = useState('');
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    fetch(`${API_URL}/api/setup/status`)
+      .then(r => r.json())
+      .then(({ needsSetup }: { needsSetup: boolean }) => {
+        if (needsSetup) router.replace('/setup/');
+        else setChecking(false);
+      })
+      .catch(() => setChecking(false));
+  }, [router]);
+
+  const handleCaptchaVerify = useCallback((payload: string) => {
+    setCaptchaPayload(payload);
+  }, []);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -25,7 +43,7 @@ export default function LoginPage() {
     try {
       const data = await apiFetch<LoginResponse>('/api/guardians/login', {
         method: 'POST',
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, captcha: captchaPayload }),
       });
 
       setToken(data.token);
@@ -37,12 +55,20 @@ export default function LoginPage() {
     }
   }
 
+  if (checking) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-600 border-t-transparent" />
+      </div>
+    );
+  }
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-sm">
         {/* Branding */}
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-green-700">OpenKick</h1>
+          <h1 className="text-3xl font-bold text-emerald-600">OpenKick</h1>
           <p className="mt-1 text-sm text-gray-500">Youth Football Management</p>
         </div>
 
@@ -69,7 +95,7 @@ export default function LoginPage() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="mb-4 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+            className="mb-4 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
             placeholder="you@example.com"
             autoComplete="email"
           />
@@ -82,15 +108,25 @@ export default function LoginPage() {
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mb-6 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+            className="mb-2 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
             placeholder="••••••••"
             autoComplete="current-password"
           />
 
+          <div className="mb-6 text-right">
+            <a href="/forgot-password/" className="text-sm text-emerald-600 hover:underline">
+              {t('forgot_password')}
+            </a>
+          </div>
+
+          <div className="mb-4">
+            <AltchaWidget onVerify={handleCaptchaVerify} />
+          </div>
+
           <button
             type="submit"
-            disabled={loading}
-            className="w-full rounded-lg bg-green-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50"
+            disabled={loading || !captchaPayload}
+            className="w-full rounded-xl bg-emerald-500 px-6 py-3 text-sm font-medium text-white transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 disabled:opacity-50"
           >
             {loading ? '...' : t('login')}
           </button>

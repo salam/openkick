@@ -1,5 +1,12 @@
 # OpenKick Release Notes
 
+## Version 1.0.6 (Mar 1, 2026, 03:30)
+
+* Holiday sync: fixed bug where "Sync Zurich Holidays" always failed (missing year parameter)
+* Holiday sources: pick from 10 preset regions (Swiss cantons, German/Austrian states) via grouped dropdown
+* Holiday sources: suggest a missing region directly to the project maintainers via GitHub
+* Holiday sources: import holidays from URL or ICS file (unchanged, repositioned in UI)
+
 ## Version 1.0.5 (Mar 1, 2026, 02:10)
 
 * User management: Admins can view, invite, and manage coaches and other admins directly from Settings

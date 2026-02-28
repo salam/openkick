@@ -14,7 +14,7 @@
 - [x] Weather forecasts via OpenMeteo (free, no key)
 - [x] Half-automated broadcast system (training headsup, rain alert, cancellation, holiday)
 - [x] Automatic attendance reminders
-- [x] School holiday system (Zurich built-in, ICS import, URL extraction via LLM)
+- [x] School holiday system (10 preset regions with grouped picker, ICS import, URL extraction via LLM, suggest-a-source)
 - [x] Calendar with training schedule, vacation integration, auto-cancellation
 - [x] Tournament import from PDF and URL via LLM
 - [x] Team auto-assignment for tournaments

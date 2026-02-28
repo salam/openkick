@@ -112,6 +112,13 @@ export default function SettingsPage() {
   const [useCustomModel, setUseCustomModel] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [logoMsg, setLogoMsg] = useState('');
+  const [auditResult, setAuditResult] = useState<{
+    timestamp: string;
+    checks: { id: string; category: string; status: 'pass' | 'warn' | 'fail'; message: string; detail?: string }[];
+    summary: { pass: number; warn: number; fail: number };
+  } | null>(null);
+  const [runningAudit, setRunningAudit] = useState(false);
+  const [auditExpanded, setAuditExpanded] = useState(false);
 
   const loadSettings = useCallback(async () => {
     try {
@@ -295,12 +302,50 @@ export default function SettingsPage() {
       update('club_logo', res.value);
       setOriginal((prev) => ({ ...prev, club_logo: res.value }));
       setLogoMsg('Logo uploaded successfully.');
-    } catch {
-      setLogoMsg('Failed to upload logo.');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '';
+      if (msg.includes('413') || msg.toLowerCase().includes('too large')) {
+        setLogoMsg('Logo too large. Please choose a smaller file.');
+      } else {
+        setLogoMsg(msg ? `Failed to upload logo: ${msg}` : 'Failed to upload logo.');
+      }
     } finally {
       setUploadingLogo(false);
       e.target.value = '';
+      setTimeout(() => setLogoMsg(''), 5000);
+    }
+  }
+
+  async function handleLogoRemove() {
+    setUploadingLogo(true);
+    setLogoMsg('');
+    try {
+      await apiFetch('/api/settings/remove-logo', { method: 'DELETE' });
+      update('club_logo', '');
+      setOriginal((prev) => ({ ...prev, club_logo: '' }));
+      setLogoMsg('Logo removed.');
+    } catch {
+      setLogoMsg('Failed to remove logo.');
+    } finally {
+      setUploadingLogo(false);
       setTimeout(() => setLogoMsg(''), 3000);
+    }
+  }
+
+  async function handleRunAudit() {
+    setRunningAudit(true);
+    try {
+      const result = await apiFetch<{
+        timestamp: string;
+        checks: { id: string; category: string; status: 'pass' | 'warn' | 'fail'; message: string; detail?: string }[];
+        summary: { pass: number; warn: number; fail: number };
+      }>('/api/security-audit');
+      setAuditResult(result);
+      setAuditExpanded(true);
+    } catch {
+      setAuditResult(null);
+    } finally {
+      setRunningAudit(false);
     }
   }
 
@@ -375,11 +420,22 @@ export default function SettingsPage() {
                   <label className={labelClass}>Club Logo</label>
                   <div className="flex items-center gap-4">
                     {settings.club_logo && (
-                      <img
-                        src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${settings.club_logo}`}
-                        alt="Club logo"
-                        className="h-16 w-16 rounded-lg border border-gray-200 object-contain bg-white"
-                      />
+                      <div className="relative">
+                        <img
+                          src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${settings.club_logo}`}
+                          alt="Club logo"
+                          className="h-16 w-16 rounded-lg border border-gray-200 object-contain bg-white"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleLogoRemove}
+                          disabled={uploadingLogo}
+                          className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white text-xs leading-none shadow hover:bg-red-600 disabled:opacity-50"
+                          title="Remove logo"
+                        >
+                          &times;
+                        </button>
+                      </div>
                     )}
                     <div>
                       <input
@@ -406,6 +462,101 @@ export default function SettingsPage() {
                   )}
                 </div>
               </div>
+            </div>
+
+            {/* Security Audit */}
+            <div className={cardClass}>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <h2 className="text-lg font-semibold text-gray-900">Security Audit</h2>
+                  {auditResult && (
+                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                      auditResult.summary.fail > 0
+                        ? 'bg-red-100 text-red-700'
+                        : auditResult.summary.warn > 0
+                          ? 'bg-amber-100 text-amber-700'
+                          : 'bg-emerald-100 text-emerald-700'
+                    }`}>
+                      {auditResult.summary.fail > 0
+                        ? `${auditResult.summary.fail} issue${auditResult.summary.fail > 1 ? 's' : ''}`
+                        : auditResult.summary.warn > 0
+                          ? `${auditResult.summary.warn} warning${auditResult.summary.warn > 1 ? 's' : ''}`
+                          : 'All clear'}
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={handleRunAudit}
+                  disabled={runningAudit}
+                  className={btnSecondary}
+                >
+                  {runningAudit ? 'Running...' : auditResult ? 'Re-run Audit' : 'Run Audit'}
+                </button>
+              </div>
+              <p className="mb-3 text-sm text-gray-500">
+                Checks file permissions, database exposure, CORS, admin passwords, and more.
+              </p>
+
+              {auditResult && (
+                <>
+                  <div className="mb-3 flex items-center gap-4 text-sm">
+                    <span className="text-emerald-600 font-medium">{auditResult.summary.pass} passed</span>
+                    {auditResult.summary.warn > 0 && (
+                      <span className="text-amber-600 font-medium">{auditResult.summary.warn} warning{auditResult.summary.warn > 1 ? 's' : ''}</span>
+                    )}
+                    {auditResult.summary.fail > 0 && (
+                      <span className="text-red-600 font-medium">{auditResult.summary.fail} failed</span>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setAuditExpanded(!auditExpanded)}
+                    className="text-xs text-gray-500 hover:text-gray-700 mb-2"
+                  >
+                    {auditExpanded ? '▾ Hide details' : '▸ Show details'}
+                  </button>
+
+                  {auditExpanded && (
+                    <div className="space-y-2">
+                      {(['fail', 'warn', 'pass'] as const).map(status =>
+                        auditResult.checks
+                          .filter(c => c.status === status)
+                          .map(check => (
+                            <div key={check.id} className={`rounded-md border px-3 py-2 text-sm ${
+                              check.status === 'fail'
+                                ? 'border-red-200 bg-red-50'
+                                : check.status === 'warn'
+                                  ? 'border-amber-200 bg-amber-50'
+                                  : 'border-gray-100 bg-gray-50'
+                            }`}>
+                              <div className="flex items-start gap-2">
+                                <span className="mt-0.5 flex-shrink-0">
+                                  {check.status === 'pass' ? '✔' : check.status === 'warn' ? '⚠' : '✘'}
+                                </span>
+                                <div>
+                                  <p className={`font-medium ${
+                                    check.status === 'fail' ? 'text-red-800' : check.status === 'warn' ? 'text-amber-800' : 'text-gray-700'
+                                  }`}>
+                                    {check.message}
+                                  </p>
+                                  {check.detail && (
+                                    <p className="mt-0.5 text-xs text-gray-500">{check.detail}</p>
+                                  )}
+                                  <p className="mt-0.5 text-xs text-gray-400">{check.category}</p>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                      )}
+                    </div>
+                  )}
+
+                  <p className="mt-3 text-xs text-gray-400">
+                    Last run: {new Date(auditResult.timestamp).toLocaleString()}
+                  </p>
+                </>
+              )}
             </div>
 
             {/* LLM Configuration */}
@@ -705,6 +856,43 @@ export default function SettingsPage() {
               <h2 className="mb-4 text-lg font-semibold text-gray-900">
                 WAHA Configuration
               </h2>
+
+              <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-900 space-y-1.5">
+                <p className="font-medium">What is WAHA?</p>
+                <p>
+                  WAHA (WhatsApp HTTP API) is a self-hosted service that connects
+                  openkick to WhatsApp. It runs as a Docker container on your
+                  server and provides the bridge so the bot can receive and send
+                  messages.
+                </p>
+                <p>
+                  <span className="font-medium">URL</span> — the address where
+                  your WAHA instance is running. If WAHA runs on the same server,
+                  use{' '}
+                  <code className="rounded bg-amber-100 px-1 py-0.5 font-mono text-[11px]">
+                    http://localhost:3008
+                  </code>
+                  ; otherwise use the public URL of the machine hosting it.
+                </p>
+                <p>
+                  <span className="font-medium">Getting started</span> — follow
+                  the{' '}
+                  <a
+                    href="https://waha.devlike.pro/docs/overview/quick-start/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium underline hover:text-amber-700"
+                  >
+                    WAHA Quick Start guide →
+                  </a>{' '}
+                  to spin up the Docker container. Once running, open the dashboard at{' '}
+                  <code className="rounded bg-amber-100 px-1 py-0.5 font-mono text-[11px]">
+                    your-url/dashboard
+                  </code>{' '}
+                  to scan the QR code and link your WhatsApp account.
+                </p>
+              </div>
+
               <div>
                 <label htmlFor="waha_url" className={labelClass}>
                   WAHA URL

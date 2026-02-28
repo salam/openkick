@@ -11,7 +11,7 @@ function getSetting(key: string): string {
   return (result[0].values[0][0] as string) ?? "";
 }
 
-function queryCount(sql: string, params?: unknown[]): number {
+function queryCount(sql: string, params?: (string | number | null)[]): number {
   const db = getDB();
   const result = db.exec(sql, params);
   if (result.length === 0 || result[0].values.length === 0) return 0;

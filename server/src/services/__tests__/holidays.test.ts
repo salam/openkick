@@ -7,6 +7,9 @@ let parseICS: typeof import("../holidays.js").parseICS;
 let extractHolidaysFromUrl: typeof import("../holidays.js").extractHolidaysFromUrl;
 let isVacationDay: typeof import("../holidays.js").isVacationDay;
 let syncZurichHolidays: typeof import("../holidays.js").syncZurichHolidays;
+let syncPresetHolidays: typeof import("../holidays.js").syncPresetHolidays;
+let getUpcomingVacations: typeof import("../holidays.js").getUpcomingVacations;
+let getZurichPublicHolidays: typeof import("../holidays.js").getZurichPublicHolidays;
 
 let db: Database;
 
@@ -18,6 +21,9 @@ beforeEach(async () => {
   extractHolidaysFromUrl = mod.extractHolidaysFromUrl;
   isVacationDay = mod.isVacationDay;
   syncZurichHolidays = mod.syncZurichHolidays;
+  syncPresetHolidays = mod.syncPresetHolidays;
+  getUpcomingVacations = mod.getUpcomingVacations;
+  getZurichPublicHolidays = mod.getZurichPublicHolidays;
 });
 
 afterEach(() => {
@@ -55,6 +61,46 @@ describe("getZurichHolidays", () => {
       expect(h.source).toBe("zurich-official");
       expect(h.name.length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe("getZurichPublicHolidays", () => {
+  it("returns 10 public holidays for 2026", () => {
+    const holidays = getZurichPublicHolidays(2026);
+    expect(holidays).toHaveLength(10);
+
+    const names = holidays.map((h) => h.name);
+    expect(names).toContain("Neujahr");
+    expect(names).toContain("Berchtoldstag");
+    expect(names).toContain("Karfreitag");
+    expect(names).toContain("Ostermontag");
+    expect(names).toContain("Tag der Arbeit");
+    expect(names).toContain("Auffahrt");
+    expect(names).toContain("Pfingstmontag");
+    expect(names).toContain("Bundesfeier");
+    expect(names).toContain("Weihnachten");
+    expect(names).toContain("Stephanstag");
+  });
+
+  it("single-day holidays have startDate === endDate", () => {
+    const holidays = getZurichPublicHolidays(2026);
+    for (const h of holidays) {
+      expect(h.startDate).toBe(h.endDate);
+    }
+  });
+
+  it("Easter-based holidays are correct for 2026 (Easter = April 5)", () => {
+    const holidays = getZurichPublicHolidays(2026);
+    const karfreitag = holidays.find((h) => h.name === "Karfreitag")!;
+    const ostermontag = holidays.find((h) => h.name === "Ostermontag")!;
+    const auffahrt = holidays.find((h) => h.name === "Auffahrt")!;
+    const pfingstmontag = holidays.find((h) => h.name === "Pfingstmontag")!;
+
+    // Easter 2026 = April 5
+    expect(karfreitag.startDate).toBe("2026-04-03");
+    expect(ostermontag.startDate).toBe("2026-04-06");
+    expect(auffahrt.startDate).toBe("2026-05-14");
+    expect(pfingstmontag.startDate).toBe("2026-05-25");
   });
 });
 
@@ -160,5 +206,75 @@ describe("isVacationDay", () => {
 
   it("returns true for last day of a vacation period", () => {
     expect(isVacationDay("2026-02-22")).toBe(true);
+  });
+
+  it("returns true for a single-day public holiday (Bundesfeier)", () => {
+    expect(isVacationDay("2026-08-01")).toBe(true);
+  });
+});
+
+describe("getUpcomingVacations", () => {
+  beforeEach(() => {
+    syncZurichHolidays(2026);
+  });
+
+  it("returns up to 3 upcoming vacations by default", () => {
+    const upcoming = getUpcomingVacations();
+    expect(upcoming.length).toBeLessThanOrEqual(3);
+    expect(upcoming.length).toBeGreaterThan(0);
+    for (const v of upcoming) {
+      expect(v.name).toBeTruthy();
+      expect(v.startDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(v.endDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    }
+  });
+
+  it("respects the limit parameter", () => {
+    const upcoming = getUpcomingVacations(1);
+    expect(upcoming.length).toBe(1);
+  });
+
+  it("returns empty array when no vacations exist", () => {
+    const db = getDB();
+    db.run("DELETE FROM vacation_periods");
+    expect(getUpcomingVacations()).toEqual([]);
+  });
+
+  it("returns vacations ordered by startDate ascending", () => {
+    const upcoming = getUpcomingVacations(5);
+    for (let i = 1; i < upcoming.length; i++) {
+      expect(upcoming[i].startDate >= upcoming[i - 1].startDate).toBe(true);
+    }
+  });
+});
+
+describe("syncPresetHolidays", () => {
+  it("syncs ch-zurich preset and inserts 5 periods", () => {
+    const result = syncPresetHolidays("ch-zurich", 2026);
+    expect(result.synced).toBe(5);
+    expect(result.source).toBe("fallback");
+
+    const db = getDB();
+    const rows = db.exec("SELECT * FROM vacation_periods WHERE source = 'preset:ch-zurich'");
+    expect(rows[0].values.length).toBe(5);
+  });
+
+  it("replaces previous entries on re-sync", () => {
+    syncPresetHolidays("ch-zurich", 2026);
+    syncPresetHolidays("ch-zurich", 2026);
+
+    const db = getDB();
+    const rows = db.exec("SELECT * FROM vacation_periods WHERE source = 'preset:ch-zurich'");
+    expect(rows[0].values.length).toBe(5);
+  });
+
+  it("returns synced 0 for stub preset with no external URL", () => {
+    const result = syncPresetHolidays("ch-bern", 2026);
+    expect(result.synced).toBe(0);
+    expect(result.source).toBe("fallback");
+  });
+
+  it("throws for unknown preset id", () => {
+    expect(() => syncPresetHolidays("xx-unknown", 2026)).toThrow("Unknown preset");
   });
 });

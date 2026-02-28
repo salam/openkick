@@ -1,5 +1,6 @@
 import { getDB } from "../database.js";
 import { chatCompletion } from "./llm.js";
+import { getPresetById } from "./holiday-presets.js";
 
 export interface VacationPeriod {
   name: string;
@@ -33,6 +34,70 @@ function getSundayOfWeek(week: number, year: number): Date {
   const sunday = new Date(monday);
   sunday.setDate(monday.getDate() + 6);
   return sunday;
+}
+
+/**
+ * Compute Easter Sunday for a given year using the Anonymous Gregorian algorithm.
+ */
+function getEasterSunday(year: number): Date {
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31); // 3=March, 4=April
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(year, month - 1, day);
+}
+
+function addDays(d: Date, n: number): Date {
+  const r = new Date(d);
+  r.setDate(r.getDate() + n);
+  return r;
+}
+
+/**
+ * Zurich public holidays (Feiertage) for a given year.
+ * Includes fixed-date and Easter-based movable holidays observed in Kanton Zurich.
+ */
+export function getZurichPublicHolidays(year: number): VacationPeriod[] {
+  const source = "zurich-official";
+  const easter = getEasterSunday(year);
+
+  const fixed: [string, string][] = [
+    ["Neujahr", `${year}-01-01`],
+    ["Berchtoldstag", `${year}-01-02`],
+    ["Tag der Arbeit", `${year}-05-01`],
+    ["Bundesfeier", `${year}-08-01`],
+    ["Weihnachten", `${year}-12-25`],
+    ["Stephanstag", `${year}-12-26`],
+  ];
+
+  const movable: [string, Date][] = [
+    ["Karfreitag", addDays(easter, -2)],
+    ["Ostermontag", addDays(easter, 1)],
+    ["Auffahrt", addDays(easter, 39)],
+    ["Pfingstmontag", addDays(easter, 50)],
+  ];
+
+  const holidays: VacationPeriod[] = [];
+
+  for (const [name, date] of fixed) {
+    holidays.push({ name, startDate: date, endDate: date, source });
+  }
+  for (const [name, date] of movable) {
+    const d = formatDate(date);
+    holidays.push({ name, startDate: d, endDate: d, source });
+  }
+
+  return holidays;
 }
 
 // Zurich school holidays based on DIN week numbers
@@ -160,15 +225,64 @@ export function isVacationDay(dateStr: string): boolean {
 }
 
 /**
+ * Returns the next N upcoming vacation periods (endDate >= today), ordered by startDate.
+ */
+export function getUpcomingVacations(limit = 3): VacationPeriod[] {
+  const db = getDB();
+  const today = formatDate(new Date());
+  const result = db.exec(
+    "SELECT name, startDate, endDate, source FROM vacation_periods WHERE endDate >= ? ORDER BY startDate ASC LIMIT ?",
+    [today, limit],
+  );
+  if (!result[0]) return [];
+  return result[0].values.map((row) => ({
+    name: row[0] as string,
+    startDate: row[1] as string,
+    endDate: row[2] as string,
+    source: row[3] as string,
+  }));
+}
+
+/**
  * Sync Zurich holidays for a given year into the vacation_periods table.
  */
 export function syncZurichHolidays(year: number): void {
-  const holidays = getZurichHolidays(year);
+  const allHolidays = [...getZurichHolidays(year), ...getZurichPublicHolidays(year)];
   const db = getDB();
-  for (const h of holidays) {
+  for (const h of allHolidays) {
     db.run(
       "INSERT OR IGNORE INTO vacation_periods (name, startDate, endDate, source) VALUES (?, ?, ?, ?)",
       [h.name, h.startDate, h.endDate, h.source],
     );
   }
+}
+
+/**
+ * Sync holidays from a named preset into the vacation_periods table.
+ * Replaces any previous entries for the same preset on re-sync.
+ */
+export function syncPresetHolidays(
+  presetId: string,
+  year: number,
+): { synced: number; source: "external" | "fallback" } {
+  const preset = getPresetById(presetId);
+  if (!preset) throw new Error(`Unknown preset: ${presetId}`);
+
+  const db = getDB();
+  const sourceTag = `preset:${presetId}`;
+
+  // Delete previous entries for this preset
+  db.run("DELETE FROM vacation_periods WHERE source = ?", [sourceTag]);
+
+  // Fall back to hardcoded data (hybrid external fetch is a future enhancement)
+  const holidays = preset.getHolidays(year);
+
+  for (const h of holidays) {
+    db.run(
+      "INSERT INTO vacation_periods (name, startDate, endDate, source) VALUES (?, ?, ?, ?)",
+      [h.name, h.startDate, h.endDate, sourceTag],
+    );
+  }
+
+  return { synced: holidays.length, source: "fallback" };
 }

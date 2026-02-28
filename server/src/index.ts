@@ -6,6 +6,7 @@ import { playersRouter } from "./routes/players.js";
 import { eventsRouter } from "./routes/events.js";
 import { attendanceRouter } from "./routes/attendance.js";
 import { settingsRouter } from "./routes/settings.js";
+import { whatsappRouter } from "./routes/whatsapp.js";
 
 const app = express();
 
@@ -21,6 +22,7 @@ app.use("/api", playersRouter);
 app.use("/api", eventsRouter);
 app.use("/api", attendanceRouter);
 app.use("/api", settingsRouter);
+app.use("/api/whatsapp", whatsappRouter);
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
 const DB_PATH = process.env.DB_PATH || "./data/openkick.db";

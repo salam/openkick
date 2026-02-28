@@ -2,10 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import RecentTrophies from '@/components/RecentTrophies';
+import UpcomingTournaments from '@/components/UpcomingTournaments';
 import SubscribeCard from '@/components/SubscribeCard';
 import TournamentWidget from '@/components/TournamentWidget';
 import { useClubSettings } from '@/hooks/useClubSettings';
 import { t, getLanguage } from '@/lib/i18n';
+import LanguageToggle from '@/components/LanguageToggle';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -19,7 +22,10 @@ export default function Home() {
   }, []);
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-8 p-8">
+    <main className="relative flex min-h-screen flex-col items-center justify-center gap-8 p-8">
+      <div className="absolute right-4 top-4">
+        <LanguageToggle />
+      </div>
       {club_logo ? (
         <img src={`${API_URL}${club_logo}`} alt={club_name} className="h-20 w-20 rounded-full object-cover" />
       ) : null}
@@ -35,6 +41,10 @@ export default function Home() {
         </Link>
       </div>
 
+      <div className="w-full max-w-md">
+        <RecentTrophies />
+        <UpcomingTournaments />
+      </div>
       <TournamentWidget />
       <SubscribeCard />
     </main>

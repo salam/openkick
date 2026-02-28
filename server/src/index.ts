@@ -30,6 +30,8 @@ import { runHolidaySync, startHolidaySyncScheduler } from "./services/holiday-sc
 import { startCrawlScheduler } from "./services/crawl-scheduler.js";
 import { liveTickerRouter } from "./routes/live-ticker.routes.js";
 import { notificationsRouter } from "./routes/notifications.js";
+import { publicTournamentsRouter } from "./routes/public-tournaments.js";
+import { gameHistoryRouter } from "./routes/game-history.routes.js";
 
 const app = express();
 
@@ -46,6 +48,7 @@ app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
+app.use("/api", publicTournamentsRouter);
 app.use("/api", authRouter);
 app.use("/api", playersRouter);
 app.use("/api", eventsRouter);
@@ -65,6 +68,7 @@ app.use("/api", onboardingRouter);
 app.use("/api/setup-waha", setupWahaRouter);
 app.use("/api", liveTickerRouter);
 app.use("/api", notificationsRouter);
+app.use("/api", gameHistoryRouter);
 app.use("/mcp", mcpRouter);
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;

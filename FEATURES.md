@@ -34,6 +34,7 @@
 - [x] WebFinger + DID well-known discovery endpoints
 - [x] Security audit service (8 self-checks: DB permissions, HTTP exposure, .env, CORS, admin passwords, security.txt, HTTPS, .gitignore)
 - [x] Admin-only GET /api/security-audit endpoint
+- [x] User management API (list, role changes, password reset, invite) with role-based permissions
 
 ## Frontend (Web)
 
@@ -50,6 +51,7 @@
 - [x] Homepage subscribe card widget (calendar, RSS, social feeds)
 - [x] Admin feed toggle switches on settings page
 - [x] Security audit widget on settings page (run/re-run, status badges, expandable results)
+- [x] User management widget on settings page (list, role changes, password reset, invites)
 
 ## Infrastructure
 

@@ -1,5 +1,12 @@
 # OpenKick Release Notes
 
+## Version 1.0.5 (Mar 1, 2026, 02:10)
+
+* User management: Admins can view, invite, and manage coaches and other admins directly from Settings
+* Coaches can view the user list and invite new coaches
+* Admins can change user roles (admin/coach) and trigger password reset emails
+* Last-admin protection prevents accidental lockout
+
 ## Version 1.0.4 (Mar 1, 2026, 01:50)
 
 * Security Audit widget: Run security self-checks from the Settings page — checks file permissions, database exposure, CORS, admin passwords, security.txt, HTTPS, and .gitignore coverage

@@ -1,5 +1,10 @@
 # OpenKick Release Notes
 
+## Version 1.6.1 (Feb 28, 2026, 23:30)
+
+* Language toggle: globe icon dropdown in the top-right navbar lets you switch between Deutsch, English, and Français
+* Language choice is saved in the browser and remembered across sessions
+
 ## Version 1.6.0 (Feb 28, 2026, 23:00)
 
 * Open call mode: create tournaments with no participant limit — all registrations accepted, teams formed automatically after deadline

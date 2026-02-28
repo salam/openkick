@@ -26,7 +26,7 @@
 - [x] Tournament import from PDF and URL via LLM
 - [x] Team auto-assignment for tournaments
 - [x] i18n for de/fr/en
-- [x] Rate limiting (general, auth, mutation tiers via express-rate-limit)
+- [x] Rate limiting (general tier via express-rate-limit; auth + mutation limiters defined but not yet wired)
 - [x] Altcha proof-of-work captcha on login, attendance, and public RSVP (pluggable provider)
 - [x] Public RSVP API (resolve deep link, name search with CAPTCHA, confirm with opaque tokens)
 - [x] RSS 2.0 feed for public events
@@ -35,7 +35,7 @@
 - [x] AT Protocol feed generator (Bluesky)
 - [x] ICS calendar subscriptions (combined + per-type)
 - [x] Dynamic sitemap with feed URLs
-- [x] robots.txt with sitemap reference
+- [x] robots.txt with sitemap reference (dynamic route, not static file)
 - [x] Club profile settings (name, description, contact info, logo upload)
 - [x] Dynamic llms.txt endpoint (club info, public API docs, live statistics from DB)
 - [x] MCP server at /mcp (read-only tools: club info, events, attendance stats, player categories)
@@ -72,6 +72,7 @@
 - [x] Series badge on event cards and calendar sidebar section
 - [x] Event detail page series awareness (banner, cancel instance, RSVP auto-materialize)
 - [x] i18n with browser language detection (de/fr/en)
+- [x] Language toggle (globe icon dropdown) in Navbar with localStorage persistence
 - [x] Homepage subscribe card widget (calendar, RSS, social feeds)
 - [x] Admin feed toggle switches on settings page
 - [x] Security audit widget on settings page (run/re-run, status badges, expandable results)
@@ -93,11 +94,11 @@
 ## Infrastructure
 
 - [x] Docker compose for WAHA
-- [x] 421 server tests (Vitest)
+- [x] ~476 server tests (Vitest)
 
 ---
 
-## Remaining — Attendance via WhatsApp (PRD 4.5.1)
+## Completed — Attendance via WhatsApp (PRD 4.5.1)
 
 - [x] WhatsApp RSVP: parents confirm/decline attendance via chat message
 - [x] Name-entry-first web flow (privacy mode for anonymous RSVP links)
@@ -111,17 +112,17 @@
 - [x] Tournament team name management
 - [x] Upcoming tournaments widget on homepage
 
-## Remaining — WhatsApp Confirmations (PRD 4.5.3)
+## Completed — WhatsApp Confirmations (PRD 4.5.3)
 
 - [x] WhatsApp confirmation message after RSVP (attendance)
 
 ## Remaining — Parent Onboarding (PRD 4.5.4)
 
-- [ ] Group join link / QR code for parents
+- [ ] Group join link / QR code for parents (backend join-by-link exists, QR display missing)
 - [x] WhatsApp-based parent onboarding (name → child → birth year → consent)
 - [x] Consent collection during onboarding
 
-## Remaining — Data Privacy & GDPR (PRD 4.5.5)
+## Completed — Data Privacy & GDPR (PRD 4.5.5)
 
 - [x] Data export for guardians (GDPR right of access)
 - [x] Data deletion for guardians (GDPR right to erasure)
@@ -129,14 +130,15 @@
 
 ## Remaining — Data Protection Audit (PRD 4.5.6)
 
-- [ ] Daily automated production audit (DB exposure, API bypass, directory listing, TLS, logs)
+- [x] Security audit shell script (tools/security-audit.sh — HTTP exposure, .env, CORS, helmet, npm audit)
+- [ ] Daily automated production audit scheduling (cron wrapper)
 - [ ] Audit alerting via WhatsApp/email
-- [ ] Audit script at tools/data-protection-audit.sh
+- [ ] Dedicated data-protection audit script at tools/data-protection-audit.sh (DB exposure, directory listing, TLS, log checks)
 
 ## Remaining — Security Audit Extensions (PRD 4.5.7)
 
-- [ ] Dependency vulnerability scanning (npm audit integration)
-- [ ] CI pipeline integration for security checks
+- [x] Dependency vulnerability scanning (npm audit in tools/security-audit.sh)
+- [ ] CI pipeline integration for security checks (.github/workflows/ not yet created)
 
 ## Remaining — Security Disclosure (PRD 4.5.8)
 
@@ -183,7 +185,7 @@
 - [ ] Receipt generation
 - [ ] Refund functionality
 
-## In Progress — Live Ticker & Game History (blueprint: LIVE_TICKER.md)
+## Completed — Live Ticker & Game History (blueprint: LIVE_TICKER.md)
 
 - [x] Match-day live score polling (cheerio scraper)
 - [x] LLM-based score extraction from web pages (generic fallback)

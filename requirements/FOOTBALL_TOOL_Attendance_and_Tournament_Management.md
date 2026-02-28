@@ -91,6 +91,7 @@ Parents currently notify coaches about training attendance and tournament partic
 
 - **WhatsApp interaction:** Use WAHA's API[19] and a chatbot framework (e.g., BuilderBot[23]) to listen for messages. Parse free-form text (e.g., "late", "not coming", "is sick") and update the attendance status. Provide quick-reply buttons for structured responses.
 - **Web interface:** A responsive site where parents can indicate "Participating" or "Absent" for each training session; mimic Teamy's one-click availability[1].
+- **Name-entry-first web flow (privacy mode):** By default, the web interface does **not** display a list of children's names. Instead, the parent enters their child's name into a search field. If the name is found, the parent proceeds to the guided interaction (mark attendance, register for tournaments, fill surveys). If not found, the system offers onboarding. This prevents casual visitors from seeing who is in the club. Coaches can optionally enable a "show player list" mode in club settings, but it is **off by default**.
 - **Automatic reminders:** Send WhatsApp reminders to non-responding parents before the deadline (similar to Spond's automatic reminders[8]).
 - **Attendance history:** Maintain simple logs of each player's attendance for coaches and administrators (no long-term personal data).
 
@@ -99,8 +100,15 @@ Parents currently notify coaches about training attendance and tournament partic
 - **Event creation:** Coaches can create tournaments with start date, time, registration deadline, maximum participants and attachments. These parameters mirror Spond's event features[10][11].
 - **Registration options:** Parents can register via WhatsApp or through the web form. A public registration link can be shared in group chats, similar to Save This Date's public event registration[15].
 - **Wait-list & automatic enrolment:** When the participant limit is reached, new registrants are placed on a waiting list and automatically promoted when a slot opens[11].
-- **Team assignment:** An algorithm assigns players to teams based on age, skill or other parameters (this should be configurable).
+- **Open call mode (no participant limit):** Coaches can create a "call for participation" tournament with no maximum participant limit. Registration stays open until the deadline. After the deadline closes, the system automatically forms teams from all registered players using the team assignment algorithm. This mode is ideal for friendly tournaments where the club can send as many teams as needed.
+- **Team assignment:** An algorithm assigns players to teams based on age, skill or other parameters (this should be configurable). In open-call mode, team formation runs automatically after the registration deadline and splits all registered players into balanced teams.
 - **Alerts:** The system notifies the coach when registrations are below a minimum threshold (e.g., 8 players) or exceed the maximum.
+- **Public tournament view (initials only):** Parents can view published tournament details on the website — team assignments, kick-off times, and dates — but player names are shown as **first-name initials only** (e.g., "Team A, 7:20 on Sep 28: J., F. H., K. A."). Full names are never displayed publicly.
+- **Disambiguation with last-name initial:** When two or more players share the same first-name initial (e.g., two "L."), the system detects the collision and asks the affected parents (via WhatsApp or during onboarding) to provide a last-name initial for disambiguation. The display then becomes e.g., "L. M." and "L. S.". The system never asks for or stores full last names — only the single initial character.
+- **Tournament team name:** When creating or editing a tournament, the coach can enter the **official team name** as registered with the tournament organiser (e.g., "FC Example E1", "FC Example Gelb"). This name is displayed on the public tournament view, the live ticker, and the game history. If no custom name is provided, the system defaults to the club name + team label (e.g., "FC Example — Team A").
+- **Upcoming tournaments on homepage:** The website homepage (which shows the club logo, club name, and club description from settings) displays a list of upcoming tournaments with date, time, location, registration status (open / closing soon / closed), and a "Register" button. Tournaments are sorted by date; past tournaments disappear from this list and move to the history view.
+- **Live ticker (match-day results):** On game day, the system periodically crawls the tournament organiser's results page (URL stored with the event) using the **Brave Search API** and the configured **LLM** to extract structured match results (scores, standings, match times). Results are displayed as a live ticker on the tournament's detail page. Crawl interval is configurable (default: every 10 minutes during the event window). If the page cannot be parsed or is unavailable, the system falls back to manual score entry by the coach. At the end of the match day, final results are automatically stored in the club's history.
+- **Game history & trophy cabinet:** A dedicated "History" tab on the website shows all past tournaments the club has participated in, ordered chronologically. Each entry includes: tournament name, date, place/ranking achieved, and participant initials (using the same privacy-preserving initial format). Coaches can mark notable achievements as "trophies" (e.g., 1st place, 2nd place, fair-play award) which are displayed with a trophy icon. The history is permanent and accumulates across seasons/school years.
 
 #### 4.5.3 Communication & Notifications
 
@@ -119,6 +127,203 @@ Parents currently notify coaches about training attendance and tournament partic
 - **Consent:** Provide a short privacy notice during onboarding.
 - **Export & deletion:** Allow parents to request deletion of their data.
 - **Self-hosting:** Provide Docker containers and documentation to deploy the system on the club's server.
+- **Zero-trust data exposure:** The system must follow a strict write-only principle for sensitive data (personally identifiable information, or PII). Phone numbers, email addresses and other contact details are **never displayed** in the WhatsApp chat interface, web interface, API responses or logs. These fields are accepted on input (write-only) but masked or omitted on output. The only exception is the **admin role** (see below).
+- **Admin PII access with strong password enforcement:** An administrator whose password passes a complexity check (minimum 12 characters, mixed case, digits, special characters; must not appear in common-password lists such as the "Have I Been Pwned" top-100k list) may view unmasked PII in the admin dashboard. If the admin password is weak or uses a default/simple value, PII is masked even for the admin. The system must re-evaluate password strength on every login and downgrade PII visibility immediately if the password no longer meets the policy (e.g., after a policy update).
+- **No data export of PII:** Attendance exports, reports and API endpoints must anonymise or pseudonymise personal data. Raw PII is never included in exports; only hashed identifiers or nicknames are used.
+
+#### 4.5.6 Data Protection Analysis (Daily Automated Audit)
+
+The system must include an automated **data protection analysis tool** that proactively tests for data exposure vulnerabilities. It runs as an external online checker — a scheduled cron job on the server (or any machine with network access to the deployment).
+
+- **What it checks:**
+  - **Database file exposure:** Attempts to access the SQLite/PostgreSQL data files via HTTP(S) (e.g., `https://example.com/db.sqlite3`, common backup paths like `/backups/*.sql.gz`). Any successful download is a critical finding.
+  - **API permission bypass:** Sends unauthenticated and low-privilege requests to all API endpoints that return PII. Verifies that PII fields are masked or absent in responses for non-admin callers.
+  - **Directory listing:** Checks whether the web server exposes directory listings for sensitive paths (`/backups/`, `/data/`, `/uploads/`, `.env`).
+  - **Default credentials:** Attempts login with common default credentials (`admin/admin`, `admin/password`, etc.) and flags any successful authentication.
+  - **TLS configuration:** Verifies that HTTPS is active and that HTTP requests are redirected (no plaintext PII transmission).
+  - **Log exposure:** Checks whether application logs are accessible via the web and whether they contain PII.
+
+- **How it runs:**
+  - Implemented as a standalone script: `tools/data-protection-audit.sh` (or `.py`).
+  - Accepts the deployment URL as a parameter (e.g., `./tools/data-protection-audit.sh https://club.example.com`).
+  - Designed to run from outside the server (black-box perspective, testing what an attacker would see).
+  - Scheduled as a daily cron job. The deployment guide includes a section explaining how to install the cron entry:
+
+    ```bash
+    # Run data protection audit daily at 03:00
+    0 3 * * * /opt/openkick/tools/data-protection-audit.sh https://club.example.com >> /var/log/openkick-audit.log 2>&1
+    ```
+
+  - The setup wizard (`tools/deploy-production.sh`) offers to install this cron job automatically during deployment.
+
+- **Reporting:**
+  - On success (no issues found): logs a single OK line with a timestamp.
+  - On failure (any vulnerability detected): sends an alert to the admin via WhatsApp (using WAHA) and/or email, with a summary of findings and severity (critical / warning).
+  - Maintains a rolling log file (`/var/log/openkick-audit.log`) with 30-day retention.
+  - Provides a `--json` flag for machine-readable output, enabling integration with monitoring dashboards.
+
+- **Guiding principle — assume breach:** The audit operates on the assumption that misconfigurations happen. Its purpose is to catch them before an attacker does. All checks must be non-destructive (read-only probes, no data modification).
+
+#### 4.5.7 Development-Time Security Audit
+
+A shell script (`tools/security-audit.sh`) must run during development and in CI pipelines to catch security issues before they reach production.
+
+- **What it checks:**
+  - **Hardcoded secrets:** Scans source files for patterns matching passwords, API keys, tokens, and private keys committed to the repository.
+  - **Dependency vulnerabilities:** Runs `npm audit` and flags critical/high severity issues.
+  - **File permissions:** Verifies that database files (`.sqlite3`, `.db`) and `.env` files are not world-readable.
+  - **Docker misconfigurations:** Detects containers running as root, privileged mode, or hardcoded credentials in compose files.
+  - **Code-level security patterns:** SQL injection (string interpolation in queries), dangerous dynamic code execution, insecure randomness (`Math.random()` in security contexts), and PII leakage in log statements.
+  - **CORS & security headers:** Flags wildcard CORS and missing `helmet` middleware.
+  - **security.txt presence:** Verifies that a `security.txt` file exists following RFC 9116.
+  - **.gitignore coverage:** Ensures sensitive file patterns (`.env`, `*.sqlite3`, `node_modules`, `/backups`) are gitignored.
+
+- **Modes:**
+  - `./tools/security-audit.sh` — full audit (all checks).
+  - `./tools/security-audit.sh --quick` — fast subset suitable for CI pre-merge checks.
+
+- **Exit codes:**
+  - `0` — no findings (warnings are non-blocking).
+  - `1` — one or more findings detected (blocks CI).
+
+- **Integration:** The CI pipeline must run `tools/security-audit.sh --quick` on every pull request. The full audit should run nightly.
+
+#### 4.5.8 Security Disclosure & security.txt
+
+The project must follow security best practices for vulnerability disclosure:
+
+- **security.txt:** A machine-readable file at `public/.well-known/security.txt` following [RFC 9116](https://www.rfc-editor.org/rfc/rfc9116), containing contact information, policy links, preferred languages, and an expiry date.
+- **SECURITY.md:** A human-readable security policy at the repository root, describing how to report vulnerabilities, expected response times, and the project's security design principles.
+- **README invitation:** The README must include a Security section that explains the zero-trust model, links to the security audit script, and invites responsible disclosure of vulnerabilities.
+- **No public issue tracking for vulnerabilities:** Security issues must be reported via GitHub Security Advisories (private) or email, never as public issues.
+
+#### 4.5.9 Statistics & Reporting
+
+The system must provide aggregated statistics for coaches, administrators and the club board. All reports use anonymised or pseudonymised data (nicknames, hashed IDs) and never expose PII.
+
+- **Semester periods:** Statistics are grouped by semester — spring semester (February–July) and autumn semester (August–January) — as well as by school year (autumn to summer, e.g., 2025/26).
+- **Training hours:** Total training hours offered per team, per semester and per school year.
+- **Person hours:** Sum of (number of attending players × session duration) per team, semester, and school year. This measures the club's effective training volume.
+- **Coach hours:** Total hours each coach has led or assisted sessions, per semester and school year. Useful for volunteer recognition and insurance reporting.
+- **No-show statistics:** Per-player and per-team no-show rate (registered but did not attend without prior cancellation). Highlight chronic no-shows so coaches can follow up.
+- **Attendance rate:** Per-player and per-team attendance percentage over a configurable period.
+- **Tournament participation:** Number of tournaments attended per player, per team, per semester.
+- **Dashboard widgets:** Key metrics displayed on the coach dashboard as cards or charts (bar chart for attendance trend, pie chart for absence reasons).
+- **Homepage club statistics (public):** The website homepage displays a set of headline statistics visible to everyone (no login required). These are purely aggregate numbers with no PII:
+  - **Lifetime athletes:** Total number of players who have ever been registered with the club.
+  - **Active athletes:** Number of players currently active (attended at least one session in the current semester).
+  - **Tournaments played:** Lifetime count of tournaments the club has participated in.
+  - **Trophies won:** Total count of trophy-marked achievements from the game history.
+  - **Training sessions this season:** Number of training sessions held in the current school year.
+  - **Active coaches:** Number of coaches who have led at least one session in the current semester.
+  The admin can enable or disable each stat individually in club settings. All numbers update automatically.
+- **Export:** Statistics can be exported as CSV or PDF. Exports are anonymised (see PRD 4.5.5).
+
+#### 4.5.10 Administrative Checklists
+
+An interactive checklist module helps club owners and coaches stay on top of administrative, legal and logistical requirements. Checklists are context-aware and adapt based on the club's classification.
+
+- **Club profile & classification:** During setup, the administrator selects applicable classifications:
+  - City of Zurich official sports activity (Sportamt Zürich)
+  - Swiss Football Association (SFV / ASF) member club
+  - Regional league participation (e.g., IFV, FVRZ)
+  - Other associations or custom classifications
+- **Administrative checklist:** A master checklist of recurring administrative tasks, filtered by the club's classifications. Examples:
+  - Liability insurance (Haftpflichtversicherung) valid and renewed
+  - Accident insurance for players confirmed
+  - Coach certifications (J+S, SFV C-Diploma) up to date
+  - Facility usage permits / field reservations secured
+  - Registration with Sportamt Zürich submitted (if applicable)
+  - SFV team registration and licence fees paid (if applicable)
+  - Parent consent forms / disclaimers collected for all players
+  - First-aid kit inspected and restocked
+  - Bills and invoices paid (membership fees, tournament fees)
+- **Per-training checklist:** A short, repeatable checklist for each training session:
+  - Balls, cones, bibs packed
+  - First-aid kit available
+  - Attendance taken (links to the attendance module)
+  - Field condition checked
+  - Water / drinks reminder sent to parents
+- **Per-tournament checklist:** A checklist for each tournament participation:
+  - Registration submitted before deadline
+  - Teams formed and published
+  - Custom Trikots ordered (links to survey module for sizing)
+  - Trikots packed and accounted for
+  - Tournament rules / PDF downloaded and reviewed
+  - Transport organised (drivers, carpooling)
+  - Player passes / ID cards prepared (if league requires)
+  - Post-tournament feedback survey sent (links to survey module)
+- **Custom items:** Coaches and administrators can add, remove and reorder checklist items.
+- **Progress tracking:** Each checklist instance tracks completion per item with timestamps. Incomplete items can trigger reminders.
+- **Recurring checklists:** Administrative checklists reset per semester or per school year. Per-training checklists reset for each session. Per-tournament checklists are created per event.
+
+#### 4.5.11 Surveys & Questionnaires
+
+A lightweight survey system allows coaches to collect structured feedback, orders and preferences from parents. Surveys are shareable via link (web, WhatsApp, Signal, email).
+
+- **Survey builder:** Coaches can create simple surveys with the following question types:
+  - Single choice (radio buttons)
+  - Multiple choice (checkboxes)
+  - Star rating (1–5 stars)
+  - Free text (optional comment field)
+  - Size picker (dropdown with standard sizes: XS, S, M, L, XL, XXL, plus children's sizes: 116, 128, 140, 152, 164)
+- **Anonymous or identified:** When creating a survey, the coach chooses whether responses are anonymous or linked to a player/parent. Anonymous surveys store no identifiers; identified surveys link to the player's nickname only (no PII).
+- **Shareable link:** Each survey gets a unique URL that can be posted anywhere — WhatsApp group, Signal, email, printed QR code.
+- **Mobile-friendly:** Survey pages are responsive and optimised for quick completion on a phone.
+- **Two ready-made survey templates:**
+  1. **Trikot & cap order:** Collects per player: Trikot size (children's / adult sizes), cap size (adjustable / S-M / L-XL), name or number to print on back (optional). Includes a summary view for the coach showing quantities per size.
+  2. **End-of-semester feedback:** 5-star rating for overall satisfaction, 5-star rating for training quality, 5-star rating for communication, free-text field for "What should we improve?", free-text field for "What did you enjoy most?". Anonymous by default.
+- **Results dashboard:** Coaches see aggregated results — average star ratings, size distribution charts, individual text responses (anonymous or attributed).
+- **Deadline & reminders:** Surveys can have a response deadline. Reminders are sent via WhatsApp to parents who haven't responded (only for identified surveys; anonymous surveys cannot track who has responded).
+- **Close & archive:** Coaches can close a survey to stop accepting responses and archive it for future reference.
+
+#### 4.5.12 Payments
+
+The system supports optional payment collection for club activities. Administrators configure which payment providers and use cases are active.
+
+- **Payment providers:** The system integrates with the following providers. The administrator enables one or more during setup:
+  - **Stripe** — card payments, SEPA, Apple Pay, Google Pay, and Twint (via Stripe's Twint payment method, available for Swiss accounts).
+  - **Datatrans** — Swiss PSP supporting credit cards, PostFinance, and Twint. Commonly used by Swiss clubs and associations.
+  - **Twint (via PSP):** Twint does not offer a direct developer API. It is available as a payment method through Stripe or Datatrans. The admin selects "Twint" as an offered payment method, and the system routes it through the configured PSP.
+- **Admin payment settings:** In the admin dashboard under "Payment Settings", the administrator can:
+  - Enable or disable each payment provider.
+  - Enable or disable each payment use case (see below).
+  - Set a default currency (CHF by default).
+  - View a transaction log with date, amount, purpose, and status (no PII — only player nickname or anonymous).
+- **Payment use cases:**
+  - **Tournament participation fee:** When creating a tournament, the coach can set an optional participation fee. Parents pay during registration (via web form). Registration is confirmed only after successful payment. Unpaid registrations are flagged and can be reminded.
+  - **Trikot & merchandise orders (survey payments):** When a survey includes orderable items (e.g., Trikot & cap order template from PRD 4.5.11), the coach can attach a price per item. After submitting the survey, the parent is redirected to a payment page with their order total. The order is marked as "paid" or "pending" in the results dashboard.
+  - **Donations (homepage widget):** An optional donation widget can be displayed on the homepage. The admin sets a suggested amount (or "any amount") and a short description (e.g., "Support our tournament travel fund"). Donations are anonymous by default; donors can optionally leave a name or message.
+- **Payment flow:** All payments use the provider's hosted checkout page (Stripe Checkout, Datatrans Lightbox). The club's server never handles raw card data. The system receives a webhook callback on payment success/failure and updates the record accordingly.
+- **Receipts:** After successful payment, the parent receives a confirmation via WhatsApp (if identified) and can download a simple receipt (PDF) from the web interface.
+- **Refunds:** Coaches can initiate refunds from the admin dashboard (e.g., if a tournament is cancelled). The refund is processed through the PSP's API.
+- **Privacy:** Payment records store only the player nickname, amount, purpose, and transaction ID. No credit card numbers, bank details, or billing addresses are stored in the OpenKick database.
+
+#### 4.5.13 Club Branding & Customisation
+
+Every OpenKick instance should feel like the club's own tool, not a generic platform. Administrators can customise the appearance and identity of the web application and WhatsApp messages.
+
+- **Homepage:** The homepage at `/` displays the club logo, club name, and club description — all taken from settings. No hardcoded "OpenKick" text appears on the homepage. The server injects these values (and all meta/OG tags) into the HTML at request time so that crawlers and social media previews see the correct branding.
+- **Club name & subtitle:** Displayed on the homepage, header, login page, footer copyright, and WhatsApp bot greeting. Example: "FC Example — Junioren E".
+- **Logo:** Upload a club logo (SVG, PNG, or JPG, max 2 MB). Displayed on the homepage, header, login page, footer, and as the WhatsApp bot profile picture (if supported by WAHA). On upload, the server automatically generates favicon variants (ICO, 16×16, 32×32, apple-touch-icon 180×180, Android Chrome 192×192 and 512×512) and a `site.webmanifest`.
+- **Tint colour (primary colour):** A single brand colour (hex value or colour picker) applied to buttons, links, active states, and the header bar. The system auto-generates accessible contrast variants (dark/light) for text and backgrounds.
+- **SEO & Social Media:** Administrators can individually configure: OG title, OG description, OG image, Twitter/X title, Twitter/X description, Twitter/X handle, and meta keywords. Empty fields fall back to club profile values (club name, club description, club logo). These tags are injected server-side into every HTML page's `<head>`.
+- **Official contact information:** Displayed in the footer and the "About" / "Contact" page:
+  - Club name (legal name if different from display name)
+  - Street address
+  - Postal code and city
+  - Email address
+  - Phone number (optional)
+  - Website URL (optional)
+- **Imprint (Impressum):** A free-text or structured field for the legal imprint, required by Swiss law for websites. Displayed on a dedicated `/imprint` page and linked from the footer. Fields:
+  - Responsible person (name)
+  - Club association type (e.g., Verein nach Art. 60 ZGB)
+  - UID / commercial register number (optional)
+  - Data protection officer or contact (optional)
+- **Security contact (security.txt):** Administrators configure security contact details (email, URL, PGP key URL, policy URL, acknowledgments URL, preferred languages, canonical URL) through the settings page. The server dynamically generates an RFC 9116 compliant `/.well-known/security.txt` from these settings. The open-source project contact is always included automatically.
+- **Footer:** The footer on every page shows: club name in the copyright line, links to Imprint, Privacy Policy, Login, feeds (RSS, Atom, Calendar), data endpoints (Sitemap, llms.txt, robots.txt), and API links (Health, MCP, security.txt).
+- **WhatsApp bot identity:** The bot's display name and greeting message are derived from the club name and subtitle. The greeting is customisable (e.g., "Hallo! Ich bin der Bot vom FC Example. Schreib mir den Namen deines Kindes, um loszulegen.").
+- **Settings UI:** All branding settings are managed from a "Club Settings" page in the admin dashboard. Changes take effect immediately (no restart required). Settings sections: Club Profile, SEO & Social Media, Security Contact.
 
 ### 4.6 Non-Functional Requirements
 
@@ -126,9 +331,9 @@ Parents currently notify coaches about training attendance and tournament partic
 |---|---|
 | **Usability** | Parents can send messages without changing habits; the web interface must be mobile-friendly. |
 | **Reliability** | System must handle concurrent messages without losing responses; use queueing to process WhatsApp webhooks. |
-| **Security & Privacy** | Use HTTPS; restrict access to the admin dashboard; comply with Swiss/EU data-protection laws; store minimal data. |
+| **Security & Privacy** | Use HTTPS; restrict access to the admin dashboard; comply with Swiss/EU data-protection laws; store minimal data. Enforce zero-trust data exposure (PII is write-only; never displayed except to strong-password admins). Run daily automated data protection audits via cron. Enforce strong admin passwords (min 12 chars, complexity rules, checked against common-password lists). |
 | **Scalability** | Should support multiple teams with up to ~100 players; WAHA can scale to hundreds of sessions[27]. |
-| **Extensibility** | Modular architecture to add features (payments, equipment tracking) later. |
+| **Extensibility** | Modular architecture to add features (equipment tracking, etc.) later. Payments are a first-class module (see PRD 4.5.12). |
 | **Localization** | Interface should support German and French as well as English; follow the user's timezone (Europe/Zurich). |
 
 ### 4.7 Technical Architecture (High-Level)
@@ -155,6 +360,7 @@ Parents currently notify coaches about training attendance and tournament partic
 | **Data privacy concerns** | Host servers in Switzerland/EU; store minimal data; provide clear consent. |
 | **Technical complexity** | Start with core features (attendance and simple tournament registration). Use open-source components to reduce development time. |
 | **User adoption** | Provide training for coaches and clear onboarding for parents; allow fallback to manual communication until adoption stabilises. |
+| **Accidental data exposure** | Daily automated audit (`tools/data-protection-audit.sh`) detects misconfigured permissions, exposed database files, directory listings, and default credentials. Alerts are sent to the admin immediately. Zero-trust architecture ensures PII is never returned in API responses or UI unless the caller is an admin with a verified strong password. |
 
 ### 4.10 Deployment & Installation
 
@@ -213,6 +419,8 @@ A deployment script (`tools/deploy-production.sh`) must handle:
 | `tools/backup-db.sh` | Database backup with retention policy |
 | `tools/restore-db.sh` | Restore database from a backup file |
 | `tools/health-check.sh` | Verify all services are running and responsive |
+| `tools/data-protection-audit.sh` | Daily automated data protection analysis (cron job) |
+| `tools/security-audit.sh` | Development/CI-time extended security audit (`--quick` for CI) |
 
 ### 4.11 Account Setup & Credential Onboarding
 
@@ -238,6 +446,10 @@ The setup wizard runs in the terminal and walks the user through each credential
 | **Admin account** | Created during first-run setup in the web app | The first user to log in becomes the club administrator. They set their own email and password. |
 | **n8n credentials** | Set during setup (`N8N_BASIC_AUTH_USER`, `N8N_BASIC_AUTH_PASSWORD`) | Protects the n8n workflow dashboard from unauthorised access. |
 | **SMTP server (optional)** | Club's email provider or a free service like Mailgun/Brevo | Sends email notifications and password-reset emails. Not required if the club only uses WhatsApp. |
+| **Stripe API keys (optional)** | [dashboard.stripe.com/apikeys](https://dashboard.stripe.com/apikeys) | Required if Stripe is used as payment provider. Publishable key for frontend, secret key for backend webhooks. |
+| **Datatrans Merchant ID & API credentials (optional)** | [datatrans.ch](https://www.datatrans.ch/) — contact for account | Required if Datatrans is used as payment provider. Merchant ID, server-to-server password, and sign key. |
+| **Brave Search API key (optional)** | [brave.com/search/api](https://brave.com/search/api/) — free tier available | Powers the live-ticker feature by crawling tournament result pages on match day. Not required if coaches enter results manually. |
+| **LLM API key (optional)** | Anthropic, OpenAI, or local model (e.g., Ollama) | Used together with Brave Search to extract structured match results from unstructured tournament web pages. Not required if live ticker is not used. |
 | **Domain name (production)** | Any domain registrar (e.g., Cloudflare, Namecheap) | Required for HTTPS in production. The reverse proxy obtains a certificate automatically via Let's Encrypt. |
 
 #### 4.11.3 Credential Security

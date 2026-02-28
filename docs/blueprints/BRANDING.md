@@ -2,8 +2,23 @@
 
 > **PRD reference:** Section 4.5.13 — Club Branding & Customisation
 > **Design system:** See `CICD.md` for colours, typography, components, layout, and dark mode
-> **Status:** Ready for implementation
+> **Status:** Partially implemented (see "Current Implementation" below)
 > **Priority:** High (every page and every WhatsApp message depends on branding data)
+>
+> ## Current Implementation (as of Mar 2026)
+>
+> The following parts of this blueprint are already implemented and diverge from the original design below:
+>
+> - **Settings storage:** Uses the existing `settings` key-value table (not a separate `club_settings` table). Keys: `club_name`, `club_description`, `club_logo`, `og_title`, `og_description`, `og_image`, `twitter_title`, `twitter_description`, `twitter_handle`, `meta_keywords`, `security_contact_email`, `security_contact_url`, `security_pgp_key_url`, `security_policy_url`, `security_acknowledgments_url`, `security_preferred_languages`, `security_canonical_url`.
+> - **Homepage:** Displays club logo, club name, and club description from settings. No hardcoded "OpenKick" text on the homepage. Values come from `window.__CLUB_SETTINGS__` (injected server-side).
+> - **Server-side HTML injection:** An Express middleware (`server/src/middleware/html-injector.ts`) reads each HTML file from disk, injects `<title>`, `<meta>` (description, keywords, OG, Twitter), favicon `<link>` tags, and a `<script>window.__CLUB_SETTINGS__={...}</script>` into `<head>` before serving. Crawlers and social media bots see correct branding in the raw HTML.
+> - **Favicon generation:** On logo upload (`POST /api/settings/upload-logo`), `sharp` generates favicon.ico, 16×16, 32×32, apple-touch-icon (180×180), Android Chrome (192×192, 512×512), and `site.webmanifest`. Cleanup on logo removal.
+> - **Dynamic security.txt:** `GET /.well-known/security.txt` is dynamically generated from settings (RFC 9116). Includes club owner contacts + hardcoded open-source project contact.
+> - **Footer:** Shows club name in copyright, links to feeds, data endpoints, API, login, imprint, privacy.
+> - **Settings UI:** "Club Profile", "SEO & Social Media", and "Security Contact" sections in the admin settings page.
+> - **Frontend hook:** `useClubSettings()` reads from `window.__CLUB_SETTINGS__` (no API fetch).
+>
+> **Not yet implemented from this blueprint:** tint colour system, imprint page, SVG sanitisation, WhatsApp bot identity sync, branding middleware headers, colour palette generation.
 
 ---
 

@@ -73,8 +73,8 @@ settingsRouter.post("/settings/upload-logo", (req: Request, res: Response) => {
   }
 
   const buffer = Buffer.from(data, "base64");
-  if (buffer.length > 2 * 1024 * 1024) {
-    res.status(400).json({ error: "File too large. Maximum 2MB." });
+  if (buffer.length > 10 * 1024 * 1024) {
+    res.status(400).json({ error: "File too large. Maximum 10MB." });
     return;
   }
 
@@ -91,6 +91,22 @@ settingsRouter.post("/settings/upload-logo", (req: Request, res: Response) => {
   db.run("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", ["club_logo", publicPath]);
 
   res.json({ key: "club_logo", value: publicPath });
+});
+
+// DELETE /api/settings/remove-logo — delete the uploaded club logo
+settingsRouter.delete("/settings/remove-logo", (_req: Request, res: Response) => {
+  const db = getDB();
+  const row = db.prepare("SELECT value FROM settings WHERE key = ?").get("club_logo") as { value: string } | undefined;
+
+  if (row?.value) {
+    const filePath = path.resolve(__dirname, "../../../public", row.value.replace(/^\//, ""));
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+  }
+
+  db.run("DELETE FROM settings WHERE key = ?", ["club_logo"]);
+  res.json({ key: "club_logo", value: "" });
 });
 
 // POST /api/settings/test-smtp — send a test email to verify SMTP config

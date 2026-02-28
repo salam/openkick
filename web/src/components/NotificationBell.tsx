@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { apiFetch } from '@/lib/api';
+import { t, getLanguage } from '@/lib/i18n';
 
 interface Notification {
   id: number;
@@ -11,6 +12,13 @@ interface Notification {
 }
 
 export default function NotificationBell() {
+  const [, setLang] = useState(() => getLanguage());
+  useEffect(() => {
+    function onLangChange() { setLang(getLanguage()); }
+    window.addEventListener('languagechange', onLangChange);
+    return () => window.removeEventListener('languagechange', onLangChange);
+  }, []);
+
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -46,7 +54,7 @@ export default function NotificationBell() {
       <button
         onClick={() => setOpen(!open)}
         className="relative p-2 text-gray-600 hover:text-gray-800 transition-colors"
-        aria-label="Notifications"
+        aria-label={t('notifications')}
       >
         <svg
           className="w-6 h-6"
@@ -69,7 +77,7 @@ export default function NotificationBell() {
         <div className="absolute right-0 top-10 bg-white border border-gray-200 rounded-xl shadow-lg w-80 z-50 max-h-96 overflow-y-auto">
           <div className="p-3 border-b border-gray-100">
             <h3 className="text-sm font-semibold text-gray-700">
-              Notifications
+              {t('notifications')}
             </h3>
           </div>
           {notifications.map((n) => (
@@ -86,7 +94,7 @@ export default function NotificationBell() {
                   onClick={() => markRead(n.id)}
                   className="text-xs text-blue-600 hover:text-blue-800"
                 >
-                  Dismiss
+                  {t('dismiss')}
                 </button>
               </div>
             </div>

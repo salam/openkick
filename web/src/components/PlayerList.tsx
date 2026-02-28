@@ -2,13 +2,24 @@
 
 import { useState } from 'react';
 
+export interface Guardian {
+  id: number;
+  phone: string;
+  name: string | null;
+  email: string | null;
+  role: string;
+  language: string;
+}
+
 export interface Player {
   id: number;
   name: string;
   yearOfBirth: number | null;
   category: string | null;
   position: string | null;
+  lastNameInitial: string | null;
   notes: string | null;
+  guardians?: Guardian[];
 }
 
 interface PlayerListProps {
@@ -78,6 +89,7 @@ export default function PlayerList({ players, onEdit, onDelete }: PlayerListProp
                   <th className="pb-3 pr-4 font-medium">Year of Birth</th>
                   <th className="pb-3 pr-4 font-medium">Category</th>
                   <th className="pb-3 pr-4 font-medium">Position</th>
+                  <th className="pb-3 pr-4 font-medium">Contact</th>
                   <th className="pb-3 font-medium">Actions</th>
                 </tr>
               </thead>
@@ -93,6 +105,20 @@ export default function PlayerList({ players, onEdit, onDelete }: PlayerListProp
                       <CategoryBadge category={player.category} />
                     </td>
                     <td className="py-3 pr-4 text-gray-600">{formatPosition(player.position)}</td>
+                    <td className="py-3 pr-4 text-gray-600">
+                      {player.guardians && player.guardians.length > 0 ? (
+                        <div className="flex flex-col gap-0.5 text-xs">
+                          {player.guardians.map((g) => (
+                            <span key={g.id}>
+                              {g.name || 'Parent'}: {g.phone}
+                              {g.email && ` / ${g.email}`}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
+                    </td>
                     <td className="py-3">
                       <div className="flex gap-2">
                         <button
@@ -126,10 +152,20 @@ export default function PlayerList({ players, onEdit, onDelete }: PlayerListProp
                   <span className="font-medium text-gray-900">{player.name}</span>
                   <CategoryBadge category={player.category} />
                 </div>
-                <div className="mb-3 flex gap-4 text-xs text-gray-500">
+                <div className="mb-2 flex gap-4 text-xs text-gray-500">
                   {player.yearOfBirth && <span>Born {player.yearOfBirth}</span>}
                   {player.position && <span>{formatPosition(player.position)}</span>}
                 </div>
+                {player.guardians && player.guardians.length > 0 && (
+                  <div className="mb-3 flex flex-col gap-0.5 text-xs text-gray-500">
+                    {player.guardians.map((g) => (
+                      <span key={g.id}>
+                        {g.name || 'Parent'}: {g.phone}
+                        {g.email && ` / ${g.email}`}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 <div className="flex gap-2">
                   <button
                     onClick={() => onEdit(player)}

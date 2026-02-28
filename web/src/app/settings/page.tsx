@@ -163,10 +163,11 @@ export default function SettingsPage() {
   useEffect(() => { loadUsers(); }, [loadUsers]);
 
   useEffect(() => {
-    apiFetch<{ group: string; presets: { id: string; label: string }[] }[]>('/api/vacations/presets')
+    apiFetch<{ groups: { group: string; presets: { id: string; label: string }[] }[]; selected: string }>('/api/vacations/presets')
       .then((data) => {
-        setPresets(data);
-        if (data[0]?.presets[0]) setSelectedPreset(data[0].presets[0].id);
+        setPresets(data.groups);
+        if (data.selected) setSelectedPreset(data.selected);
+        else if (data.groups[0]?.presets[0]) setSelectedPreset(data.groups[0].presets[0].id);
       })
       .catch(() => {});
   }, []);

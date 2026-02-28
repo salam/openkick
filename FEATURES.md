@@ -14,17 +14,21 @@
 - [x] Settings management (key-value store)
 - [x] Multi-provider LLM abstraction (OpenAI, Claude, Infomaniak Euria)
 - [x] Whisper speech-to-text for voice messages
-- [x] WhatsApp integration via WAHA (webhook + message sending)
+- [x] WhatsApp integration via WAHA (webhook + message sending + session-based state machine)
+- [x] WhatsApp RSVP: parents confirm/decline attendance via chat message (intent classification, multi-child disambiguation)
+- [x] WhatsApp onboarding for unknown phone numbers (4-step: name, child, birth year, consent)
+- [x] WhatsApp message deduplication and logging
 - [x] Weather forecasts via OpenMeteo (free, no key)
 - [x] Half-automated broadcast system (training headsup, rain alert, cancellation, holiday)
-- [x] Automatic attendance reminders
+- [x] Automatic attendance reminders with personalized RSVP deep links
 - [x] School holiday system (10 preset regions with grouped picker, ICS import, URL extraction via LLM, suggest-a-source)
 - [x] Calendar with training schedule, vacation integration, auto-cancellation
 - [x] Tournament import from PDF and URL via LLM
 - [x] Team auto-assignment for tournaments
 - [x] i18n for de/fr/en
 - [x] Rate limiting (general, auth, mutation tiers via express-rate-limit)
-- [x] Altcha proof-of-work captcha on login and attendance (pluggable provider)
+- [x] Altcha proof-of-work captcha on login, attendance, and public RSVP (pluggable provider)
+- [x] Public RSVP API (resolve deep link, name search with CAPTCHA, confirm with opaque tokens)
 - [x] RSS 2.0 feed for public events
 - [x] Atom 1.0 feed for public events
 - [x] ActivityPub read-only publisher (Mastodon/Fediverse)
@@ -52,6 +56,7 @@
 - [x] Login page with JWT auth
 - [x] Coach dashboard with event cards and attendance overview
 - [x] Event detail page with one-click RSVP for parents
+- [x] Public RSVP page (/rsvp) with personalized deep links and anonymous name-search mode
 - [x] Player management with SFV category badges
 - [x] Calendar page (yearly/monthly/list views)
 - [x] Broadcast composer with template selection
@@ -83,8 +88,8 @@
 
 ## Remaining — Attendance via WhatsApp (PRD 4.5.1)
 
-- [ ] WhatsApp RSVP: parents confirm/decline attendance via chat message
-- [ ] Name-entry-first web flow (privacy mode for anonymous RSVP links)
+- [x] WhatsApp RSVP: parents confirm/decline attendance via chat message
+- [x] Name-entry-first web flow (privacy mode for anonymous RSVP links)
 
 ## Remaining — Tournament Management (PRD 4.5.2)
 
@@ -97,13 +102,13 @@
 
 ## Remaining — WhatsApp Confirmations (PRD 4.5.3)
 
-- [ ] WhatsApp confirmation message after RSVP (attendance + tournament)
+- [x] WhatsApp confirmation message after RSVP (attendance)
 
 ## Remaining — Parent Onboarding (PRD 4.5.4)
 
 - [ ] Group join link / QR code for parents
-- [ ] WhatsApp-based parent onboarding (name → child → birth year → consent)
-- [ ] Consent collection during onboarding
+- [x] WhatsApp-based parent onboarding (name → child → birth year → consent)
+- [x] Consent collection during onboarding
 
 ## Remaining — Data Privacy & GDPR (PRD 4.5.5)
 
@@ -175,10 +180,11 @@
 - [x] Manual score entry for tournaments without online presence
 - [x] Crawl scheduler (node-cron, per-URL interval)
 - [x] Live ticker REST API (public + coach endpoints)
-- [ ] Privacy-preserving player initials in match results
-- [ ] Permanent game history storage
-- [ ] Trophy cabinet display
+- [x] Privacy-preserving player initials in match results
+- [x] Permanent game history storage
+- [x] Trophy cabinet (set/unset trophies, archive tournaments)
 - [x] Homepage live ticker widget (compact bar + detail page)
+- [x] Public live detail page (/live/:id, shareable, no login)
 - [ ] Brave Search API for results URL discovery
 
 ## Remaining — Admin Security & PII Gating (blueprint: ADMIN_SECURITY.md)

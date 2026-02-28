@@ -1,5 +1,27 @@
 # OpenKick Release Notes
 
+## Version 1.5.0 (Feb 28, 2026, 23:15)
+
+* WhatsApp RSVP: parents can now confirm or decline attendance by simply texting the bot (e.g. "Luca kommt" or "Mia ist krank")
+* Multi-child support: if a parent has multiple children, the bot asks which child they mean
+* WhatsApp onboarding: new parents can register by messaging the bot — it asks for name, child's name, birth year, and consent
+* Message deduplication: duplicate webhook deliveries are automatically ignored
+* Public RSVP page: shareable /rsvp link for quick attendance responses without logging in
+* Personalized deep links: WhatsApp reminders now include a one-tap link to confirm or decline attendance online
+* Anonymous RSVP: public event links with name search and CAPTCHA protection (privacy-first, no player list shown)
+* i18n: all WhatsApp messages support German and English based on the parent's language preference
+
+## Version 1.4.0 (Feb 28, 2026, 23:00)
+
+* Live Ticker: follow tournament scores in real time from the public homepage
+* Turnieragenda.ch integration: automatic score import from turnieragenda.ch tournament pages (no copy-paste needed)
+* Generic tournament scraping: paste any tournament results URL and the AI extracts scores automatically
+* Manual score entry: for tournaments without an online presence, coaches can enter scores directly
+* Crawl scheduler: once a results URL is set, scores update automatically every few minutes on match day
+* Homepage widget: shows a live score ticker during match day, or upcoming/last tournament info when idle
+* Public live page: shareable /live/:id URL for parents to follow along without logging in
+* Game history: archive tournament results permanently with player initials and trophy marking
+
 ## Version 1.3.0 (Feb 28, 2026, 22:50)
 
 * GDPR: Guardians can request a full data export (JSON + CSV) of their personal data and their children's attendance records

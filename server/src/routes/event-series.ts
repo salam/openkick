@@ -76,6 +76,18 @@ eventSeriesRouter.post("/event-series", (req: Request, res: Response) => {
     return;
   }
 
+  if (!Number.isInteger(recurrenceDay) || recurrenceDay < 1 || recurrenceDay > 7) {
+    res.status(400).json({
+      error: "recurrenceDay must be an integer between 1 (Mon) and 7 (Sun)",
+    });
+    return;
+  }
+
+  if (startDate > endDate) {
+    res.status(400).json({ error: "startDate must be before or equal to endDate" });
+    return;
+  }
+
   const db = getDB();
   db.run(
     `INSERT INTO event_series (type, title, description, startTime, attendanceTime,
@@ -243,9 +255,14 @@ eventSeriesRouter.delete("/event-series/:id", (req: Request, res: Response) => {
     return;
   }
 
-  // Delete materialized events first
+  // Delete attendance records for materialized events, then events, then series
+  const materializedIds = rowsToObjects(
+    db.exec("SELECT id FROM events WHERE seriesId = ?", [id]),
+  ).map((r) => r.id as number);
+  for (const eid of materializedIds) {
+    db.run("DELETE FROM attendance WHERE eventId = ?", [eid]);
+  }
   db.run("DELETE FROM events WHERE seriesId = ?", [id]);
-  // Delete the series itself
   db.run("DELETE FROM event_series WHERE id = ?", [id]);
   res.status(204).end();
 });

@@ -1,0 +1,52 @@
+import { initDB, getDB } from "../../database.js";
+
+describe("tournament_results table", () => {
+  beforeAll(async () => {
+    await initDB(); // in-memory
+  });
+
+  it("should create tournament_results table", () => {
+    const db = getDB();
+    const tables = db.exec(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='tournament_results'"
+    );
+    expect(tables.length).toBe(1);
+    expect(tables[0].values[0][0]).toBe("tournament_results");
+  });
+
+  it("should have teamName column on events table", () => {
+    const db = getDB();
+    const cols = db.exec("PRAGMA table_info(events)");
+    const colNames = cols[0].values.map((r) => r[1]);
+    expect(colNames).toContain("teamName");
+  });
+
+  it("should enforce unique eventId constraint", () => {
+    const db = getDB();
+    db.run("INSERT INTO events (type, title, date) VALUES ('tournament', 'Test Cup', '2026-03-01')");
+    const eventId = db.exec("SELECT last_insert_rowid()")[0].values[0][0];
+    db.run(
+      "INSERT INTO tournament_results (eventId, placement, totalTeams) VALUES (?, 1, 8)",
+      [eventId]
+    );
+    expect(() => {
+      db.run(
+        "INSERT INTO tournament_results (eventId, placement, totalTeams) VALUES (?, 2, 8)",
+        [eventId]
+      );
+    }).toThrow();
+  });
+
+  it("should cascade delete when event is deleted", () => {
+    const db = getDB();
+    db.run("INSERT INTO events (type, title, date) VALUES ('tournament', 'Del Cup', '2026-04-01')");
+    const eventId = db.exec("SELECT last_insert_rowid()")[0].values[0][0];
+    db.run(
+      "INSERT INTO tournament_results (eventId, placement, totalTeams, summary) VALUES (?, 1, 6, 'Great win')",
+      [eventId]
+    );
+    db.run("DELETE FROM events WHERE id = ?", [eventId]);
+    const results = db.exec("SELECT * FROM tournament_results WHERE eventId = ?", [eventId]);
+    expect(results.length === 0 || results[0].values.length === 0).toBe(true);
+  });
+});

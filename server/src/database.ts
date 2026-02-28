@@ -139,6 +139,74 @@ CREATE TABLE IF NOT EXISTS broadcasts (
   sentAt TEXT,
   createdBy INTEGER REFERENCES guardians(id)
 );
+
+CREATE TABLE IF NOT EXISTS tournament_results (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  eventId INTEGER NOT NULL UNIQUE REFERENCES events(id) ON DELETE CASCADE,
+  placement INTEGER,
+  totalTeams INTEGER,
+  summary TEXT,
+  resultsUrl TEXT,
+  achievements TEXT DEFAULT '[]',
+  createdBy INTEGER REFERENCES guardians(id),
+  createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+  updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS tournament_results_url (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tournamentId INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  url TEXT NOT NULL,
+  crawlIntervalMin INTEGER NOT NULL DEFAULT 10,
+  lastCrawledAt TEXT,
+  isActive INTEGER NOT NULL DEFAULT 1,
+  createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(tournamentId, url)
+);
+
+CREATE TABLE IF NOT EXISTS live_ticker_entries (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tournamentId INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  matchLabel TEXT,
+  homeTeam TEXT NOT NULL,
+  awayTeam TEXT NOT NULL,
+  score TEXT,
+  matchTime TEXT,
+  source TEXT NOT NULL DEFAULT 'crawl' CHECK(source IN ('crawl', 'manual')),
+  crawledAt TEXT NOT NULL DEFAULT (datetime('now')),
+  updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_ticker_match
+  ON live_ticker_entries(tournamentId, homeTeam, awayTeam, matchLabel);
+
+CREATE TABLE IF NOT EXISTS game_history (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tournamentId INTEGER REFERENCES events(id) ON DELETE SET NULL,
+  tournamentName TEXT NOT NULL,
+  teamName TEXT,
+  date TEXT NOT NULL,
+  placeRanking INTEGER,
+  isTrophy INTEGER NOT NULL DEFAULT 0,
+  trophyType TEXT,
+  notes TEXT,
+  createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS game_history_players (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  historyId INTEGER NOT NULL REFERENCES game_history(id) ON DELETE CASCADE,
+  playerInitial TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS game_history_matches (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  historyId INTEGER NOT NULL REFERENCES game_history(id) ON DELETE CASCADE,
+  matchLabel TEXT,
+  homeTeam TEXT NOT NULL,
+  awayTeam TEXT NOT NULL,
+  score TEXT
+);
 `;
 
 const DEFAULT_SETTINGS: Record<string, string> = {
@@ -190,6 +258,11 @@ export async function initDB(dbPath?: string): Promise<Database> {
   const eventCols = db.exec("PRAGMA table_info(events)")[0]?.values.map(r => r[1]) ?? [];
   if (!eventCols.includes('seriesId')) {
     db.run("ALTER TABLE events ADD COLUMN seriesId INTEGER REFERENCES event_series(id)");
+  }
+
+  // Migrate: add teamName to events if absent
+  if (!eventCols.includes('teamName')) {
+    db.run("ALTER TABLE events ADD COLUMN teamName TEXT");
   }
 
   // Seed default settings (INSERT OR IGNORE to avoid duplicates)

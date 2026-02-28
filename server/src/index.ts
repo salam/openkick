@@ -1,7 +1,10 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { initDB } from "./database.js";
+import { authRouter } from "./routes/auth.js";
 import { playersRouter } from "./routes/players.js";
 import { eventsRouter } from "./routes/events.js";
 import { attendanceRouter } from "./routes/attendance.js";
@@ -17,10 +20,14 @@ const CORS_ORIGIN = process.env.CORS_ORIGIN || "http://localhost:3000";
 app.use(cors({ origin: CORS_ORIGIN.split(",") }));
 app.use(express.json());
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+app.use(express.static(path.resolve(__dirname, "../../public")));
+
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
+app.use("/api", authRouter);
 app.use("/api", playersRouter);
 app.use("/api", eventsRouter);
 app.use("/api", attendanceRouter);

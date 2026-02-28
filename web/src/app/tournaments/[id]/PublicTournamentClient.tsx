@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import { t, getLanguage } from '@/lib/i18n';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -31,22 +32,21 @@ function formatDate(dateStr: string): string {
   });
 }
 
-const STATUS_CONFIG: Record<
-  TournamentView['status'],
-  { classes: string; label: string }
-> = {
-  open: {
-    classes: 'bg-emerald-100 text-emerald-700',
-    label: 'Registration Open',
-  },
-  closing_soon: {
-    classes: 'bg-amber-100 text-amber-800',
-    label: 'Closing Soon',
-  },
-  closed: {
-    classes: 'bg-red-100 text-red-800',
-    label: 'Closed',
-  },
+function statusLabel(status: TournamentView['status']): string {
+  switch (status) {
+    case 'open':
+      return t('registration_open');
+    case 'closing_soon':
+      return t('closing_soon');
+    case 'closed':
+      return t('closed');
+  }
+}
+
+const STATUS_CLASSES: Record<TournamentView['status'], string> = {
+  open: 'bg-emerald-100 text-emerald-700',
+  closing_soon: 'bg-amber-100 text-amber-800',
+  closed: 'bg-red-100 text-red-800',
 };
 
 /* ── Loading skeleton ────────────────────────────────────────────────── */
@@ -84,6 +84,12 @@ export default function PublicTournamentClient() {
   const [tournament, setTournament] = useState<TournamentView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [, setLang] = useState(() => getLanguage());
+  useEffect(() => {
+    function onLangChange() { setLang(getLanguage()); }
+    window.addEventListener('languagechange', onLangChange);
+    return () => window.removeEventListener('languagechange', onLangChange);
+  }, []);
 
   useEffect(() => {
     if (!id) return;
@@ -98,7 +104,7 @@ export default function PublicTournamentClient() {
         setTournament(data);
         setError(null);
       })
-      .catch(() => setError('Tournament not found'))
+      .catch(() => setError(t('tournament_not_found')))
       .finally(() => setLoading(false));
   }, [id]);
 
@@ -109,32 +115,30 @@ export default function PublicTournamentClient() {
       <div className="flex min-h-[60vh] items-center justify-center p-6">
         <div className="rounded-xl border border-red-200 bg-red-50 p-8 text-center">
           <h2 className="mb-2 text-lg font-semibold text-red-800">
-            {error || 'Tournament not found'}
+            {error || t('tournament_not_found')}
           </h2>
           <a
             href="/"
             className="mt-4 inline-block text-sm text-emerald-600 underline hover:text-emerald-800"
           >
-            Back to home
+            {t('back_to_home')}
           </a>
         </div>
       </div>
     );
   }
 
-  const { classes, label } = STATUS_CONFIG[tournament.status];
-
   return (
     <main className="mx-auto max-w-3xl space-y-8 px-4 py-8 sm:px-6">
       <div>
         <div className="mb-2 flex flex-wrap items-center gap-2">
           <span className="inline-block rounded-full bg-emerald-100 px-3 py-0.5 text-xs font-semibold text-emerald-700">
-            Tournament
+            {t('tournament')}
           </span>
           <span
-            className={`inline-block rounded-full px-3 py-0.5 text-xs font-semibold ${classes}`}
+            className={`inline-block rounded-full px-3 py-0.5 text-xs font-semibold ${STATUS_CLASSES[tournament.status]}`}
           >
-            {label}
+            {statusLabel(tournament.status)}
           </span>
         </div>
         <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">
@@ -143,18 +147,18 @@ export default function PublicTournamentClient() {
       </div>
 
       <section className="grid gap-4 sm:grid-cols-2">
-        <InfoItem label="Date" value={formatDate(tournament.date)} />
+        <InfoItem label={t('date')} value={formatDate(tournament.date)} />
         {tournament.startTime && (
-          <InfoItem label="Start time" value={tournament.startTime} />
+          <InfoItem label={t('rsvp_start_time')} value={tournament.startTime} />
         )}
         {tournament.location && (
-          <InfoItem label="Location" value={tournament.location} />
+          <InfoItem label={t('location')} value={tournament.location} />
         )}
         {tournament.teamName && (
-          <InfoItem label="Team" value={tournament.teamName} />
+          <InfoItem label={t('team')} value={tournament.teamName} />
         )}
         <InfoItem
-          label="Registered"
+          label={t('registered')}
           value={
             tournament.maxParticipants
               ? `${tournament.attendingCount} / ${tournament.maxParticipants}`
@@ -166,7 +170,7 @@ export default function PublicTournamentClient() {
       {tournament.teams.length > 0 && (
         <section>
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
-            Teams
+            {t('teams')}
           </h2>
           <div className="grid gap-4 sm:grid-cols-2">
             {tournament.teams.map((team, i) => (
@@ -178,7 +182,7 @@ export default function PublicTournamentClient() {
                   {team.name}
                 </h3>
                 {team.players.length === 0 ? (
-                  <p className="text-xs italic text-gray-400">No players</p>
+                  <p className="text-xs italic text-gray-400">{t('rsvp_no_players')}</p>
                 ) : (
                   <div className="flex flex-wrap gap-2">
                     {team.players.map((p, j) => (
@@ -202,7 +206,7 @@ export default function PublicTournamentClient() {
           href="/"
           className="text-sm text-emerald-600 underline hover:text-emerald-800"
         >
-          Back to home
+          {t('back_to_home')}
         </a>
       </div>
     </main>

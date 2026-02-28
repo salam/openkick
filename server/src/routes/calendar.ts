@@ -206,7 +206,10 @@ calendarRouter.post("/vacations/import-url", async (req: Request, res: Response)
 
 // GET /api/vacations/presets
 calendarRouter.get("/vacations/presets", (_req: Request, res: Response) => {
-  res.json(getPresetGroups());
+  const db = getDB();
+  const result = db.exec("SELECT value FROM settings WHERE key = 'holiday_preset'");
+  const selected = (result[0]?.values[0]?.[0] as string) || "";
+  res.json({ groups: getPresetGroups(), selected });
 });
 
 // POST /api/vacations/sync
@@ -225,6 +228,11 @@ calendarRouter.post("/vacations/sync", (req: Request, res: Response) => {
 
   const syncYear = year ?? new Date().getFullYear();
   const result = syncPresetHolidays(presetId, syncYear);
+
+  // Persist the selected preset for daily auto-sync
+  const db = getDB();
+  db.run("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", ["holiday_preset", presetId]);
+
   const upcoming = getUpcomingVacations(3);
   res.json({ ...result, upcoming });
 });

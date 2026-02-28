@@ -278,14 +278,15 @@ END:VCALENDAR`;
     mockExtract.mockRestore();
   });
 
-  it("GET /api/vacations/presets — returns grouped preset list", async () => {
+  it("GET /api/vacations/presets — returns grouped preset list with selected", async () => {
     const res = await fetch(`${baseUrl}/api/vacations/presets`);
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body).toBeInstanceOf(Array);
-    expect(body.length).toBeGreaterThanOrEqual(3);
-    expect(body[0].group).toBeTruthy();
-    expect(body[0].presets.length).toBeGreaterThan(0);
+    expect(body.groups).toBeInstanceOf(Array);
+    expect(body.groups.length).toBeGreaterThanOrEqual(3);
+    expect(body.groups[0].group).toBeTruthy();
+    expect(body.groups[0].presets.length).toBeGreaterThan(0);
+    expect(typeof body.selected).toBe("string");
   });
 
   it("POST /api/vacations/sync — syncs a preset by id", async () => {
@@ -306,6 +307,11 @@ END:VCALENDAR`;
     const vacations = await getRes.json();
     expect(vacations.length).toBeGreaterThan(0);
     expect(vacations[0].source).toBe("preset:ch-zurich");
+
+    // Verify the preset was persisted in settings for auto-sync
+    const presetsRes = await fetch(`${baseUrl}/api/vacations/presets`);
+    const presetsBody = await presetsRes.json();
+    expect(presetsBody.selected).toBe("ch-zurich");
   });
 
   it("POST /api/vacations/sync — returns 400 for unknown preset", async () => {

@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS players (
   category TEXT,
   position TEXT,
   notes TEXT,
+  lastNameInitial TEXT,
   createdAt TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -208,6 +209,25 @@ CREATE TABLE IF NOT EXISTS game_history_matches (
   score TEXT
 );
 
+CREATE TABLE IF NOT EXISTS notifications (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  userId INTEGER,
+  eventId INTEGER,
+  type TEXT NOT NULL,
+  message TEXT NOT NULL,
+  read INTEGER DEFAULT 0,
+  createdAt TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (eventId) REFERENCES events(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS tournament_alerts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  eventId INTEGER NOT NULL UNIQUE,
+  lastAlertType TEXT,
+  lastAlertAt TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (eventId) REFERENCES events(id) ON DELETE CASCADE
+);
+
 `;
 
 const DEFAULT_SETTINGS: Record<string, string> = {
@@ -264,6 +284,12 @@ export async function initDB(dbPath?: string): Promise<Database> {
   // Migrate: add teamName to events if absent
   if (!eventCols.includes('teamName')) {
     db.run("ALTER TABLE events ADD COLUMN teamName TEXT");
+  }
+
+  // Migrate: add lastNameInitial to players if absent
+  const playerCols = db.exec("PRAGMA table_info(players)")[0]?.values.map(r => r[1]) ?? [];
+  if (!playerCols.includes('lastNameInitial')) {
+    try { db.run('ALTER TABLE players ADD COLUMN lastNameInitial TEXT'); } catch {}
   }
 
   // Seed default settings (INSERT OR IGNORE to avoid duplicates)

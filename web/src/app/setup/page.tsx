@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import { setToken } from '@/lib/auth';
+import { t, getLanguage } from '@/lib/i18n';
 import WahaWizard from './waha-wizard';
 
 interface SetupStatusResponse {
@@ -25,6 +26,12 @@ export default function SetupPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [, setLang] = useState(() => getLanguage());
+  useEffect(() => {
+    function onLangChange() { setLang(getLanguage()); }
+    window.addEventListener('languagechange', onLangChange);
+    return () => window.removeEventListener('languagechange', onLangChange);
+  }, []);
 
   const goToDashboard = useCallback(() => {
     router.push('/onboarding/');
@@ -49,7 +56,7 @@ export default function SetupPage() {
     setError('');
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match.');
+      setError(t('passwords_no_match'));
       return;
     }
 
@@ -65,7 +72,7 @@ export default function SetupPage() {
       setAuthToken(data.token);
       setSetupPhase('waha');
     } catch {
-      setError('Setup failed. Please try again.');
+      setError(t('setup_failed'));
     } finally {
       setLoading(false);
     }
@@ -97,7 +104,7 @@ export default function SetupPage() {
         {/* Branding */}
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold text-emerald-600">OpenKick</h1>
-          <p className="mt-1 text-sm text-gray-500">Youth Football Management</p>
+          <p className="mt-1 text-sm text-gray-500">{t('youth_football_mgmt')}</p>
         </div>
 
         {/* Card */}
@@ -106,10 +113,10 @@ export default function SetupPage() {
           className="rounded-xl bg-white p-6 shadow-md"
         >
           <h2 className="mb-1 text-xl font-semibold text-gray-800">
-            Welcome to OpenKick
+            {t('setup_title')}
           </h2>
           <p className="mb-6 text-sm text-gray-500">
-            Create your admin account to get started
+            {t('setup_hint')}
           </p>
 
           {error && (
@@ -119,7 +126,7 @@ export default function SetupPage() {
           )}
 
           <label className="mb-1 block text-sm font-medium text-gray-700">
-            Name
+            {t('name')}
           </label>
           <input
             type="text"
@@ -132,7 +139,7 @@ export default function SetupPage() {
           />
 
           <label className="mb-1 block text-sm font-medium text-gray-700">
-            Email
+            {t('email')}
           </label>
           <input
             type="email"
@@ -145,7 +152,7 @@ export default function SetupPage() {
           />
 
           <label className="mb-1 block text-sm font-medium text-gray-700">
-            Password
+            {t('password')}
           </label>
           <input
             type="password"
@@ -159,7 +166,7 @@ export default function SetupPage() {
           />
 
           <label className="mb-1 block text-sm font-medium text-gray-700">
-            Confirm Password
+            {t('setup_password_confirm')}
           </label>
           <input
             type="password"
@@ -177,7 +184,7 @@ export default function SetupPage() {
             disabled={loading}
             className="w-full rounded-xl bg-emerald-500 px-6 py-3 text-sm font-medium text-white transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 disabled:opacity-50"
           >
-            {loading ? '...' : 'Create Account'}
+            {loading ? '...' : t('setup_submit')}
           </button>
         </form>
       </div>

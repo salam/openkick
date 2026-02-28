@@ -1,5 +1,13 @@
 # OpenKick Release Notes
 
+## Version 1.7.1 (Mar 1, 2026, 00:35)
+
+* Trophy data now appears in all feed outputs (RSS, Atom, ICS, ActivityPub) — placement, team count, and achievements are shown alongside tournament events
+* New trophy-only calendar feed at /api/feeds/calendar/trophies.ics — subscribe to see only events where the team placed
+* RSS and Atom feeds support ?trophies=only filter for trophy-only views
+* Sitemap now includes the trophy cabinet page and individual events with results
+* New MCP tool: get_trophy_cabinet — AI assistants can query the club's trophy history
+
 ## Version 1.7.0 (Mar 1, 2026, 00:15)
 
 * Dynamic branding: your club name, description, and logo now appear on the homepage instead of "OpenKick"

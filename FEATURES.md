@@ -37,6 +37,11 @@
 - [x] Dynamic sitemap with feed URLs
 - [x] robots.txt with sitemap reference (dynamic route, not static file)
 - [x] Club profile settings (name, description, contact info, logo upload)
+- [x] Server-side HTML injection of club branding, meta tags, OG/Twitter tags, and favicons
+- [x] Automatic favicon generation from club logo (ICO, PNG variants, apple-touch-icon, webmanifest)
+- [x] SEO & Social Media settings (OG title/description/image, Twitter card, meta keywords)
+- [x] Dynamic security.txt endpoint from structured settings (RFC 9116)
+- [x] Security contact settings (email, URL, PGP key, policy, acknowledgments, preferred languages)
 - [x] Dynamic llms.txt endpoint (club info, public API docs, live statistics from DB)
 - [x] MCP server at /mcp (read-only tools: club info, events, attendance stats, player categories)
 - [x] WebFinger + DID well-known discovery endpoints

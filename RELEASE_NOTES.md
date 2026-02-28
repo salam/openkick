@@ -1,5 +1,14 @@
 # OpenKick Release Notes
 
+## Version 1.7.0 (Mar 1, 2026, 00:15)
+
+* Dynamic branding: your club name, description, and logo now appear on the homepage instead of "OpenKick"
+* Favicon auto-generation: uploading a club logo automatically creates favicon, apple-touch-icon, and Android app icons
+* SEO & Social Media settings: individually configure Open Graph, Twitter/X card, and meta keyword tags
+* Dynamic security.txt: configure security contacts through the settings page (RFC 9116 compliant)
+* Server-side rendering: all meta tags, OG tags, and branding are injected into the HTML before it reaches the browser — works for crawlers and social previews
+* Footer now displays your club name in the copyright line
+
 ## Version 1.6.1 (Feb 28, 2026, 23:30)
 
 * Language toggle: globe icon dropdown in the top-right navbar lets you switch between Deutsch, English, and Français

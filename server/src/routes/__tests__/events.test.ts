@@ -243,6 +243,63 @@ describe("Events routes", () => {
     expect(res.status).toBe(404);
   });
 
+  it("POST /api/events — accepts teamName and returns it in response", async () => {
+    const res = await fetch(`${baseUrl}/api/events`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "tournament",
+        title: "Spring Cup",
+        date: "2026-04-05",
+        teamName: "FC Example E1",
+      }),
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.teamName).toBe("FC Example E1");
+
+    // Verify it persists via GET
+    const getRes = await fetch(`${baseUrl}/api/events/${body.id}`);
+    const getBody = await getRes.json();
+    expect(getBody.teamName).toBe("FC Example E1");
+  });
+
+  it("POST /api/events — teamName defaults to null when not provided", async () => {
+    const res = await fetch(`${baseUrl}/api/events`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "training", title: "No Team", date: "2026-04-06" }),
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.teamName).toBeNull();
+  });
+
+  it("PUT /api/events/:id — can update teamName", async () => {
+    const createRes = await fetch(`${baseUrl}/api/events`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "tournament",
+        title: "Autumn Cup",
+        date: "2026-10-10",
+        teamName: "FC Old Name",
+      }),
+    });
+    const { id } = await createRes.json();
+
+    const res = await fetch(`${baseUrl}/api/events/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ teamName: "FC New Name" }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.teamName).toBe("FC New Name");
+    // Other fields unchanged
+    expect(body.title).toBe("Autumn Cup");
+  });
+
   it("GET /api/events — includes expanded series instances", async () => {
     // Insert an event series directly into the DB (every Wednesday, March 2026)
     db.run(

@@ -1,5 +1,10 @@
 # OpenKick Release Notes
 
+## Version 1.0.4 (Mar 1, 2026, 01:50)
+
+* Security Audit widget: Run security self-checks from the Settings page — checks file permissions, database exposure, CORS, admin passwords, security.txt, HTTPS, and .gitignore coverage
+* Results displayed with pass/warn/fail status badges, expandable details, and manual re-run button
+
 ## Version 1.0.3 (Feb 28, 2026, 23:00)
 
 * llms.txt: Dynamic endpoint at /llms.txt with club name, public API docs, and live statistics — customizable via settings

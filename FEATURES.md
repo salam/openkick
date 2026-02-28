@@ -32,6 +32,8 @@
 - [x] Dynamic llms.txt endpoint (club info, public API docs, live statistics from DB)
 - [x] MCP server at /mcp (read-only tools: club info, events, attendance stats, player categories)
 - [x] WebFinger + DID well-known discovery endpoints
+- [x] Security audit service (8 self-checks: DB permissions, HTTP exposure, .env, CORS, admin passwords, security.txt, HTTPS, .gitignore)
+- [x] Admin-only GET /api/security-audit endpoint
 
 ## Frontend (Web)
 
@@ -47,6 +49,7 @@
 - [x] i18n with browser language detection (de/fr/en)
 - [x] Homepage subscribe card widget (calendar, RSS, social feeds)
 - [x] Admin feed toggle switches on settings page
+- [x] Security audit widget on settings page (run/re-run, status badges, expandable results)
 
 ## Infrastructure
 

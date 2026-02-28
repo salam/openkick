@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
-import { t } from '@/lib/i18n';
+import { t, getLanguage } from '@/lib/i18n';
 import EventCard from '@/components/EventCard';
 import OnboardingChecklist from '@/components/OnboardingChecklist';
 import NotificationBell from '@/components/NotificationBell';
@@ -31,18 +31,26 @@ interface ApiPlayer {
 
 type FilterType = 'all' | 'training' | 'tournament' | 'match';
 
-const filterButtons: { value: FilterType; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'training', label: 'Training' },
-  { value: 'tournament', label: 'Tournament' },
-  { value: 'match', label: 'Match' },
-];
+function getFilterButtons(): { value: FilterType; label: string }[] {
+  return [
+    { value: 'all', label: t('filter_all') },
+    { value: 'training', label: t('type_training') },
+    { value: 'tournament', label: t('type_tournament') },
+    { value: 'match', label: t('type_match') },
+  ];
+}
 
 export default function DashboardPage() {
   const [events, setEvents] = useState<ApiEvent[]>([]);
   const [players, setPlayers] = useState<ApiPlayer[]>([]);
   const [filter, setFilter] = useState<FilterType>('all');
   const [loading, setLoading] = useState(true);
+  const [, setLang] = useState(() => getLanguage());
+  useEffect(() => {
+    function onLangChange() { setLang(getLanguage()); }
+    window.addEventListener('languagechange', onLangChange);
+    return () => window.removeEventListener('languagechange', onLangChange);
+  }, []);
 
   useEffect(() => {
     async function loadData() {
@@ -97,7 +105,7 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="rounded-lg border border-gray-200 bg-white p-5">
-          <p className="text-sm text-gray-500">Pending Responses</p>
+          <p className="text-sm text-gray-500">{t('pending_responses')}</p>
           <p className="mt-1 text-2xl font-semibold text-gray-900">
             {loading ? '-' : pendingResponses}
           </p>
@@ -108,7 +116,7 @@ export default function DashboardPage() {
 
       {/* Filter buttons */}
       <div className="mb-6 flex flex-wrap gap-2">
-        {filterButtons.map((btn) => (
+        {getFilterButtons().map((btn) => (
           <button
             key={btn.value}
             onClick={() => setFilter(btn.value)}
@@ -133,20 +141,20 @@ export default function DashboardPage() {
           <svg className="mx-auto h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 9v9.75" />
           </svg>
-          <p className="mt-2 text-sm font-medium text-gray-600">No events yet</p>
-          <p className="mt-1 text-xs text-gray-400">Create your first event or set up a recurring series</p>
+          <p className="mt-2 text-sm font-medium text-gray-600">{t('no_events')}</p>
+          <p className="mt-1 text-xs text-gray-400">{t('create_first_event_hint')}</p>
           <div className="mt-4 flex justify-center gap-3">
             <Link
               href="/events/new/"
               className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-600"
             >
-              Create Event
+              {t('create_event')}
             </Link>
             <Link
               href="/events/new/?series=true"
               className="rounded-xl border border-emerald-500 px-4 py-2 text-sm font-medium text-emerald-600 transition hover:bg-emerald-50"
             >
-              Create Series
+              {t('create_series')}
             </Link>
           </div>
         </div>

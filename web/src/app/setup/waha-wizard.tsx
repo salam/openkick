@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { t, getLanguage } from '@/lib/i18n';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -10,7 +11,7 @@ interface WahaWizardProps {
   onSkip: () => void;
 }
 
-const STEP_LABELS = ['Docker', 'Configure', 'Install', 'Connect'];
+const STEP_KEYS = ['docker', 'configure', 'install', 'connect'] as const;
 
 /* ------------------------------------------------------------------ */
 /*  Step indicator                                                     */
@@ -19,7 +20,7 @@ const STEP_LABELS = ['Docker', 'Configure', 'Install', 'Connect'];
 function StepIndicator({ current, completed }: { current: number; completed: number[] }) {
   return (
     <div className="mb-8 flex items-center justify-center gap-2">
-      {STEP_LABELS.map((label, i) => {
+      {STEP_KEYS.map((key, i) => {
         const step = i + 1;
         const isDone = completed.includes(step);
         const isCurrent = step === current;
@@ -45,7 +46,7 @@ function StepIndicator({ current, completed }: { current: number; completed: num
               <span
                 className={`mt-1 text-[10px] ${isCurrent ? 'font-medium text-emerald-600' : 'text-gray-400'}`}
               >
-                {label}
+                {t(key)}
               </span>
             </div>
           </div>
@@ -209,19 +210,19 @@ function StepDocker({
 
   return (
     <div>
-      <h3 className="mb-2 text-lg font-semibold text-gray-800">Docker Check</h3>
+      <h3 className="mb-2 text-lg font-semibold text-gray-800">{t('docker_check')}</h3>
 
       {status === 'checking' && (
         <div className="flex items-center gap-2 text-sm text-gray-500">
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
-          Checking Docker availability...
+          {t('checking_docker')}
         </div>
       )}
 
       {status === 'missing' && !sse.running && (
         <>
           <p className="mb-4 text-sm text-gray-600">
-            Docker was not found on this system. It is required to run the WhatsApp gateway (WAHA).
+            {t('docker_not_found')}
           </p>
           {sse.error && (
             <div className="mb-3 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -232,13 +233,13 @@ function StepDocker({
             onClick={() => sse.start(`${API_URL}/api/setup-waha/docker/install`)}
             className="rounded-xl bg-emerald-500 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-emerald-600 disabled:opacity-50"
           >
-            Install Docker
+            {t('install_docker')}
           </button>
         </>
       )}
 
       {sse.running && (
-        <p className="text-sm text-gray-500">Installing Docker...</p>
+        <p className="text-sm text-gray-500">{t('installing_docker')}</p>
       )}
 
       <LogViewer logs={sse.logs} />
@@ -247,7 +248,7 @@ function StepDocker({
         onClick={onSkip}
         className="mt-6 block text-xs text-gray-400 underline hover:text-gray-600"
       >
-        Skip for now
+        {t('skip_for_now')}
       </button>
     </div>
   );
@@ -272,7 +273,7 @@ function StepConfigure({
 
   function handleNext() {
     if (port < 1024 || port > 65535) {
-      setPortError('Port must be between 1024 and 65535.');
+      setPortError(t('port_error'));
       return;
     }
     setPortError('');
@@ -281,12 +282,12 @@ function StepConfigure({
 
   return (
     <div>
-      <h3 className="mb-2 text-lg font-semibold text-gray-800">Configure WAHA</h3>
+      <h3 className="mb-2 text-lg font-semibold text-gray-800">{t('configure_waha')}</h3>
       <p className="mb-6 text-sm text-gray-600">
-        Choose the port and engine for the WhatsApp HTTP API container.
+        {t('waha_config_hint')}
       </p>
 
-      <label className="mb-1 block text-sm font-medium text-gray-700">Port</label>
+      <label className="mb-1 block text-sm font-medium text-gray-700">{t('port')}</label>
       <input
         type="number"
         min={1024}
@@ -296,30 +297,30 @@ function StepConfigure({
         className="mb-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
       />
       {portError && <p className="mb-3 text-xs text-red-600">{portError}</p>}
-      <p className="mb-4 text-xs text-gray-400">Default: 3008. Range: 1024 - 65535</p>
+      <p className="mb-4 text-xs text-gray-400">{t('port_hint')}</p>
 
-      <label className="mb-1 block text-sm font-medium text-gray-700">Engine</label>
+      <label className="mb-1 block text-sm font-medium text-gray-700">{t('engine')}</label>
       <select
         value={engine}
         onChange={(e) => setEngine(e.target.value)}
         className="mb-6 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
       >
-        <option value="WEBJS">WEBJS (recommended)</option>
-        <option value="NOWEB">NOWEB (experimental)</option>
+        <option value="WEBJS">{t('webjs_recommended')}</option>
+        <option value="NOWEB">{t('noweb_experimental')}</option>
       </select>
 
       <button
         onClick={handleNext}
         className="rounded-xl bg-emerald-500 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-emerald-600"
       >
-        Next
+        {t('next')}
       </button>
 
       <button
         onClick={onSkip}
         className="mt-6 block text-xs text-gray-400 underline hover:text-gray-600"
       >
-        Skip for now
+        {t('skip_for_now')}
       </button>
     </div>
   );
@@ -348,9 +349,9 @@ function StepInstall({
 
   return (
     <div>
-      <h3 className="mb-2 text-lg font-semibold text-gray-800">Install &amp; Start WAHA</h3>
+      <h3 className="mb-2 text-lg font-semibold text-gray-800">{t('install_waha')}</h3>
       <p className="mb-4 text-sm text-gray-600">
-        This will pull the WAHA Docker image (port {port}, engine {engine}) and start the container.
+        {t('install_waha_desc')}
       </p>
 
       {sse.error && (
@@ -366,12 +367,12 @@ function StepInstall({
           }
           className="rounded-xl bg-emerald-500 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-emerald-600"
         >
-          {sse.error ? 'Retry Install' : 'Install WAHA'}
+          {sse.error ? t('retry_install') : t('install_waha_btn')}
         </button>
       )}
 
       {sse.running && (
-        <p className="text-sm text-gray-500">Installing WAHA container...</p>
+        <p className="text-sm text-gray-500">{t('installing_waha')}</p>
       )}
 
       <LogViewer logs={sse.logs} />
@@ -380,7 +381,7 @@ function StepInstall({
         onClick={onSkip}
         className="mt-6 block text-xs text-gray-400 underline hover:text-gray-600"
       >
-        Skip for now
+        {t('skip_for_now')}
       </button>
     </div>
   );
@@ -462,15 +463,15 @@ function StepConnect({
   if (connected) {
     return (
       <div>
-        <h3 className="mb-2 text-lg font-semibold text-gray-800">WhatsApp Connected</h3>
+        <h3 className="mb-2 text-lg font-semibold text-gray-800">{t('whatsapp_connected')}</h3>
         <div className="mb-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-          Successfully connected{sessionInfo ? ` as ${sessionInfo}` : ''}!
+          {t('connected_as')}{sessionInfo ? ` ${sessionInfo}` : ''}!
         </div>
         <button
           onClick={onComplete}
           className="rounded-xl bg-emerald-500 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-emerald-600"
         >
-          Continue to Dashboard
+          {t('continue_dashboard')}
         </button>
       </div>
     );
@@ -478,9 +479,9 @@ function StepConnect({
 
   return (
     <div>
-      <h3 className="mb-2 text-lg font-semibold text-gray-800">Connect WhatsApp</h3>
+      <h3 className="mb-2 text-lg font-semibold text-gray-800">{t('connect_whatsapp')}</h3>
       <p className="mb-4 text-sm text-gray-600">
-        Scan the QR code below with your WhatsApp app to link this device.
+        {t('scan_qr_hint')}
       </p>
 
       <div className="flex justify-center">
@@ -498,14 +499,14 @@ function StepConnect({
       </div>
 
       <p className="mt-3 text-center text-xs text-gray-400">
-        Waiting for scan... The QR code refreshes automatically.
+        {t('qr_waiting')}
       </p>
 
       <button
         onClick={onSkip}
         className="mt-6 block text-xs text-gray-400 underline hover:text-gray-600"
       >
-        Skip for now
+        {t('skip_for_now')}
       </button>
     </div>
   );
@@ -520,6 +521,12 @@ export default function WahaWizard({ authToken, onComplete, onSkip }: WahaWizard
   const [completed, setCompleted] = useState<number[]>([]);
   const [port, setPort] = useState(3008);
   const [engine, setEngine] = useState('WEBJS');
+  const [, setLang] = useState(() => getLanguage());
+  useEffect(() => {
+    function onLangChange() { setLang(getLanguage()); }
+    window.addEventListener('languagechange', onLangChange);
+    return () => window.removeEventListener('languagechange', onLangChange);
+  }, []);
 
   const markComplete = useCallback((s: number) => {
     setCompleted((prev) => (prev.includes(s) ? prev : [...prev, s]));
@@ -538,7 +545,7 @@ export default function WahaWizard({ authToken, onComplete, onSkip }: WahaWizard
       {/* Branding */}
       <div className="mb-6 text-center">
         <h1 className="text-3xl font-bold text-emerald-600">OpenKick</h1>
-        <p className="mt-1 text-sm text-gray-500">WhatsApp Setup</p>
+        <p className="mt-1 text-sm text-gray-500">{t('whatsapp_setup')}</p>
       </div>
 
       <div className="rounded-xl bg-white p-6 shadow-md">

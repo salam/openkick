@@ -6,6 +6,7 @@ import { apiFetch } from '@/lib/api';
 import { t } from '@/lib/i18n';
 import EventCard from '@/components/EventCard';
 import OnboardingChecklist from '@/components/OnboardingChecklist';
+import RecentTrophies from '@/components/RecentTrophies';
 
 interface ApiEvent {
   id: string;
@@ -95,6 +96,8 @@ export default function DashboardPage() {
           </p>
         </div>
       </div>
+
+      <RecentTrophies />
 
       {/* Filter buttons */}
       <div className="mb-6 flex flex-wrap gap-2">

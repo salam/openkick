@@ -100,13 +100,36 @@ const translations: Record<string, Record<string, string>> = {
   },
 };
 
+export const SUPPORTED_LANGUAGES = [
+  { code: 'de', label: 'Deutsch' },
+  { code: 'en', label: 'English' },
+  { code: 'fr', label: 'Français' },
+] as const;
+
+const STORAGE_KEY = 'openkick_lang';
+
 export function detectLanguage(): string {
   if (typeof navigator === 'undefined') return 'de';
   const lang = navigator.language.split('-')[0];
   return ['de', 'fr', 'en'].includes(lang) ? lang : 'de';
 }
 
+export function getLanguage(): string {
+  if (typeof window === 'undefined') return detectLanguage();
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (stored && SUPPORTED_LANGUAGES.some((l) => l.code === stored)) {
+    return stored;
+  }
+  return detectLanguage();
+}
+
+export function setLanguage(lang: string): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(STORAGE_KEY, lang);
+  window.dispatchEvent(new CustomEvent('languagechange', { detail: { lang } }));
+}
+
 export function t(key: string, lang?: string): string {
-  const l = lang || detectLanguage();
+  const l = lang || getLanguage();
   return translations[l]?.[key] || translations['de']?.[key] || key;
 }

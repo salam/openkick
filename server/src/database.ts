@@ -349,6 +349,40 @@ CREATE INDEX IF NOT EXISTS idx_checklist_instances_event ON checklist_instances(
 CREATE INDEX IF NOT EXISTS idx_checklist_instances_semester ON checklist_instances(semester);
 CREATE INDEX IF NOT EXISTS idx_checklist_items_instance ON checklist_items(instance_id);
 
+CREATE TABLE IF NOT EXISTS payment_providers (
+  id            TEXT PRIMARY KEY,
+  enabled       INTEGER NOT NULL DEFAULT 0,
+  config        TEXT NOT NULL DEFAULT '{}',
+  testMode      INTEGER NOT NULL DEFAULT 1,
+  createdAt     TEXT NOT NULL DEFAULT (datetime('now')),
+  updatedAt     TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS payment_use_cases (
+  id            TEXT PRIMARY KEY,
+  enabled       INTEGER NOT NULL DEFAULT 0,
+  providerId    TEXT REFERENCES payment_providers(id),
+  currency      TEXT NOT NULL DEFAULT 'CHF',
+  updatedAt     TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS transactions (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  externalId      TEXT,
+  providerId      TEXT NOT NULL,
+  useCase         TEXT NOT NULL,
+  referenceId     TEXT,
+  nickname        TEXT,
+  amount          INTEGER NOT NULL,
+  currency        TEXT NOT NULL DEFAULT 'CHF',
+  status          TEXT NOT NULL DEFAULT 'pending',
+  refundedAmount  INTEGER NOT NULL DEFAULT 0,
+  idempotencyKey  TEXT UNIQUE,
+  metadata        TEXT,
+  createdAt       TEXT NOT NULL DEFAULT (datetime('now')),
+  updatedAt       TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 `;
 
 const DEFAULT_SETTINGS: Record<string, string> = {
@@ -466,6 +500,15 @@ export async function initDB(dbPath?: string): Promise<Database> {
   for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) {
     db.run("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", [key, value]);
   }
+
+  // Seed payment providers
+  db.run("INSERT OR IGNORE INTO payment_providers (id, enabled, config) VALUES ('stripe', 0, '{}')");
+  db.run("INSERT OR IGNORE INTO payment_providers (id, enabled, config) VALUES ('datatrans', 0, '{}')");
+
+  // Seed payment use cases
+  db.run("INSERT OR IGNORE INTO payment_use_cases (id, enabled) VALUES ('tournament_fee', 0)");
+  db.run("INSERT OR IGNORE INTO payment_use_cases (id, enabled) VALUES ('survey_order', 0)");
+  db.run("INSERT OR IGNORE INTO payment_use_cases (id, enabled) VALUES ('donation', 0)");
 
   // Seed checklist templates if empty
   const templateCount = db.exec("SELECT COUNT(*) FROM checklist_templates");

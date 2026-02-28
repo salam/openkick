@@ -19,7 +19,14 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     }
 
     if (!isAuthenticated()) {
-      router.replace('/login/');
+      // Check if first-time setup is needed
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      fetch(`${API_URL}/api/setup/status`)
+        .then(r => r.json())
+        .then(({ needsSetup }: { needsSetup: boolean }) => {
+          router.replace(needsSetup ? '/setup/' : '/login/');
+        })
+        .catch(() => router.replace('/login/'));
     } else {
       setChecked(true);
     }

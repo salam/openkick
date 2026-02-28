@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { apiFetch } from '@/lib/api';
+import { getUserRole } from '@/lib/auth';
 
 interface SettingRecord {
   key: string;
@@ -119,6 +120,14 @@ export default function SettingsPage() {
   } | null>(null);
   const [runningAudit, setRunningAudit] = useState(false);
   const [auditExpanded, setAuditExpanded] = useState(false);
+  const [users, setUsers] = useState<{ id: number; name: string; email: string; role: string; createdAt: string }[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(true);
+  const [userMsg, setUserMsg] = useState('');
+  const [showInviteForm, setShowInviteForm] = useState(false);
+  const [inviteName, setInviteName] = useState('');
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState('coach');
+  const [inviting, setInviting] = useState(false);
 
   const loadSettings = useCallback(async () => {
     try {
@@ -139,6 +148,22 @@ export default function SettingsPage() {
   useEffect(() => {
     loadSettings();
   }, [loadSettings]);
+
+  const currentRole = getUserRole();
+  const isAdmin = currentRole === 'admin';
+
+  const loadUsers = useCallback(async () => {
+    try {
+      const data = await apiFetch<{ id: number; name: string; email: string; role: string; createdAt: string }[]>('/api/users');
+      setUsers(data);
+    } catch {
+      // not available
+    } finally {
+      setLoadingUsers(false);
+    }
+  }, []);
+
+  useEffect(() => { loadUsers(); }, [loadUsers]);
 
   function update(key: string, value: string) {
     setSettings((prev) => ({ ...prev, [key]: value }));
@@ -347,6 +372,52 @@ export default function SettingsPage() {
     } finally {
       setRunningAudit(false);
     }
+  }
+
+  async function handleRoleChange(userId: number, newRole: string) {
+    try {
+      await apiFetch(`/api/users/${userId}/role`, {
+        method: 'PUT',
+        body: JSON.stringify({ role: newRole }),
+      });
+      setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, role: newRole } : u));
+      setUserMsg('Role updated');
+    } catch (err: unknown) {
+      setUserMsg(err instanceof Error ? err.message : 'Failed to update role');
+    }
+    setTimeout(() => setUserMsg(''), 3000);
+  }
+
+  async function handleResetPassword(userId: number, email: string) {
+    if (!confirm(`Send password reset email to ${email}?`)) return;
+    try {
+      await apiFetch(`/api/users/${userId}/reset-password`, { method: 'POST' });
+      setUserMsg('Reset email sent');
+    } catch {
+      setUserMsg('Failed to send reset email');
+    }
+    setTimeout(() => setUserMsg(''), 3000);
+  }
+
+  async function handleInvite() {
+    setInviting(true);
+    try {
+      const newUser = await apiFetch<{ id: number; name: string; email: string; role: string; createdAt: string }>('/api/users/invite', {
+        method: 'POST',
+        body: JSON.stringify({ name: inviteName, email: inviteEmail, role: inviteRole }),
+      });
+      setUsers((prev) => [...prev, { ...newUser, createdAt: new Date().toISOString() }]);
+      setInviteName('');
+      setInviteEmail('');
+      setInviteRole('coach');
+      setShowInviteForm(false);
+      setUserMsg('Invite sent');
+    } catch (err: unknown) {
+      setUserMsg(err instanceof Error ? err.message : 'Failed to invite user');
+    } finally {
+      setInviting(false);
+    }
+    setTimeout(() => setUserMsg(''), 3000);
   }
 
   const hasChanges = SETTING_KEYS.some((k) => settings[k] !== original[k]);
@@ -1202,6 +1273,101 @@ export default function SettingsPage() {
                   </label>
                 ))}
               </div>
+            </div>
+
+            {/* Users */}
+            <div className={cardClass}>
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-gray-900">Users</h2>
+                <button
+                  onClick={() => setShowInviteForm(!showInviteForm)}
+                  className={btnSecondary}
+                >
+                  {showInviteForm ? 'Cancel' : 'Invite User'}
+                </button>
+              </div>
+
+              {showInviteForm && (
+                <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-3">
+                  <div>
+                    <label className={labelClass}>Name</label>
+                    <input value={inviteName} onChange={(e) => setInviteName(e.target.value)} className={inputClass} placeholder="Jane Doe" />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Email</label>
+                    <input value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} className={inputClass} placeholder="jane@example.com" type="email" />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Role</label>
+                    <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} className={inputClass}>
+                      <option value="coach">Coach</option>
+                      {isAdmin && <option value="admin">Admin</option>}
+                    </select>
+                  </div>
+                  <button onClick={handleInvite} disabled={inviting || !inviteName.trim() || !inviteEmail.trim()} className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-600 disabled:opacity-50">
+                    {inviting ? 'Sending...' : 'Send Invite'}
+                  </button>
+                </div>
+              )}
+
+              {userMsg && (
+                <p className={`mb-3 text-sm font-medium ${userMsg.includes('Failed') ? 'text-red-600' : 'text-emerald-600'}`}>
+                  {userMsg}
+                </p>
+              )}
+
+              {loadingUsers ? (
+                <p className="text-sm text-gray-500">Loading users...</p>
+              ) : users.length === 0 ? (
+                <p className="text-sm text-gray-500">No coaches or admins found.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-200 text-left text-gray-500">
+                        <th className="pb-2 font-medium">Name</th>
+                        <th className="pb-2 font-medium">Email</th>
+                        <th className="pb-2 font-medium">Role</th>
+                        {isAdmin && <th className="pb-2 font-medium">Actions</th>}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {users.map((u) => (
+                        <tr key={u.id}>
+                          <td className="py-2">{u.name || '\u2014'}</td>
+                          <td className="py-2 text-gray-600">{u.email}</td>
+                          <td className="py-2">
+                            {isAdmin ? (
+                              <select
+                                value={u.role}
+                                onChange={(e) => handleRoleChange(u.id, e.target.value)}
+                                className="rounded border border-gray-300 px-2 py-1 text-sm"
+                              >
+                                <option value="coach">Coach</option>
+                                <option value="admin">Admin</option>
+                              </select>
+                            ) : (
+                              <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${u.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                                {u.role}
+                              </span>
+                            )}
+                          </td>
+                          {isAdmin && (
+                            <td className="py-2">
+                              <button
+                                onClick={() => handleResetPassword(u.id, u.email)}
+                                className="text-sm text-gray-500 underline hover:text-gray-700"
+                              >
+                                Reset Password
+                              </button>
+                            </td>
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
 
             {/* Save */}

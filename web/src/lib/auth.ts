@@ -25,3 +25,15 @@ export function checkTokenLink(): string | null {
   const params = new URLSearchParams(window.location.search);
   return params.get('token');
 }
+
+/** Decode the role from the stored JWT (no verification — server is the authority) */
+export function getUserRole(): string | null {
+  const token = getToken();
+  if (!token) return null;
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.role || null;
+  } catch {
+    return null;
+  }
+}

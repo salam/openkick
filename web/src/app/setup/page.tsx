@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect, useCallback, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import { setToken } from '@/lib/auth';
+import WahaWizard from './waha-wizard';
 
 interface SetupStatusResponse {
   needsSetup: boolean;
@@ -16,12 +17,18 @@ interface SetupResponse {
 export default function SetupPage() {
   const router = useRouter();
   const [checking, setChecking] = useState(true);
+  const [setupPhase, setSetupPhase] = useState<'admin' | 'waha'>('admin');
+  const [authToken, setAuthToken] = useState('');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const goToDashboard = useCallback(() => {
+    router.push('/dashboard/');
+  }, [router]);
 
   useEffect(() => {
     apiFetch<SetupStatusResponse>('/api/setup/status')
@@ -55,7 +62,8 @@ export default function SetupPage() {
       });
 
       setToken(data.token);
-      router.push('/dashboard/');
+      setAuthToken(data.token);
+      setSetupPhase('waha');
     } catch {
       setError('Setup failed. Please try again.');
     } finally {
@@ -68,6 +76,18 @@ export default function SetupPage() {
       <div className="flex min-h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-600 border-t-transparent" />
       </div>
+    );
+  }
+
+  if (setupPhase === 'waha') {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+        <WahaWizard
+          authToken={authToken}
+          onComplete={goToDashboard}
+          onSkip={goToDashboard}
+        />
+      </main>
     );
   }
 

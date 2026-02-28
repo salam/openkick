@@ -116,6 +116,62 @@ describe("Feed routes", () => {
     expect(text).toContain("Extra Training");
     expect(text).not.toContain("Test Cup");
   });
+
+  it("GET /api/feeds/calendar/trophies.ics returns only events with results", async () => {
+    db.run(
+      `INSERT INTO tournament_results (eventId, placement, totalTeams, achievements)
+       VALUES (1, 1, 8, '[]')`
+    );
+    db.run(
+      `INSERT INTO events (type, title, date) VALUES ('training', 'Weekday Training', '2026-05-02')`
+    );
+    const res = await fetch(`${baseUrl}/api/feeds/calendar/trophies.ics`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("text/calendar");
+    const text = await res.text();
+    expect(text).toContain("Test Cup");
+    expect(text).not.toContain("Weekday Training");
+    expect(text).toContain("1st place");
+  });
+
+  it("GET /api/feeds/rss?trophies=only returns only events with results", async () => {
+    db.run(
+      `INSERT INTO tournament_results (eventId, placement, totalTeams, achievements)
+       VALUES (1, 2, 10, '[{"type":"fair_play","label":"Fair Play"}]')`
+    );
+    db.run(
+      `INSERT INTO events (type, title, date) VALUES ('training', 'Extra Training', '2026-05-02')`
+    );
+    const res = await fetch(`${baseUrl}/api/feeds/rss?trophies=only`);
+    expect(res.status).toBe(200);
+    const text = await res.text();
+    expect(text).toContain("Test Cup");
+    expect(text).toContain("2nd place");
+    expect(text).not.toContain("Extra Training");
+  });
+
+  it("GET /api/feeds/atom?trophies=only returns only events with results", async () => {
+    db.run(
+      `INSERT INTO tournament_results (eventId, placement, totalTeams, achievements)
+       VALUES (1, 3, 6, '[]')`
+    );
+    const res = await fetch(`${baseUrl}/api/feeds/atom?trophies=only`);
+    expect(res.status).toBe(200);
+    const text = await res.text();
+    expect(text).toContain("Test Cup");
+    expect(text).toContain("3rd place");
+  });
+
+  it("RSS feed enriches events that have results", async () => {
+    db.run(
+      `INSERT INTO tournament_results (eventId, placement, totalTeams, achievements)
+       VALUES (1, 1, 8, '[{"type":"fair_play","label":"Fair Play Award"}]')`
+    );
+    const res = await fetch(`${baseUrl}/api/feeds/rss`);
+    const text = await res.text();
+    expect(text).toContain("1st place");
+    expect(text).toContain("Fair Play Award");
+  });
 });
 
 describe("Well-known endpoints", () => {
@@ -166,5 +222,26 @@ describe("Sitemap and robots.txt", () => {
     expect(res.status).toBe(200);
     const text = await res.text();
     expect(text).toContain("Sitemap:");
+  });
+
+  it("sitemap includes /trophies page", async () => {
+    const res = await fetch(`${baseUrl}/api/sitemap.xml`);
+    const text = await res.text();
+    expect(text).toContain("/trophies");
+  });
+
+  it("sitemap includes events with results", async () => {
+    db.run(
+      `INSERT INTO tournament_results (eventId, placement, achievements) VALUES (1, 1, '[]')`
+    );
+    const res = await fetch(`${baseUrl}/api/sitemap.xml`);
+    const text = await res.text();
+    expect(text).toContain("/events/1");
+  });
+
+  it("sitemap includes trophies.ics feed", async () => {
+    const res = await fetch(`${baseUrl}/api/sitemap.xml`);
+    const text = await res.text();
+    expect(text).toContain("/api/feeds/calendar/trophies.ics");
   });
 });

@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import { getDB } from "../database.js";
-import { getFeedItems, type FeedQuery } from "../services/feeds.js";
+import { getFeedItems, getTrophyFeedItems, type FeedQuery } from "../services/feeds.js";
 import { xmlEscape } from "../utils/xml.js";
 import {
   toRss,
@@ -35,21 +35,23 @@ function getBaseUrl(req: Request): string {
   return `${req.protocol}://${req.get("host")}`;
 }
 
-function parseQuery(req: Request): FeedQuery {
-  const query: FeedQuery = {};
+function parseQuery(req: Request): FeedQuery & { trophiesOnly?: boolean } {
+  const query: FeedQuery & { trophiesOnly?: boolean } = {};
   const type = req.query.type as string | undefined;
   if (type && ["training", "tournament", "match"].includes(type)) {
     query.type = type as FeedQuery["type"];
   }
   const limit = parseInt(req.query.limit as string, 10);
   if (!isNaN(limit)) query.limit = limit;
+  if (req.query.trophies === "only") query.trophiesOnly = true;
   return query;
 }
 
 // RSS 2.0
 feedsRouter.get("/feeds/rss", (req: Request, res: Response) => {
   if (!isFeedEnabled("feed_rss_enabled")) { res.status(404).json({ error: "Feed disabled" }); return; }
-  const items = getFeedItems(parseQuery(req));
+  const query = parseQuery(req);
+  const items = query.trophiesOnly ? getTrophyFeedItems(query.limit) : getFeedItems(query);
   const xml = toRss(items, getBaseUrl(req), CLUB_NAME);
   res.set("Content-Type", "application/rss+xml; charset=utf-8").send(xml);
 });
@@ -57,7 +59,8 @@ feedsRouter.get("/feeds/rss", (req: Request, res: Response) => {
 // Atom 1.0
 feedsRouter.get("/feeds/atom", (req: Request, res: Response) => {
   if (!isFeedEnabled("feed_atom_enabled")) { res.status(404).json({ error: "Feed disabled" }); return; }
-  const items = getFeedItems(parseQuery(req));
+  const query = parseQuery(req);
+  const items = query.trophiesOnly ? getTrophyFeedItems(query.limit) : getFeedItems(query);
   const xml = toAtom(items, getBaseUrl(req), CLUB_NAME);
   res.set("Content-Type", "application/atom+xml; charset=utf-8").send(xml);
 });
@@ -66,6 +69,14 @@ feedsRouter.get("/feeds/atom", (req: Request, res: Response) => {
 feedsRouter.get("/feeds/calendar.ics", (req: Request, res: Response) => {
   if (!isFeedEnabled("feed_ics_enabled")) { res.status(404).json({ error: "Feed disabled" }); return; }
   const items = getFeedItems(parseQuery(req));
+  const ics = toIcs(items, CLUB_NAME);
+  res.set("Content-Type", "text/calendar; charset=utf-8").send(ics);
+});
+
+// ICS - trophies only
+feedsRouter.get("/feeds/calendar/trophies.ics", (_req: Request, res: Response) => {
+  if (!isFeedEnabled("feed_ics_enabled")) { res.status(404).json({ error: "Feed disabled" }); return; }
+  const items = getTrophyFeedItems();
   const ics = toIcs(items, CLUB_NAME);
   res.set("Content-Type", "text/calendar; charset=utf-8").send(ics);
 });
@@ -104,6 +115,13 @@ feedsRouter.get("/feeds/atprotocol/feed", (req: Request, res: Response) => {
   res.json(feed);
 });
 
+function getEventIdsWithResults(): number[] {
+  const db = getDB();
+  const result = db.exec("SELECT eventId FROM tournament_results");
+  if (result.length === 0) return [];
+  return result[0].values.map((row) => row[0] as number);
+}
+
 // Dynamic sitemap
 feedsRouter.get("/sitemap.xml", (req: Request, res: Response) => {
   const base = getBaseUrl(req);
@@ -119,10 +137,22 @@ feedsRouter.get("/sitemap.xml", (req: Request, res: Response) => {
     { path: "/api/feeds/atprotocol/feed", settingKey: "feed_atprotocol_enabled" },
   ];
 
-  const urls = feedEntries
+  const feedUrls = feedEntries
     .filter((e) => isFeedEnabled(e.settingKey))
-    .map((e) => `  <url><loc>${xmlEscape(base + e.path)}</loc></url>`)
-    .join("\n");
+    .map((e) => `  <url><loc>${xmlEscape(base + e.path)}</loc></url>`);
+
+  // Trophy-related URLs
+  const trophyUrls: string[] = [];
+  trophyUrls.push(`  <url><loc>${xmlEscape(base + "/trophies")}</loc></url>`);
+  if (isFeedEnabled("feed_ics_enabled")) {
+    trophyUrls.push(`  <url><loc>${xmlEscape(base + "/api/feeds/calendar/trophies.ics")}</loc></url>`);
+  }
+  const eventIds = getEventIdsWithResults();
+  for (const id of eventIds) {
+    trophyUrls.push(`  <url><loc>${xmlEscape(base + "/events/" + id)}</loc></url>`);
+  }
+
+  const urls = [...feedUrls, ...trophyUrls].join("\n");
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">

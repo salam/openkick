@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { t, getLanguage } from '@/lib/i18n';
 
 function CopyButton({ url }: { url: string }) {
   const [copied, setCopied] = useState(false);
@@ -13,7 +14,7 @@ function CopyButton({ url }: { url: string }) {
       }}
       className="ml-2 shrink-0 rounded bg-gray-100 px-2 py-1 text-xs text-gray-600 hover:bg-gray-200"
     >
-      {copied ? 'Copied!' : 'Copy'}
+      {copied ? t('copied') : t('copy')}
     </button>
   );
 }
@@ -30,48 +31,48 @@ function FeedUrl({ label, url }: { label: string; url: string }) {
   );
 }
 
-const TABS = ['Google Calendar', 'Apple Calendar', 'Outlook'] as const;
+const TAB_KEYS = ['google_calendar', 'apple_calendar', 'outlook'] as const;
 
 function CalendarInstructions({ url }: { url: string }) {
-  const [tab, setTab] = useState<(typeof TABS)[number]>('Google Calendar');
+  const [tab, setTab] = useState<(typeof TAB_KEYS)[number]>('google_calendar');
 
   return (
     <div className="mt-3">
       <div className="flex gap-1 border-b border-gray-200">
-        {TABS.map((t) => (
+        {TAB_KEYS.map((key) => (
           <button
-            key={t}
-            onClick={() => setTab(t)}
+            key={key}
+            onClick={() => setTab(key)}
             className={`px-3 py-1.5 text-xs font-medium transition ${
-              tab === t
+              tab === key
                 ? 'border-b-2 border-emerald-500 text-emerald-700'
                 : 'text-gray-400 hover:text-gray-600'
             }`}
           >
-            {t}
+            {t(key)}
           </button>
         ))}
       </div>
       <div className="pt-2 text-xs text-gray-500 leading-relaxed">
-        {tab === 'Google Calendar' && (
+        {tab === 'google_calendar' && (
           <ol className="list-decimal list-inside space-y-0.5">
-            <li>Open <strong>Google Calendar</strong> in your browser</li>
-            <li>Click <strong>+</strong> next to &quot;Other calendars&quot; &rarr; <strong>From URL</strong></li>
-            <li>Paste: <code className="rounded bg-gray-100 px-1 text-[10px] break-all">{url}</code></li>
+            <li>{t('google_cal_step1')}</li>
+            <li>{t('google_cal_step2')}</li>
+            <li>{t('google_cal_step3')}: <code className="rounded bg-gray-100 px-1 text-[10px] break-all">{url}</code></li>
           </ol>
         )}
-        {tab === 'Apple Calendar' && (
+        {tab === 'apple_calendar' && (
           <ol className="list-decimal list-inside space-y-0.5">
-            <li>Open <strong>Calendar</strong> on your Mac or iPhone</li>
-            <li>File &rarr; <strong>New Calendar Subscription</strong></li>
-            <li>Paste: <code className="rounded bg-gray-100 px-1 text-[10px] break-all">{url}</code></li>
+            <li>{t('apple_cal_step1')}</li>
+            <li>{t('apple_cal_step2')}</li>
+            <li>{t('apple_cal_step3')}: <code className="rounded bg-gray-100 px-1 text-[10px] break-all">{url}</code></li>
           </ol>
         )}
-        {tab === 'Outlook' && (
+        {tab === 'outlook' && (
           <ol className="list-decimal list-inside space-y-0.5">
-            <li>Open <strong>Outlook</strong> &rarr; Calendar</li>
-            <li>Click <strong>Add calendar</strong> &rarr; <strong>Subscribe from web</strong></li>
-            <li>Paste: <code className="rounded bg-gray-100 px-1 text-[10px] break-all">{url}</code></li>
+            <li>{t('outlook_step1')}</li>
+            <li>{t('outlook_step2')}</li>
+            <li>{t('outlook_step3')}: <code className="rounded bg-gray-100 px-1 text-[10px] break-all">{url}</code></li>
           </ol>
         )}
       </div>
@@ -79,11 +80,19 @@ function CalendarInstructions({ url }: { url: string }) {
   );
 }
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
 export default function SubscribeCard() {
   const [open, setOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
-  const base = typeof window !== 'undefined' ? window.location.origin : '';
+  const base = API_URL;
   const allEventsUrl = `${base}/api/feeds/calendar.ics`;
+  const [, setLang] = useState(() => getLanguage());
+  useEffect(() => {
+    function onLangChange() { setLang(getLanguage()); }
+    window.addEventListener('languagechange', onLangChange);
+    return () => window.removeEventListener('languagechange', onLangChange);
+  }, []);
 
   return (
     <div className="w-full max-w-md rounded-lg border border-gray-200 bg-white shadow-sm">
@@ -92,7 +101,7 @@ export default function SubscribeCard() {
         className="flex w-full items-center justify-between px-5 py-4 text-left"
       >
         <span className="text-sm font-semibold text-gray-900">
-          Subscribe to updates
+          {t('subscribe_updates')}
         </span>
         <svg
           className={`h-4 w-4 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`}
@@ -105,7 +114,7 @@ export default function SubscribeCard() {
       {open && (
         <div className="border-t border-gray-100 px-5 pb-5 pt-4">
           {/* Primary: All events calendar */}
-          <FeedUrl label="All events" url={allEventsUrl} />
+          <FeedUrl label={t('all_events')} url={allEventsUrl} />
           <CalendarInstructions url={allEventsUrl} />
 
           {/* More feeds — collapsed for users, open for bots via noscript */}
@@ -120,7 +129,7 @@ export default function SubscribeCard() {
               >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
-              More feeds
+              {t('more_feeds')}
             </button>
 
             {/* Always render for bots/crawlers but visually hidden until toggled */}
@@ -128,12 +137,12 @@ export default function SubscribeCard() {
               {/* Per-type calendars */}
               <div>
                 <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  Calendar by type
+                  {t('calendar_by_type')}
                 </h3>
                 <div className="space-y-2">
-                  <FeedUrl label="Tournaments" url={`${base}/api/feeds/calendar/tournaments.ics`} />
-                  <FeedUrl label="Matches" url={`${base}/api/feeds/calendar/matches.ics`} />
-                  <FeedUrl label="Trainings" url={`${base}/api/feeds/calendar/trainings.ics`} />
+                  <FeedUrl label={t('tournaments_feed')} url={`${base}/api/feeds/calendar/tournaments.ics`} />
+                  <FeedUrl label={t('matches_feed')} url={`${base}/api/feeds/calendar/matches.ics`} />
+                  <FeedUrl label={t('trainings_feed')} url={`${base}/api/feeds/calendar/trainings.ics`} />
                 </div>
               </div>
 
@@ -147,26 +156,26 @@ export default function SubscribeCard() {
                   <FeedUrl label="Atom" url={`${base}/api/feeds/atom`} />
                 </div>
                 <p className="mt-2 text-xs text-gray-400">
-                  Use with any RSS reader (Feedly, Thunderbird, NetNewsWire, etc.).
+                  {t('rss_hint')}
                 </p>
               </div>
 
               {/* Social */}
               <div>
                 <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  Social
+                  {t('social')}
                 </h3>
                 <div className="space-y-2">
                   <div className="rounded border border-gray-200 px-3 py-2">
-                    <span className="text-sm font-medium text-gray-700">Mastodon / Fediverse</span>
+                    <span className="text-sm font-medium text-gray-700">{t('mastodon_fediverse')}</span>
                     <span className="ml-2 text-xs text-gray-400">
-                      Search for @club@{typeof window !== 'undefined' ? window.location.hostname : 'your-domain'}
+                      {t('search_at_club')}{typeof window !== 'undefined' ? window.location.hostname : 'your-domain'}
                     </span>
                   </div>
                   <div className="rounded border border-gray-200 px-3 py-2">
-                    <span className="text-sm font-medium text-gray-700">Bluesky</span>
+                    <span className="text-sm font-medium text-gray-700">{t('bluesky')}</span>
                     <span className="ml-2 text-xs text-gray-400">
-                      Feed available via AT Protocol
+                      {t('feed_at_protocol')}
                     </span>
                   </div>
                 </div>

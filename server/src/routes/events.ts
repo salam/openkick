@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import { getDB, getLastInsertId } from "../database.js";
 import { expandSeries, type SeriesTemplate, type VacationPeriod, type MaterializedEvent } from "../services/event-series.js";
+import { getResults } from "../services/tournament-results.js";
 
 export const eventsRouter = Router();
 
@@ -38,6 +39,7 @@ eventsRouter.post("/events", (req: Request, res: Response) => {
     categoryRequirement,
     recurring,
     recurrenceRule,
+    teamName,
   } = req.body;
 
   if (!type || !title || !date) {
@@ -48,8 +50,8 @@ eventsRouter.post("/events", (req: Request, res: Response) => {
   const db = getDB();
   db.run(
     `INSERT INTO events (type, title, description, date, startTime, attendanceTime, deadline,
-      maxParticipants, minParticipants, location, categoryRequirement, recurring, recurrenceRule)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      maxParticipants, minParticipants, location, categoryRequirement, recurring, recurrenceRule, teamName)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       type,
       title,
@@ -64,6 +66,7 @@ eventsRouter.post("/events", (req: Request, res: Response) => {
       categoryRequirement ?? null,
       recurring ?? 0,
       recurrenceRule ?? null,
+      teamName ?? null,
     ],
   );
 
@@ -184,7 +187,9 @@ eventsRouter.get("/events/:id", (req: Request, res: Response) => {
     }
   }
 
-  res.json({ ...event, attendanceSummary });
+  const results = getResults(id);
+
+  res.json({ ...event, attendanceSummary, results });
 });
 
 // PUT /api/events/:id
@@ -212,16 +217,17 @@ eventsRouter.put("/events/:id", (req: Request, res: Response) => {
   const categoryRequirement = req.body.categoryRequirement ?? current.categoryRequirement;
   const recurring = req.body.recurring ?? current.recurring;
   const recurrenceRule = req.body.recurrenceRule ?? current.recurrenceRule;
+  const teamName = req.body.teamName ?? current.teamName;
 
   db.run(
     `UPDATE events SET type = ?, title = ?, description = ?, date = ?, startTime = ?,
       attendanceTime = ?, deadline = ?, maxParticipants = ?, minParticipants = ?,
-      location = ?, categoryRequirement = ?, recurring = ?, recurrenceRule = ?
+      location = ?, categoryRequirement = ?, recurring = ?, recurrenceRule = ?, teamName = ?
      WHERE id = ?`,
     [
       type, title, description, date, startTime, attendanceTime, deadline,
       maxParticipants, minParticipants, location, categoryRequirement,
-      recurring, recurrenceRule, id,
+      recurring, recurrenceRule, teamName, id,
     ],
   );
 

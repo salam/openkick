@@ -2,8 +2,11 @@ import { Router, type Request, type Response } from "express";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import sharp from "sharp";
+import pngToIco from "png-to-ico";
 import { getDB } from "../database.js";
-import { sendEmail } from "../services/email.js";
+import { sendEmail, buildTestEmail } from "../services/email.js";
+import { chatCompletion } from "../services/llm.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -57,7 +60,7 @@ settingsRouter.put("/settings/:key", (req: Request, res: Response) => {
 });
 
 // POST /api/settings/upload-logo — accept base64-encoded image, save to public/uploads/
-settingsRouter.post("/settings/upload-logo", (req: Request, res: Response) => {
+settingsRouter.post("/settings/upload-logo", async (req: Request, res: Response) => {
   const { data, filename } = req.body;
 
   if (!data || !filename) {
@@ -86,6 +89,38 @@ settingsRouter.post("/settings/upload-logo", (req: Request, res: Response) => {
   const savedName = `club-logo${ext}`;
   fs.writeFileSync(path.join(uploadDir, savedName), buffer);
 
+  // Generate favicon variants from the uploaded logo
+  try {
+    const logoBuffer = fs.readFileSync(path.join(uploadDir, savedName));
+    const sharpInput = sharp(logoBuffer);
+
+    await Promise.all([
+      sharpInput.clone().resize(16, 16).png().toFile(path.join(uploadDir, "favicon-16x16.png")),
+      sharpInput.clone().resize(32, 32).png().toFile(path.join(uploadDir, "favicon-32x32.png")),
+      sharpInput.clone().resize(180, 180).png().toFile(path.join(uploadDir, "apple-touch-icon.png")),
+      sharpInput.clone().resize(192, 192).png().toFile(path.join(uploadDir, "android-chrome-192x192.png")),
+      sharpInput.clone().resize(512, 512).png().toFile(path.join(uploadDir, "android-chrome-512x512.png")),
+    ]);
+
+    const icoBuffer = await pngToIco(path.join(uploadDir, "favicon-32x32.png"));
+    fs.writeFileSync(path.join(uploadDir, "favicon.ico"), icoBuffer);
+
+    const manifest = {
+      name: "",
+      short_name: "",
+      icons: [
+        { src: "/uploads/android-chrome-192x192.png", sizes: "192x192", type: "image/png" },
+        { src: "/uploads/android-chrome-512x512.png", sizes: "512x512", type: "image/png" },
+      ],
+      theme_color: "#10b981",
+      background_color: "#ffffff",
+      display: "standalone",
+    };
+    fs.writeFileSync(path.join(uploadDir, "site.webmanifest"), JSON.stringify(manifest, null, 2));
+  } catch (err) {
+    console.error("Favicon generation failed:", err);
+  }
+
   const publicPath = `/uploads/${savedName}`;
   const db = getDB();
   db.run("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", ["club_logo", publicPath]);
@@ -105,8 +140,31 @@ settingsRouter.delete("/settings/remove-logo", (_req: Request, res: Response) =>
     }
   }
 
+  // Clean up favicon variants
+  for (const f of [
+    "favicon.ico", "favicon-16x16.png", "favicon-32x32.png",
+    "apple-touch-icon.png", "android-chrome-192x192.png",
+    "android-chrome-512x512.png", "site.webmanifest",
+  ]) {
+    const fp = path.join(path.resolve(__dirname, "../../../public/uploads"), f);
+    if (fs.existsSync(fp)) fs.unlinkSync(fp);
+  }
+
   db.run("DELETE FROM settings WHERE key = ?", ["club_logo"]);
   res.json({ key: "club_logo", value: "" });
+});
+
+// POST /api/settings/test-llm — verify LLM API key and model work
+settingsRouter.post("/settings/test-llm", async (_req: Request, res: Response) => {
+  try {
+    const result = await chatCompletion([
+      { role: "user", content: "Reply with exactly: OK" },
+    ]);
+    res.json({ success: true, message: `Connected to ${result.model}.` });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.json({ success: false, message });
+  }
 });
 
 // POST /api/settings/test-smtp — send a test email to verify SMTP config
@@ -117,7 +175,14 @@ settingsRouter.post("/settings/test-smtp", async (req: Request, res: Response) =
     return;
   }
   try {
-    await sendEmail(to, "OpenKick SMTP Test", "<p>SMTP configuration is working.</p>");
+    const db = getDB();
+    const clubRow = db.exec("SELECT value FROM settings WHERE key = 'club_name'");
+    const clubName = (clubRow[0]?.values[0]?.[0] as string) || "OpenKick";
+    const langRow = db.exec("SELECT value FROM settings WHERE key = 'bot_language'");
+    const lang = (langRow[0]?.values[0]?.[0] as string) || "de";
+
+    const { subject, html } = buildTestEmail(clubName, lang);
+    await sendEmail(to, subject, html);
     res.json({ success: true, message: "Test email sent successfully." });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

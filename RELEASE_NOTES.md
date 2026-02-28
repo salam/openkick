@@ -1,5 +1,16 @@
 # OpenKick Release Notes
 
+## Version 1.9 (Sat, Mar 1 2026)
+
+* Surveys & Questionnaires: coaches can create surveys with 5 question types (single choice, multi choice, star rating, free text, size picker)
+* Anonymous and identified survey modes — anonymous hides all identifiers, identified uses player nicknames only (no PII)
+* Built-in templates: Trikot & Cap order (with size picker), end-of-semester feedback (anonymous star ratings)
+* Shareable survey links with on-the-fly QR code generation
+* Survey deadline enforcement and duplicate submission prevention
+* Results dashboard with aggregation — star rating averages, size/choice distributions, free text lists
+* Close and archive survey lifecycle
+* Payment stub ready for future integration (price_per_item field)
+
 ## Version 1.8 (Sat, Mar 1 2026)
 
 * Administrative checklists with semester-based auto-reset (Feb 1 / Aug 1)

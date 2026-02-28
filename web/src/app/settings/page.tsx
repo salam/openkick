@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { apiFetch } from '@/lib/api';
 import { getUserRole } from '@/lib/auth';
+import ImageCropUpload from '@/components/ImageCropUpload';
 
 interface SettingRecord {
   key: string;
@@ -106,6 +107,7 @@ export default function SettingsPage() {
   const [syncingZurich, setSyncingZurich] = useState(false);
   const [uploadingIcs, setUploadingIcs] = useState(false);
   const [holidayMsg, setHolidayMsg] = useState('');
+  const [upcomingVacations, setUpcomingVacations] = useState<{ name: string; startDate: string; endDate: string }[]>([]);
   const [smtpTestTo, setSmtpTestTo] = useState('');
   const [testingSmtp, setTestingSmtp] = useState(false);
   const [smtpTestResult, setSmtpTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
@@ -246,13 +248,22 @@ export default function SettingsPage() {
     setSyncingZurich(true);
     setHolidayMsg('');
     try {
-      await apiFetch('/api/vacations/sync-zurich', { method: 'POST' });
-      setHolidayMsg('Zurich holidays synced successfully.');
-    } catch {
-      setHolidayMsg('Failed to sync Zurich holidays.');
+      const year = new Date().getFullYear();
+      const data = await apiFetch<{ synced: number; upcoming: { name: string; startDate: string; endDate: string }[] }>('/api/vacations/sync-zurich', {
+        method: 'POST',
+        body: JSON.stringify({ year }),
+      });
+      setUpcomingVacations(data.upcoming || []);
+      const summary = (data.upcoming || [])
+        .map((v) => `${v.name} (${v.startDate} – ${v.endDate})`)
+        .join(', ');
+      setHolidayMsg(summary ? `Synced! Next: ${summary}` : 'Zurich holidays synced successfully.');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      setHolidayMsg(`Failed to sync Zurich holidays: ${msg}`);
     } finally {
       setSyncingZurich(false);
-      setTimeout(() => setHolidayMsg(''), 3000);
+      setTimeout(() => setHolidayMsg(''), 5000);
     }
   }
 
@@ -302,26 +313,15 @@ export default function SettingsPage() {
     }
   }
 
-  async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  async function handleLogoUpload(base64: string) {
     setUploadingLogo(true);
     setLogoMsg('');
     try {
-      const reader = new FileReader();
-      const base64 = await new Promise<string>((resolve, reject) => {
-        reader.onload = () => {
-          const result = reader.result as string;
-          resolve(result.split(',')[1]);
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
       const res = await apiFetch<{ key: string; value: string }>(
         '/api/settings/upload-logo',
         {
           method: 'POST',
-          body: JSON.stringify({ data: base64, filename: file.name }),
+          body: JSON.stringify({ data: base64, filename: 'logo.jpg' }),
         },
       );
       update('club_logo', res.value);
@@ -336,7 +336,6 @@ export default function SettingsPage() {
       }
     } finally {
       setUploadingLogo(false);
-      e.target.value = '';
       setTimeout(() => setLogoMsg(''), 5000);
     }
   }
@@ -489,39 +488,18 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <label className={labelClass}>Club Logo</label>
-                  <div className="flex items-center gap-4">
-                    {settings.club_logo && (
-                      <div className="relative">
-                        <img
-                          src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${settings.club_logo}`}
-                          alt="Club logo"
-                          className="h-16 w-16 rounded-lg border border-gray-200 object-contain bg-white"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleLogoRemove}
-                          disabled={uploadingLogo}
-                          className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white text-xs leading-none shadow hover:bg-red-600 disabled:opacity-50"
-                          title="Remove logo"
-                        >
-                          &times;
-                        </button>
-                      </div>
-                    )}
-                    <div>
-                      <input
-                        id="upload_logo"
-                        type="file"
-                        accept=".png,.jpg,.jpeg,.gif,.svg,.webp"
-                        onChange={handleLogoUpload}
-                        disabled={uploadingLogo}
-                        className="text-sm text-gray-600 file:mr-3 file:rounded-md file:border file:border-gray-300 file:bg-white file:px-4 file:py-2 file:text-sm file:font-medium file:text-gray-700 file:shadow-sm hover:file:bg-gray-50"
-                      />
-                      <p className="mt-1 text-xs text-gray-400">
-                        PNG, JPG, SVG, or WebP. Max 2 MB.
-                      </p>
-                    </div>
-                  </div>
+                  <ImageCropUpload
+                    shape="round"
+                    outputSize={200}
+                    onCrop={handleLogoUpload}
+                    onRemove={handleLogoRemove}
+                    initialImage={
+                      settings.club_logo
+                        ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${settings.club_logo}`
+                        : undefined
+                    }
+                    disabled={uploadingLogo}
+                  />
                   {logoMsg && (
                     <p
                       className={`mt-2 text-sm font-medium ${
@@ -1105,6 +1083,17 @@ export default function SettingsPage() {
                   >
                     {syncingZurich ? 'Syncing...' : 'Sync Zurich Holidays'}
                   </button>
+                  {upcomingVacations.length > 0 && (
+                    <ul className="mt-3 space-y-1">
+                      {upcomingVacations.map((v) => (
+                        <li key={v.startDate} className="flex items-center gap-2 text-sm text-gray-700">
+                          <span className="h-2 w-2 shrink-0 rounded-full bg-purple-400" />
+                          <span className="font-medium">{v.name}</span>
+                          <span className="text-gray-500">{v.startDate} &ndash; {v.endDate}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
 
                 <div>
@@ -1243,17 +1232,23 @@ export default function SettingsPage() {
               </p>
               <div className="space-y-3">
                 {[
-                  { key: 'feeds_enabled', label: 'All Feeds (Master Toggle)' },
-                  { key: 'feed_rss_enabled', label: 'RSS 2.0' },
-                  { key: 'feed_atom_enabled', label: 'Atom 1.0' },
-                  { key: 'feed_ics_enabled', label: 'Calendar (ICS)' },
-                  { key: 'feed_activitypub_enabled', label: 'ActivityPub (Mastodon)' },
-                  { key: 'feed_atprotocol_enabled', label: 'AT Protocol (Bluesky)' },
-                  { key: 'feed_sitemap_enabled', label: 'Include in Sitemap' },
-                ].map(({ key, label }) => (
+                  { key: 'feeds_enabled', label: 'All Feeds (Master Toggle)', hint: 'Turns all public feeds on or off at once.' },
+                  { key: 'feed_rss_enabled', label: 'RSS 2.0', hint: 'Standard feed format — parents can follow club news in any feed reader (Feedly, Apple News, etc.).' },
+                  { key: 'feed_atom_enabled', label: 'Atom 1.0', hint: 'Modern feed format used by many apps and services to pull in your updates automatically.' },
+                  { key: 'feed_ics_enabled', label: 'Calendar (ICS)', hint: 'Lets parents subscribe in Google Calendar, Apple Calendar, or Outlook so games and trainings appear automatically.' },
+                  { key: 'feed_activitypub_enabled', label: 'ActivityPub (Mastodon)', hint: 'Publishes updates to the Fediverse — followers on Mastodon and compatible platforms see your posts.' },
+                  { key: 'feed_atprotocol_enabled', label: 'AT Protocol (Bluesky)', hint: 'Publishes updates to Bluesky so followers there can stay up to date with the club.' },
+                  { key: 'feed_sitemap_enabled', label: 'Include in Sitemap', hint: 'Helps Google and other search engines find and index your club pages — important for SEO and discoverability.' },
+                ].map(({ key, label, hint }) => (
                   <label key={key} className="flex items-center justify-between cursor-pointer">
-                    <span className={`text-sm ${key === 'feeds_enabled' ? 'font-semibold' : ''} text-gray-700`}>
+                    <span className={`text-sm ${key === 'feeds_enabled' ? 'font-semibold' : ''} text-gray-700 flex items-center gap-1.5`}>
                       {label}
+                      <span className="relative group">
+                        <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-gray-200 text-[10px] font-semibold text-gray-500 cursor-help leading-none hover:bg-gray-300 transition-colors" title={hint}>i</span>
+                        <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 rounded-lg bg-gray-800 px-3 py-2 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity z-50 shadow-lg text-left font-normal">
+                          {hint}
+                        </span>
+                      </span>
                     </span>
                     <button
                       type="button"

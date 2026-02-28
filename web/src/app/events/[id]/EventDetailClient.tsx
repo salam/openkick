@@ -3,6 +3,7 @@
 import { useParams } from 'next/navigation';
 import { useEffect, useState, useCallback } from 'react';
 import { apiFetch } from '@/lib/api';
+import AltchaWidget from '@/components/AltchaWidget';
 
 /* ── Types ──────────────────────────────────────────────────────────── */
 
@@ -207,6 +208,7 @@ export default function EventDetailClient() {
   // Parent RSVP
   const [rsvpStatus, setRsvpStatus] = useState<string | null>(null);
   const [rsvpLoading, setRsvpLoading] = useState(false);
+  const [captchaPayload, setCaptchaPayload] = useState('');
 
   // Coach attendance
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
@@ -288,6 +290,7 @@ export default function EventDetailClient() {
           playerId,
           status,
           source: 'parent',
+          captcha: captchaPayload,
         }),
       });
       setRsvpStatus(status);
@@ -358,7 +361,7 @@ export default function EventDetailClient() {
       {/* ── Header ── */}
       <div>
         <div className="mb-2 flex flex-wrap items-center gap-2">
-          <span className="inline-block rounded-full bg-green-100 px-3 py-0.5 text-xs font-semibold text-green-800">
+          <span className="inline-block rounded-full bg-emerald-100 px-3 py-0.5 text-xs font-semibold text-emerald-700">
             {TYPE_LABELS[event.type] || event.type}
           </span>
           {event.deadline && (
@@ -417,7 +420,7 @@ export default function EventDetailClient() {
             {categories.map((cat) => (
               <span
                 key={cat}
-                className="inline-block rounded-full border border-green-300 bg-green-50 px-3 py-0.5 text-xs font-medium text-green-700"
+                className="inline-block rounded-full border border-emerald-300 bg-emerald-50 px-3 py-0.5 text-xs font-medium text-emerald-600"
               >
                 {cat}
               </span>
@@ -433,7 +436,7 @@ export default function EventDetailClient() {
             href={event.attachmentUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-green-700 transition hover:bg-green-50"
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-emerald-600 transition hover:bg-emerald-50"
           >
             <svg
               className="h-4 w-4"
@@ -485,8 +488,8 @@ export default function EventDetailClient() {
 
       {/* ── Parent RSVP ── */}
       {isParent && (
-        <section className="rounded-xl border border-green-200 bg-green-50 p-6">
-          <h2 className="mb-4 text-lg font-semibold text-green-900">
+        <section className="rounded-xl border border-emerald-200 bg-emerald-50 p-6">
+          <h2 className="mb-4 text-lg font-semibold text-emerald-800">
             Your response
           </h2>
 
@@ -495,7 +498,7 @@ export default function EventDetailClient() {
               <span
                 className={`inline-block rounded-full px-4 py-1 text-sm font-semibold ${
                   rsvpStatus === 'attending'
-                    ? 'bg-green-200 text-green-900'
+                    ? 'bg-emerald-200 text-emerald-800'
                     : 'bg-red-200 text-red-900'
                 }`}
               >
@@ -503,27 +506,30 @@ export default function EventDetailClient() {
               </span>
               <button
                 onClick={() => setRsvpStatus(null)}
-                className="text-sm text-green-700 underline hover:text-green-900"
+                className="text-sm text-emerald-600 underline hover:text-emerald-800"
               >
                 Change
               </button>
             </div>
           ) : (
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <button
-                onClick={() => handleRsvp('attending')}
-                disabled={rsvpLoading}
-                className="flex-1 rounded-xl bg-green-600 px-6 py-4 text-lg font-bold text-white shadow transition hover:bg-green-700 disabled:opacity-50"
-              >
-                {rsvpLoading ? '...' : 'Attend'}
-              </button>
-              <button
-                onClick={() => handleRsvp('absent')}
-                disabled={rsvpLoading}
-                className="flex-1 rounded-xl bg-red-500 px-6 py-4 text-lg font-bold text-white shadow transition hover:bg-red-600 disabled:opacity-50"
-              >
-                {rsvpLoading ? '...' : 'Absent'}
-              </button>
+            <div className="space-y-3">
+              <AltchaWidget onVerify={setCaptchaPayload} />
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <button
+                  onClick={() => handleRsvp('attending')}
+                  disabled={rsvpLoading || !captchaPayload}
+                  className="flex-1 rounded-xl bg-emerald-500 px-6 py-4 text-lg font-bold text-white shadow transition hover:bg-emerald-600 disabled:opacity-50"
+                >
+                  {rsvpLoading ? '...' : 'Attend'}
+                </button>
+                <button
+                  onClick={() => handleRsvp('absent')}
+                  disabled={rsvpLoading || !captchaPayload}
+                  className="flex-1 rounded-xl bg-red-500 px-6 py-4 text-lg font-bold text-white shadow transition hover:bg-red-600 disabled:opacity-50"
+                >
+                  {rsvpLoading ? '...' : 'Absent'}
+                </button>
+              </div>
             </div>
           )}
         </section>
@@ -538,7 +544,7 @@ export default function EventDetailClient() {
             </h2>
             <button
               onClick={fetchAttendance}
-              className="text-xs text-green-700 underline hover:text-green-900"
+              className="text-xs text-emerald-600 underline hover:text-emerald-800"
             >
               Refresh
             </button>
@@ -571,7 +577,7 @@ export default function EventDetailClient() {
             <button
               onClick={handleAutoAssignTeams}
               disabled={assigningTeams}
-              className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow transition hover:bg-green-700 disabled:opacity-50"
+              className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-600 disabled:opacity-50"
             >
               {assigningTeams ? 'Assigning...' : 'Auto-assign teams'}
             </button>
@@ -620,12 +626,12 @@ export default function EventDetailClient() {
           <button
             onClick={handleSendReminder}
             disabled={reminderSent}
-            className="rounded-lg border border-green-300 bg-white px-4 py-2 text-sm font-semibold text-green-700 transition hover:bg-green-50 disabled:opacity-50"
+            className="rounded-xl border border-emerald-300 bg-white px-4 py-2 text-sm font-medium text-emerald-600 transition hover:bg-emerald-50 disabled:opacity-50"
           >
             {reminderSent ? 'Reminder sent' : 'Send reminder'}
           </button>
           {reminderSent && (
-            <span className="text-xs text-green-600">
+            <span className="text-xs text-emerald-600">
               Reminder has been sent to all parents.
             </span>
           )}
@@ -636,7 +642,7 @@ export default function EventDetailClient() {
       <div className="pt-4">
         <a
           href="/dashboard/"
-          className="text-sm text-green-700 underline hover:text-green-900"
+          className="text-sm text-emerald-600 underline hover:text-emerald-800"
         >
           Back to dashboard
         </a>

@@ -79,7 +79,7 @@ eventsRouter.post("/events", (req: Request, res: Response) => {
 // GET /api/events
 eventsRouter.get("/events", (req: Request, res: Response) => {
   const db = getDB();
-  const { type, category } = req.query;
+  const { type, category, upcoming } = req.query;
 
   // 1. Fetch standalone events (seriesId IS NULL to avoid duplicating materialized events)
   let sql = "SELECT * FROM events WHERE seriesId IS NULL";
@@ -145,8 +145,14 @@ eventsRouter.get("/events", (req: Request, res: Response) => {
   }
 
   // 3. Merge and sort by date
-  const allEvents = [...standaloneEvents, ...expandedEvents];
+  let allEvents = [...standaloneEvents, ...expandedEvents];
   allEvents.sort((a, b) => String(a.date).localeCompare(String(b.date)));
+
+  // 4. Filter upcoming events (date >= today) when requested
+  if (upcoming === "true") {
+    const today = new Date().toISOString().slice(0, 10);
+    allEvents = allEvents.filter((e) => String(e.date) >= today);
+  }
 
   res.json(allEvents);
 });

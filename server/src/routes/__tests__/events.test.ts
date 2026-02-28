@@ -349,6 +349,51 @@ describe("Events routes", () => {
     }
   });
 
+  it("GET /api/events?upcoming=true — filters to only future events", async () => {
+    // Past event
+    db.run(
+      "INSERT INTO events (type, title, date) VALUES (?, ?, ?)",
+      ["tournament", "Past Cup", "2025-01-01"],
+    );
+    // Future event
+    db.run(
+      "INSERT INTO events (type, title, date) VALUES (?, ?, ?)",
+      ["tournament", "Future Cup", "2027-06-15"],
+    );
+    // Future training (should appear without type filter)
+    db.run(
+      "INSERT INTO events (type, title, date) VALUES (?, ?, ?)",
+      ["training", "Future Training", "2027-06-15"],
+    );
+
+    // With type filter — only future tournaments
+    const res = await fetch(`${baseUrl}/api/events?type=tournament&upcoming=true`);
+    const body = await res.json();
+    expect(body).toHaveLength(1);
+    expect(body[0].title).toBe("Future Cup");
+
+    // Without type filter — all future events
+    const res2 = await fetch(`${baseUrl}/api/events?upcoming=true`);
+    const body2 = await res2.json();
+    expect(body2).toHaveLength(2);
+    expect(body2.every((e: Record<string, unknown>) => e.date! >= new Date().toISOString().slice(0, 10))).toBe(true);
+  });
+
+  it("GET /api/events?upcoming=false — returns all events including past", async () => {
+    db.run(
+      "INSERT INTO events (type, title, date) VALUES (?, ?, ?)",
+      ["tournament", "Past Cup", "2025-01-01"],
+    );
+    db.run(
+      "INSERT INTO events (type, title, date) VALUES (?, ?, ?)",
+      ["tournament", "Future Cup", "2027-06-15"],
+    );
+
+    const res = await fetch(`${baseUrl}/api/events?upcoming=false`);
+    const body = await res.json();
+    expect(body).toHaveLength(2);
+  });
+
   it("GET /api/events — does not duplicate materialized series events", async () => {
     // Insert a series
     db.run(

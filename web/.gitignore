@@ -1,0 +1,9 @@
+# Next.js
+.next/
+out/
+
+# Dependencies (also covered by root .gitignore)
+node_modules/
+
+# next-env.d.ts is auto-generated
+next-env.d.ts

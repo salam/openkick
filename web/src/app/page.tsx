@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import SubscribeCard from '@/components/SubscribeCard';
 
 export default function Home() {
   return (
@@ -20,6 +21,8 @@ export default function Home() {
           Dashboard
         </Link>
       </div>
+
+      <SubscribeCard />
     </main>
   );
 }

@@ -8,6 +8,7 @@ import CalendarView, {
   type ViewMode,
 } from '@/components/CalendarView';
 import { apiFetch } from '@/lib/api';
+import { t, getLanguage } from '@/lib/i18n';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -28,21 +29,31 @@ interface ApiEventSeries {
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
-const VIEW_MODES: { value: ViewMode; label: string }[] = [
-  { value: 'yearly', label: 'Yearly' },
-  { value: 'monthly', label: 'Monthly' },
-  { value: 'list', label: 'List' },
+const VIEW_MODE_KEYS: Record<ViewMode, string> = {
+  yearly: 'yearly',
+  monthly: 'monthly',
+  list: 'list',
+};
+
+const VIEW_MODES: ViewMode[] = ['yearly', 'monthly', 'list'];
+
+const DAY_KEYS = [
+  'day_monday', 'day_tuesday', 'day_wednesday', 'day_thursday',
+  'day_friday', 'day_saturday', 'day_sunday',
 ];
 
-const DAYS_OF_WEEK = [
-  'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
-];
-
-const ISO_DAY_NAMES = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const ISO_DAY_KEYS = ['', 'day_mon', 'day_tue', 'day_wed', 'day_thu', 'day_fri', 'day_sat', 'day_sun'];
 
 // ── Page Component ─────────────────────────────────────────────────────────
 
 function CalendarPageContent() {
+  const [, setLang] = useState(() => getLanguage());
+  useEffect(() => {
+    function onLangChange() { setLang(getLanguage()); }
+    window.addEventListener('languagechange', onLangChange);
+    return () => window.removeEventListener('languagechange', onLangChange);
+  }, []);
+
   const now = new Date();
   const [viewMode, setViewMode] = useState<ViewMode>('monthly');
   const [year, setYear] = useState(now.getFullYear());
@@ -114,7 +125,7 @@ function CalendarPageContent() {
         .filter((e) => e.type === 'training' && !e.cancelled)
         .map((e) => {
           const d = new Date(e.date + 'T00:00:00');
-          return DAYS_OF_WEEK[d.getDay() === 0 ? 6 : d.getDay() - 1];
+          return DAY_KEYS[d.getDay() === 0 ? 6 : d.getDay() - 1];
         }),
     ),
   );
@@ -124,12 +135,12 @@ function CalendarPageContent() {
       {/* Header */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-bold text-gray-900">Calendar</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{t('calendar')}</h1>
           <Link
             href="/events/new/"
             className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-600"
           >
-            + New Event
+            {t('new_event')}
           </Link>
         </div>
 
@@ -138,16 +149,16 @@ function CalendarPageContent() {
           <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1">
             {VIEW_MODES.map((vm) => (
               <button
-                key={vm.value}
+                key={vm}
                 type="button"
-                onClick={() => setViewMode(vm.value)}
+                onClick={() => setViewMode(vm)}
                 className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                  viewMode === vm.value
+                  viewMode === vm
                     ? 'bg-emerald-500 text-white'
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
-                {vm.label}
+                {t(VIEW_MODE_KEYS[vm])}
               </button>
             ))}
           </div>
@@ -215,13 +226,13 @@ function CalendarPageContent() {
             {trainingDays.length > 0 && (
               <div className="rounded-lg border border-gray-200 bg-white p-4">
                 <h3 className="mb-3 text-sm font-semibold text-gray-900">
-                  Training Schedule
+                  {t('training_schedule')}
                 </h3>
                 <ul className="space-y-2">
-                  {trainingDays.map((day) => (
-                    <li key={day} className="flex items-center gap-2 text-sm text-gray-700">
+                  {trainingDays.map((dayKey) => (
+                    <li key={dayKey} className="flex items-center gap-2 text-sm text-gray-700">
                       <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
-                      {day}
+                      {t(dayKey)}
                     </li>
                   ))}
                 </ul>
@@ -232,7 +243,7 @@ function CalendarPageContent() {
             {vacations.length > 0 && (
               <div className="mt-4 rounded-lg border border-gray-200 bg-white p-4">
                 <h3 className="mb-3 text-sm font-semibold text-gray-900">
-                  Vacations
+                  {t('vacations')}
                 </h3>
                 <ul className="space-y-2">
                   {vacations.map((v) => (
@@ -252,10 +263,10 @@ function CalendarPageContent() {
             {/* Event Series */}
             <div className="mt-4 rounded-lg border border-gray-200 bg-white p-4">
               <h3 className="mb-3 text-sm font-semibold text-gray-900">
-                Event Series
+                {t('event_series')}
               </h3>
               {eventSeries.length === 0 ? (
-                <p className="text-sm text-gray-400">No event series</p>
+                <p className="text-sm text-gray-400">{t('no_event_series')}</p>
               ) : (
                 <ul className="space-y-2">
                   {eventSeries.map((s) => (
@@ -264,7 +275,7 @@ function CalendarPageContent() {
                       <span className="font-medium">{s.title}</span>
                       <br />
                       <span className="ml-4 text-xs text-gray-500">
-                        {ISO_DAY_NAMES[s.recurrenceDay]} &middot; {s.startDate} &ndash; {s.endDate}
+                        {t(ISO_DAY_KEYS[s.recurrenceDay])} &middot; {s.startDate} &ndash; {s.endDate}
                       </span>
                     </li>
                   ))}

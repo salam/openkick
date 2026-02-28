@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import AuthGuard from '@/components/AuthGuard';
+import Link from 'next/link';
 import CalendarView, {
   type CalendarEvent,
   type CalendarVacation,
@@ -17,16 +17,13 @@ interface CalendarApiResponse {
   vacations: CalendarVacation[];
 }
 
-interface VacationFormData {
-  name: string;
+interface ApiEventSeries {
+  id: number;
+  type: string;
+  title: string;
+  recurrenceDay: number;
   startDate: string;
   endDate: string;
-}
-
-interface TrainingFormData {
-  title: string;
-  dayOfWeek: string;
-  time: string;
 }
 
 // ── Constants ──────────────────────────────────────────────────────────────
@@ -41,6 +38,8 @@ const DAYS_OF_WEEK = [
   'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
 ];
 
+const ISO_DAY_NAMES = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
 // ── Page Component ─────────────────────────────────────────────────────────
 
 function CalendarPageContent() {
@@ -50,22 +49,8 @@ function CalendarPageContent() {
   const [month, setMonth] = useState(now.getMonth());
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [vacations, setVacations] = useState<CalendarVacation[]>([]);
+  const [eventSeries, setEventSeries] = useState<ApiEventSeries[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Coach action forms
-  const [showVacationForm, setShowVacationForm] = useState(false);
-  const [showTrainingForm, setShowTrainingForm] = useState(false);
-  const [vacationForm, setVacationForm] = useState<VacationFormData>({
-    name: '',
-    startDate: '',
-    endDate: '',
-  });
-  const [trainingForm, setTrainingForm] = useState<TrainingFormData>({
-    title: '',
-    dayOfWeek: 'Monday',
-    time: '18:00',
-  });
-  const [formError, setFormError] = useState('');
 
   // ── Data fetching ────────────────────────────────────────────────────────
 
@@ -96,6 +81,18 @@ function CalendarPageContent() {
     fetchCalendar();
   }, [fetchCalendar]);
 
+  useEffect(() => {
+    async function loadSeries() {
+      try {
+        const data = await apiFetch<ApiEventSeries[]>('/api/event-series');
+        setEventSeries(data);
+      } catch {
+        // API not yet available
+      }
+    }
+    loadSeries();
+  }, []);
+
   // ── Handlers ─────────────────────────────────────────────────────────────
 
   function handleMonthClick(m: number) {
@@ -106,44 +103,6 @@ function CalendarPageContent() {
   function handleChangeMonth(y: number, m: number) {
     setYear(y);
     setMonth(m);
-  }
-
-  async function handleAddVacation() {
-    setFormError('');
-    if (!vacationForm.name || !vacationForm.startDate || !vacationForm.endDate) {
-      setFormError('All fields are required.');
-      return;
-    }
-    try {
-      await apiFetch('/api/vacations', {
-        method: 'POST',
-        body: JSON.stringify(vacationForm),
-      });
-      setShowVacationForm(false);
-      setVacationForm({ name: '', startDate: '', endDate: '' });
-      fetchCalendar();
-    } catch {
-      setFormError('Failed to create vacation.');
-    }
-  }
-
-  async function handleAddTraining() {
-    setFormError('');
-    if (!trainingForm.title || !trainingForm.time) {
-      setFormError('All fields are required.');
-      return;
-    }
-    try {
-      await apiFetch('/api/trainings', {
-        method: 'POST',
-        body: JSON.stringify(trainingForm),
-      });
-      setShowTrainingForm(false);
-      setTrainingForm({ title: '', dayOfWeek: 'Monday', time: '18:00' });
-      fetchCalendar();
-    } catch {
-      setFormError('Failed to create training day.');
-    }
   }
 
   // ── Render ───────────────────────────────────────────────────────────────
@@ -164,7 +123,15 @@ function CalendarPageContent() {
     <div>
       {/* Header */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Calendar</h1>
+        <div className="flex items-center gap-4">
+          <h1 className="text-2xl font-bold text-gray-900">Calendar</h1>
+          <Link
+            href="/events/new/"
+            className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-600"
+          >
+            + New Event
+          </Link>
+        </div>
 
         <div className="flex flex-wrap items-center gap-2">
           {/* View mode toggle */}
@@ -216,131 +183,6 @@ function CalendarPageContent() {
         </div>
       </div>
 
-      {/* Coach action buttons */}
-      <div className="mb-6 flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={() => {
-            setShowVacationForm(!showVacationForm);
-            setShowTrainingForm(false);
-            setFormError('');
-          }}
-          className="rounded-xl bg-purple-50 px-4 py-2 text-sm font-medium text-purple-700 transition-colors hover:bg-purple-100"
-        >
-          + Add Vacation
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setShowTrainingForm(!showTrainingForm);
-            setShowVacationForm(false);
-            setFormError('');
-          }}
-          className="rounded-xl bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700 transition-colors hover:bg-emerald-100"
-        >
-          + Add Training Day
-        </button>
-      </div>
-
-      {/* Inline vacation form */}
-      {showVacationForm && (
-        <div className="mb-6 rounded-lg border border-purple-200 bg-purple-50 p-4">
-          <h3 className="mb-3 text-sm font-semibold text-purple-800">New Vacation Period</h3>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <input
-              type="text"
-              placeholder="Name (e.g. Spring Break)"
-              value={vacationForm.name}
-              onChange={(e) => setVacationForm({ ...vacationForm, name: e.target.value })}
-              className="rounded-md border border-purple-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-purple-400 focus:outline-none focus:ring-1 focus:ring-purple-400"
-            />
-            <input
-              type="date"
-              value={vacationForm.startDate}
-              onChange={(e) => setVacationForm({ ...vacationForm, startDate: e.target.value })}
-              className="rounded-md border border-purple-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-purple-400 focus:outline-none focus:ring-1 focus:ring-purple-400"
-            />
-            <input
-              type="date"
-              value={vacationForm.endDate}
-              onChange={(e) => setVacationForm({ ...vacationForm, endDate: e.target.value })}
-              className="rounded-md border border-purple-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-purple-400 focus:outline-none focus:ring-1 focus:ring-purple-400"
-            />
-          </div>
-          {formError && <p className="mt-2 text-xs text-red-600">{formError}</p>}
-          <div className="mt-3 flex gap-2">
-            <button
-              type="button"
-              onClick={handleAddVacation}
-              className="rounded-xl bg-purple-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-purple-700"
-            >
-              Save
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setShowVacationForm(false);
-                setFormError('');
-              }}
-              className="rounded-xl px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Inline training form */}
-      {showTrainingForm && (
-        <div className="mb-6 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
-          <h3 className="mb-3 text-sm font-semibold text-emerald-800">New Training Day</h3>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <input
-              type="text"
-              placeholder="Title (e.g. U15 Training)"
-              value={trainingForm.title}
-              onChange={(e) => setTrainingForm({ ...trainingForm, title: e.target.value })}
-              className="rounded-md border border-emerald-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400"
-            />
-            <select
-              value={trainingForm.dayOfWeek}
-              onChange={(e) => setTrainingForm({ ...trainingForm, dayOfWeek: e.target.value })}
-              className="rounded-md border border-emerald-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400"
-            >
-              {DAYS_OF_WEEK.map((d) => (
-                <option key={d} value={d}>{d}</option>
-              ))}
-            </select>
-            <input
-              type="time"
-              value={trainingForm.time}
-              onChange={(e) => setTrainingForm({ ...trainingForm, time: e.target.value })}
-              className="rounded-md border border-emerald-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400"
-            />
-          </div>
-          {formError && <p className="mt-2 text-xs text-red-600">{formError}</p>}
-          <div className="mt-3 flex gap-2">
-            <button
-              type="button"
-              onClick={handleAddTraining}
-              className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-600"
-            >
-              Save
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setShowTrainingForm(false);
-                setFormError('');
-              }}
-              className="rounded-xl px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Main content area */}
       <div className="flex flex-col gap-6 lg:flex-row">
         {/* Calendar */}
@@ -366,22 +208,25 @@ function CalendarPageContent() {
           )}
         </div>
 
-        {/* Training schedule sidebar */}
-        {trainingDays.length > 0 && (
+        {/* Sidebar */}
+        {(trainingDays.length > 0 || vacations.length > 0 || eventSeries.length > 0) && (
           <aside className="w-full shrink-0 lg:w-64">
-            <div className="rounded-lg border border-gray-200 bg-white p-4">
-              <h3 className="mb-3 text-sm font-semibold text-gray-900">
-                Training Schedule
-              </h3>
-              <ul className="space-y-2">
-                {trainingDays.map((day) => (
-                  <li key={day} className="flex items-center gap-2 text-sm text-gray-700">
-                    <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
-                    {day}
-                  </li>
-                ))}
-              </ul>
-            </div>
+            {/* Training schedule */}
+            {trainingDays.length > 0 && (
+              <div className="rounded-lg border border-gray-200 bg-white p-4">
+                <h3 className="mb-3 text-sm font-semibold text-gray-900">
+                  Training Schedule
+                </h3>
+                <ul className="space-y-2">
+                  {trainingDays.map((day) => (
+                    <li key={day} className="flex items-center gap-2 text-sm text-gray-700">
+                      <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
+                      {day}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {/* Upcoming vacations */}
             {vacations.length > 0 && (
@@ -403,6 +248,29 @@ function CalendarPageContent() {
                 </ul>
               </div>
             )}
+
+            {/* Event Series */}
+            <div className="mt-4 rounded-lg border border-gray-200 bg-white p-4">
+              <h3 className="mb-3 text-sm font-semibold text-gray-900">
+                Event Series
+              </h3>
+              {eventSeries.length === 0 ? (
+                <p className="text-sm text-gray-400">No event series</p>
+              ) : (
+                <ul className="space-y-2">
+                  {eventSeries.map((s) => (
+                    <li key={s.id} className="text-sm text-gray-700">
+                      <span className="mr-2 inline-block h-2 w-2 rounded-full bg-blue-400" />
+                      <span className="font-medium">{s.title}</span>
+                      <br />
+                      <span className="ml-4 text-xs text-gray-500">
+                        {ISO_DAY_NAMES[s.recurrenceDay]} &middot; {s.startDate} &ndash; {s.endDate}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </aside>
         )}
       </div>
@@ -411,9 +279,5 @@ function CalendarPageContent() {
 }
 
 export default function CalendarPage() {
-  return (
-    <AuthGuard>
-      <CalendarPageContent />
-    </AuthGuard>
-  );
+  return <CalendarPageContent />;
 }

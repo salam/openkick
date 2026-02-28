@@ -13,6 +13,7 @@ interface EventCardProps {
   totalPlayers: number;
   deadline?: string;
   categories?: string[];
+  seriesId?: number;
 }
 
 const typeBadgeStyles: Record<string, string> = {
@@ -45,6 +46,7 @@ export default function EventCard({
   totalPlayers,
   deadline,
   categories,
+  seriesId,
 }: EventCardProps) {
   const deadlineClose = deadline ? isDeadlineApproaching(deadline) : false;
 
@@ -55,11 +57,18 @@ export default function EventCard({
     >
       <div className="mb-3 flex items-start justify-between gap-2">
         <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
-        <span
-          className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${typeBadgeStyles[type] || 'bg-gray-100 text-gray-700'}`}
-        >
-          {typeLabels[type] || type}
-        </span>
+        <div className="flex items-center gap-1.5">
+          {seriesId && (
+            <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
+              Series
+            </span>
+          )}
+          <span
+            className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${typeBadgeStyles[type] || 'bg-gray-100 text-gray-700'}`}
+          >
+            {typeLabels[type] || type}
+          </span>
+        </div>
       </div>
 
       <div className="mb-3 space-y-1 text-sm text-gray-500">

@@ -199,8 +199,14 @@ CREATE TABLE IF NOT EXISTS live_ticker_entries (
 
 CREATE TABLE IF NOT EXISTS game_history (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tournamentId INTEGER REFERENCES events(id),
   tournamentName TEXT NOT NULL,
+  teamName TEXT,
   date TEXT NOT NULL,
+  placeRanking INTEGER,
+  isTrophy INTEGER NOT NULL DEFAULT 0,
+  trophyType TEXT,
+  notes TEXT,
   createdAt TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -213,6 +219,7 @@ CREATE TABLE IF NOT EXISTS game_history_players (
 CREATE TABLE IF NOT EXISTS game_history_matches (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   historyId INTEGER NOT NULL REFERENCES game_history(id) ON DELETE CASCADE,
+  matchLabel TEXT,
   homeTeam TEXT NOT NULL,
   awayTeam TEXT NOT NULL,
   score TEXT
@@ -329,6 +336,33 @@ export async function initDB(dbPath?: string): Promise<Database> {
   const playerCols = db.exec("PRAGMA table_info(players)")[0]?.values.map(r => r[1]) ?? [];
   if (!playerCols.includes('lastNameInitial')) {
     try { db.run('ALTER TABLE players ADD COLUMN lastNameInitial TEXT'); } catch {}
+  }
+
+  // Migrate: add new columns to game_history if absent
+  const ghCols = db.exec("PRAGMA table_info(game_history)")[0]?.values.map(r => r[1]) ?? [];
+  if (!ghCols.includes('tournamentId')) {
+    try { db.run('ALTER TABLE game_history ADD COLUMN tournamentId INTEGER REFERENCES events(id)'); } catch {}
+  }
+  if (!ghCols.includes('teamName')) {
+    try { db.run('ALTER TABLE game_history ADD COLUMN teamName TEXT'); } catch {}
+  }
+  if (!ghCols.includes('placeRanking')) {
+    try { db.run('ALTER TABLE game_history ADD COLUMN placeRanking INTEGER'); } catch {}
+  }
+  if (!ghCols.includes('isTrophy')) {
+    try { db.run('ALTER TABLE game_history ADD COLUMN isTrophy INTEGER NOT NULL DEFAULT 0'); } catch {}
+  }
+  if (!ghCols.includes('trophyType')) {
+    try { db.run('ALTER TABLE game_history ADD COLUMN trophyType TEXT'); } catch {}
+  }
+  if (!ghCols.includes('notes')) {
+    try { db.run('ALTER TABLE game_history ADD COLUMN notes TEXT'); } catch {}
+  }
+
+  // Migrate: add matchLabel to game_history_matches if absent
+  const ghmCols = db.exec("PRAGMA table_info(game_history_matches)")[0]?.values.map(r => r[1]) ?? [];
+  if (!ghmCols.includes('matchLabel')) {
+    try { db.run('ALTER TABLE game_history_matches ADD COLUMN matchLabel TEXT'); } catch {}
   }
 
   // Seed default settings (INSERT OR IGNORE to avoid duplicates)

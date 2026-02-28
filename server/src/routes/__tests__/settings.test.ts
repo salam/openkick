@@ -2,9 +2,14 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import express from "express";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { initDB } from "../../database.js";
 import { settingsRouter } from "../settings.js";
 import type { Database } from "sql.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 let db: Database;
 let server: Server;
@@ -122,5 +127,73 @@ describe("Settings routes", () => {
     const allRes = await fetch(`${baseUrl}/api/settings`);
     const allBody = await allRes.json();
     expect(allBody.llm_provider).toBe("anthropic");
+  });
+
+  describe("POST /api/settings/upload-logo", () => {
+    const uploadDir = path.resolve(__dirname, "../../../../public/uploads");
+
+    afterEach(() => {
+      // Clean up uploaded files after each logo test
+      const logoPath = path.join(uploadDir, "club-logo.png");
+      if (fs.existsSync(logoPath)) {
+        fs.unlinkSync(logoPath);
+      }
+    });
+
+    it("saves logo and updates setting", async () => {
+      // 1x1 transparent PNG pixel
+      const pngPixel =
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+      const res = await fetch(`${baseUrl}/api/settings/upload-logo`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data: pngPixel, filename: "test-logo.png" }),
+      });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.key).toBe("club_logo");
+      expect(body.value).toBe("/uploads/club-logo.png");
+
+      // Verify file was written
+      expect(fs.existsSync(path.join(uploadDir, "club-logo.png"))).toBe(true);
+
+      // Verify setting was persisted in DB
+      const settingRes = await fetch(`${baseUrl}/api/settings/club_logo`);
+      const settingBody = await settingRes.json();
+      expect(settingBody.value).toBe("/uploads/club-logo.png");
+    });
+
+    it("rejects invalid file type", async () => {
+      const res = await fetch(`${baseUrl}/api/settings/upload-logo`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data: "dGVzdA==", filename: "test.exe" }),
+      });
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toMatch(/Invalid file type/);
+    });
+
+    it("rejects request with missing data", async () => {
+      const res = await fetch(`${baseUrl}/api/settings/upload-logo`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filename: "logo.png" }),
+      });
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toMatch(/data and filename are required/);
+    });
+
+    it("rejects request with missing filename", async () => {
+      const res = await fetch(`${baseUrl}/api/settings/upload-logo`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data: "dGVzdA==" }),
+      });
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toMatch(/data and filename are required/);
+    });
   });
 });

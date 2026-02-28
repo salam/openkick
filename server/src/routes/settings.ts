@@ -1,6 +1,11 @@
 import { Router, type Request, type Response } from "express";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { getDB } from "../database.js";
 import { sendEmail } from "../services/email.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export const settingsRouter = Router();
 
@@ -49,6 +54,43 @@ settingsRouter.put("/settings/:key", (req: Request, res: Response) => {
   db.run("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", [key as string, String(value)]);
 
   res.json({ key, value: String(value) });
+});
+
+// POST /api/settings/upload-logo — accept base64-encoded image, save to public/uploads/
+settingsRouter.post("/settings/upload-logo", (req: Request, res: Response) => {
+  const { data, filename } = req.body;
+
+  if (!data || !filename) {
+    res.status(400).json({ error: "data and filename are required" });
+    return;
+  }
+
+  const ext = path.extname(filename).toLowerCase();
+  const allowedExts = [".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp"];
+  if (!allowedExts.includes(ext)) {
+    res.status(400).json({ error: "Invalid file type. Allowed: png, jpg, jpeg, gif, svg, webp" });
+    return;
+  }
+
+  const buffer = Buffer.from(data, "base64");
+  if (buffer.length > 2 * 1024 * 1024) {
+    res.status(400).json({ error: "File too large. Maximum 2MB." });
+    return;
+  }
+
+  const uploadDir = path.resolve(__dirname, "../../../public/uploads");
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  }
+
+  const savedName = `club-logo${ext}`;
+  fs.writeFileSync(path.join(uploadDir, savedName), buffer);
+
+  const publicPath = `/uploads/${savedName}`;
+  const db = getDB();
+  db.run("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", ["club_logo", publicPath]);
+
+  res.json({ key: "club_logo", value: publicPath });
 });
 
 // POST /api/settings/test-smtp — send a test email to verify SMTP config

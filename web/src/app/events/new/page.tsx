@@ -70,6 +70,9 @@ interface EventFormData {
   seriesStartDate: string;
   seriesEndDate: string;
   deadlineOffsetHours: number | null;
+  // Tournament-specific fields
+  teamName: string;
+  openCall: boolean;
 }
 
 /* ── Component ─────────────────────────────────────────────────────── */
@@ -99,6 +102,8 @@ export default function NewEventPage() {
     seriesStartDate: '',
     seriesEndDate: '',
     deadlineOffsetHours: null,
+    teamName: '',
+    openCall: false,
   });
   const [attachment, setAttachment] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -221,13 +226,13 @@ export default function NewEventPage() {
 
     try {
       if (seriesMode) {
-        const body = {
+        const body: Record<string, unknown> = {
           type: form.type,
           title: form.title.trim(),
           description: form.description.trim() || null,
           startTime: form.startTime || null,
           attendanceTime: form.attendanceTime || null,
-          maxParticipants: form.maxParticipants ? Number(form.maxParticipants) : null,
+          maxParticipants: form.openCall ? null : (form.maxParticipants ? Number(form.maxParticipants) : null),
           minParticipants: form.minParticipants ? Number(form.minParticipants) : null,
           location: form.location.trim() || null,
           categoryRequirement: form.categories.length > 0 ? form.categories.join(',') : null,
@@ -236,10 +241,14 @@ export default function NewEventPage() {
           endDate: form.seriesEndDate,
           deadlineOffsetHours: form.deadlineOffsetHours,
         };
+        if (form.type === 'tournament') {
+          body.teamName = form.teamName.trim() || null;
+          body.openCall = form.openCall;
+        }
         await apiFetch('/api/event-series', { method: 'POST', body: JSON.stringify(body) });
         router.push('/events/');
       } else {
-        const body = {
+        const body: Record<string, unknown> = {
           type: form.type,
           title: form.title.trim(),
           description: form.description.trim() || null,
@@ -247,7 +256,7 @@ export default function NewEventPage() {
           startTime: form.startTime || null,
           attendanceTime: form.attendanceTime || null,
           deadline: form.deadline || null,
-          maxParticipants: form.maxParticipants ? Number(form.maxParticipants) : null,
+          maxParticipants: form.openCall ? null : (form.maxParticipants ? Number(form.maxParticipants) : null),
           minParticipants: form.minParticipants ? Number(form.minParticipants) : null,
           location: form.location.trim() || null,
           categoryRequirement: form.categories.length > 0 ? form.categories.join(',') : null,
@@ -257,6 +266,10 @@ export default function NewEventPage() {
               ? form.recurrenceDays.join(',')
               : null,
         };
+        if (form.type === 'tournament') {
+          body.teamName = form.teamName.trim() || null;
+          body.openCall = form.openCall;
+        }
 
         const created = await apiFetch<{ id: number }>('/api/events', {
           method: 'POST',
@@ -598,20 +611,62 @@ export default function NewEventPage() {
           </>
         )}
 
-        {/* Participants row */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {/* Tournament-specific: Team Name */}
+        {form.type === 'tournament' && (
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              Max Participants
-            </label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Team Name</label>
             <input
-              type="number"
-              min={1}
-              value={form.maxParticipants}
-              onChange={(e) => setForm({ ...form, maxParticipants: e.target.value })}
+              type="text"
+              value={form.teamName}
+              onChange={(e) => setForm({ ...form, teamName: e.target.value })}
+              placeholder="e.g., FC Example E1"
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
             />
+            <p className="mt-1 text-xs text-gray-500">
+              Official name as registered with the tournament organiser
+            </p>
           </div>
+        )}
+
+        {/* Tournament-specific: Open Call toggle */}
+        {form.type === 'tournament' && (
+          <div>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={form.openCall}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    openCall: e.target.checked,
+                    maxParticipants: e.target.checked ? '' : prev.maxParticipants,
+                  }))
+                }
+                className="h-4 w-4 rounded border-gray-300 text-emerald-500 focus:ring-emerald-500"
+              />
+              <span className="text-sm font-medium text-gray-700">
+                Open call (no participant limit)
+              </span>
+            </label>
+          </div>
+        )}
+
+        {/* Participants row */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {!form.openCall && (
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Max Participants
+              </label>
+              <input
+                type="number"
+                min={1}
+                value={form.maxParticipants}
+                onChange={(e) => setForm({ ...form, maxParticipants: e.target.value })}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              />
+            </div>
+          )}
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">
               Min Participants

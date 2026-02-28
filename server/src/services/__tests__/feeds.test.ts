@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { initDB } from "../../database.js";
-import { getFeedItems } from "../feeds.js";
+import { getFeedItems, getTrophyFeedItems } from "../feeds.js";
 import type { Database } from "sql.js";
 
 let db: Database;
@@ -66,5 +66,56 @@ describe("FeedService", () => {
     expect(item).toHaveProperty("title");
     expect(item).toHaveProperty("date");
     expect(item).toHaveProperty("location");
+  });
+
+  it("includes trophy fields when tournament_results exist", () => {
+    db.run(
+      `INSERT INTO tournament_results (eventId, placement, totalTeams, summary, achievements)
+       VALUES (1, 2, 12, 'Great performance', '[{"type":"fair_play","label":"Fair Play Award"}]')`
+    );
+    const items = getFeedItems();
+    const cup = items.find((i) => i.title === "Spring Cup")!;
+    expect(cup.placement).toBe(2);
+    expect(cup.totalTeams).toBe(12);
+    expect(cup.trophySummary).toBe("Great performance");
+    expect(cup.achievements).toEqual([{ type: "fair_play", label: "Fair Play Award" }]);
+  });
+
+  it("returns null trophy fields when no results exist", () => {
+    const items = getFeedItems();
+    const training = items.find((i) => i.title === "Monday Training")!;
+    expect(training.placement).toBeNull();
+    expect(training.totalTeams).toBeNull();
+    expect(training.trophySummary).toBeNull();
+    expect(training.achievements).toEqual([]);
+  });
+
+  describe("getTrophyFeedItems", () => {
+    it("returns only events with tournament results", () => {
+      db.run(
+        `INSERT INTO tournament_results (eventId, placement, totalTeams, achievements)
+         VALUES (1, 1, 8, '[]')`
+      );
+      const items = getTrophyFeedItems();
+      expect(items).toHaveLength(1);
+      expect(items[0].title).toBe("Spring Cup");
+      expect(items[0].placement).toBe(1);
+    });
+
+    it("returns empty array when no results exist", () => {
+      const items = getTrophyFeedItems();
+      expect(items).toHaveLength(0);
+    });
+
+    it("respects limit parameter", () => {
+      db.run(
+        `INSERT INTO tournament_results (eventId, placement, achievements) VALUES (1, 1, '[]')`
+      );
+      db.run(
+        `INSERT INTO tournament_results (eventId, placement, achievements) VALUES (3, 3, '[]')`
+      );
+      const items = getTrophyFeedItems(1);
+      expect(items).toHaveLength(1);
+    });
   });
 });

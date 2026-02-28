@@ -26,6 +26,7 @@ import { mcpRouter } from "./mcp/index.js";
 import { securityAuditRouter } from "./routes/security-audit.js";
 import { setupWahaRouter } from "./routes/setup-waha.js";
 import { onboardingRouter } from "./routes/onboarding.js";
+import { gdprRouter } from "./routes/gdpr.js";
 import { runHolidaySync, startHolidaySyncScheduler } from "./services/holiday-scheduler.js";
 import { startCrawlScheduler } from "./services/crawl-scheduler.js";
 import { liveTickerRouter } from "./routes/live-ticker.routes.js";
@@ -33,14 +34,17 @@ import { notificationsRouter } from "./routes/notifications.js";
 import { publicTournamentsRouter } from "./routes/public-tournaments.js";
 import { gameHistoryRouter } from "./routes/game-history.routes.js";
 import { createRsvpRouter } from "./routes/rsvp.js";
+import { securityTxtRouter } from "./routes/security-txt.js";
 
 const app = express();
 
 const CORS_ORIGIN = process.env.CORS_ORIGIN || "http://localhost:3000";
 app.use(cors({ origin: CORS_ORIGIN.split(",") }));
 app.use(express.json());
+app.use(express.raw({ type: "application/pdf", limit: "10mb" }));
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+app.use(securityTxtRouter);
 app.use(express.static(path.resolve(__dirname, "../../public")));
 
 app.use("/", llmsRouter);
@@ -66,6 +70,7 @@ app.use(wellKnownRouter);
 app.use("/api", feedsRouter);
 app.use("/api", securityAuditRouter);
 app.use("/api", onboardingRouter);
+app.use("/api", gdprRouter);
 app.use("/api/setup-waha", setupWahaRouter);
 app.use("/api", liveTickerRouter);
 app.use("/api", notificationsRouter);

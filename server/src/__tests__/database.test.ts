@@ -30,6 +30,7 @@ describe("initDB", () => {
 
     expect(tableNames).toContain("attendance");
     expect(tableNames).toContain("broadcasts");
+    expect(tableNames).toContain("event_series");
     expect(tableNames).toContain("events");
     expect(tableNames).toContain("guardian_players");
     expect(tableNames).toContain("guardians");
@@ -71,9 +72,9 @@ describe("initDB", () => {
     db = await initDB();
 
     const KNOWN_TABLES = [
-      "players", "guardians", "guardian_players", "events",
-      "attendance", "teams", "team_players", "vacation_periods",
-      "training_schedule", "settings", "broadcasts",
+      "players", "guardians", "guardian_players", "event_series",
+      "events", "attendance", "teams", "team_players",
+      "vacation_periods", "training_schedule", "settings", "broadcasts",
     ] as const;
 
     const columns = (table: typeof KNOWN_TABLES[number]) => {
@@ -104,13 +105,23 @@ describe("initDB", () => {
       expect.arrayContaining(["guardianId", "playerId"])
     );
 
+    // event_series
+    expect(columns("event_series")).toEqual(
+      expect.arrayContaining([
+        "id", "type", "title", "description", "startTime", "attendanceTime",
+        "location", "categoryRequirement", "maxParticipants", "minParticipants",
+        "recurrenceDay", "startDate", "endDate", "customDates", "excludedDates",
+        "deadlineOffsetHours", "createdBy", "createdAt",
+      ])
+    );
+
     // events
     expect(columns("events")).toEqual(
       expect.arrayContaining([
         "id", "type", "title", "description", "date", "startTime",
         "attendanceTime", "deadline", "maxParticipants", "minParticipants",
         "location", "categoryRequirement", "attachmentPath", "sourceUrl",
-        "recurring", "recurrenceRule", "createdBy", "createdAt",
+        "recurring", "recurrenceRule", "seriesId", "createdBy", "createdAt",
       ])
     );
 
@@ -156,6 +167,28 @@ describe("initDB", () => {
     );
   });
 
+  it("creates event_series table with expected columns", async () => {
+    db = await initDB();
+    const info = db.exec("PRAGMA table_info(event_series)");
+    const cols = info[0]?.values.map((r) => r[1]) ?? [];
+    expect(cols).toContain("id");
+    expect(cols).toContain("type");
+    expect(cols).toContain("title");
+    expect(cols).toContain("recurrenceDay");
+    expect(cols).toContain("startDate");
+    expect(cols).toContain("endDate");
+    expect(cols).toContain("customDates");
+    expect(cols).toContain("excludedDates");
+    expect(cols).toContain("deadlineOffsetHours");
+  });
+
+  it("events table has seriesId column", async () => {
+    db = await initDB();
+    const info = db.exec("PRAGMA table_info(events)");
+    const cols = info[0]?.values.map((r) => r[1]) ?? [];
+    expect(cols).toContain("seriesId");
+  });
+
   it("seeds default settings on first init", async () => {
     db = await initDB();
 
@@ -183,6 +216,50 @@ describe("initDB", () => {
     } finally {
       if (fs.existsSync(dbFile)) fs.unlinkSync(dbFile);
     }
+  });
+});
+
+// BUG2: Setup shown even when admin exists (auto-persist)
+describe("auto-persist after db.run", () => {
+  it("persists admin creation across restart when dbPath is set", async () => {
+    const dbFile = tmpDbPath();
+    try {
+      db = await initDB(dbFile);
+
+      // Simulate POST /api/setup creating an admin
+      db.run(
+        "INSERT INTO guardians (phone, name, email, passwordHash, role) VALUES (?, ?, ?, ?, 'admin')",
+        ["admin@test.com", "Admin", "admin@test.com", "hash"],
+      );
+
+      // Close without manually calling saveDB — auto-persist should have handled it
+      db.close();
+      db = null;
+
+      // Reopen (simulating server restart)
+      db = await initDB(dbFile);
+      const result = db.exec(
+        "SELECT COUNT(*) FROM guardians WHERE role IN ('admin', 'coach')",
+      );
+      const count = (result[0]?.values[0]?.[0] as number) ?? 0;
+      expect(count).toBe(1);
+    } finally {
+      if (fs.existsSync(dbFile)) fs.unlinkSync(dbFile);
+    }
+  });
+
+  it("does not auto-persist when no dbPath is given (in-memory only)", async () => {
+    db = await initDB(); // no path — in-memory
+    db.run(
+      "INSERT INTO guardians (phone, name, email, passwordHash, role) VALUES (?, ?, ?, ?, 'admin')",
+      ["admin@test.com", "Admin", "admin@test.com", "hash"],
+    );
+
+    // Data exists in-memory
+    const result = db.exec(
+      "SELECT COUNT(*) FROM guardians WHERE role IN ('admin', 'coach')",
+    );
+    expect((result[0]?.values[0]?.[0] as number) ?? 0).toBe(1);
   });
 });
 

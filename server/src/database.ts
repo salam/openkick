@@ -37,6 +37,27 @@ CREATE TABLE IF NOT EXISTS guardian_players (
   PRIMARY KEY (guardianId, playerId)
 );
 
+CREATE TABLE IF NOT EXISTS event_series (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  type TEXT NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  startTime TEXT,
+  attendanceTime TEXT,
+  location TEXT,
+  categoryRequirement TEXT,
+  maxParticipants INTEGER,
+  minParticipants INTEGER,
+  recurrenceDay INTEGER NOT NULL,
+  startDate TEXT NOT NULL,
+  endDate TEXT NOT NULL,
+  customDates TEXT,
+  excludedDates TEXT,
+  deadlineOffsetHours INTEGER,
+  createdBy INTEGER REFERENCES guardians(id),
+  createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS events (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   type TEXT NOT NULL,
@@ -54,6 +75,7 @@ CREATE TABLE IF NOT EXISTS events (
   sourceUrl TEXT,
   recurring INTEGER NOT NULL DEFAULT 0,
   recurrenceRule TEXT,
+  seriesId INTEGER REFERENCES event_series(id),
   createdBy INTEGER REFERENCES guardians(id),
   createdAt TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -159,6 +181,12 @@ export async function initDB(dbPath?: string): Promise<Database> {
   }
   if (!cols.includes('resetTokenExpiry')) {
     db.run("ALTER TABLE guardians ADD COLUMN resetTokenExpiry TEXT");
+  }
+
+  // Migrate: add seriesId to events if absent
+  const eventCols = db.exec("PRAGMA table_info(events)")[0]?.values.map(r => r[1]) ?? [];
+  if (!eventCols.includes('seriesId')) {
+    db.run("ALTER TABLE events ADD COLUMN seriesId INTEGER REFERENCES event_series(id)");
   }
 
   // Seed default settings (INSERT OR IGNORE to avoid duplicates)

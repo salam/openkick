@@ -22,7 +22,7 @@ export interface SeriesTemplate {
   customDates: string | null;   // JSON array of YYYY-MM-DD strings, or null
   excludedDates: string | null; // JSON array of YYYY-MM-DD strings, or null
   deadlineOffsetHours: number | null;
-  createdBy: string | null;
+  createdBy: number | null;
   createdAt: string;
 }
 
@@ -38,6 +38,11 @@ export interface MaterializedEvent {
   title: string;
   type: string;
   startTime: string;
+  attendanceTime: string | null;
+  location: string | null;
+  categoryRequirement: string | null;
+  maxParticipants: number | null;
+  minParticipants: number | null;
   [key: string]: unknown;
 }
 
@@ -75,6 +80,17 @@ function isoDay(d: Date): number {
 /** Parse a date string to a Date at midnight, avoiding timezone shifts. */
 function parseDate(s: string): Date {
   return new Date(`${s}T00:00:00`);
+}
+
+/** Safely parse a JSON-encoded date array, returning [] on invalid input. */
+function parseDateArray(raw: string | null): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
 }
 
 /** Check if a date string falls within any vacation period. */
@@ -121,19 +137,13 @@ export function expandSeries(
   }
 
   // 2. Add custom dates
-  if (series.customDates) {
-    const custom: string[] = JSON.parse(series.customDates);
-    for (const d of custom) {
-      dateSet.add(d);
-    }
+  for (const d of parseDateArray(series.customDates)) {
+    dateSet.add(d);
   }
 
   // 3. Remove excluded dates
-  if (series.excludedDates) {
-    const excluded: string[] = JSON.parse(series.excludedDates);
-    for (const d of excluded) {
-      dateSet.delete(d);
-    }
+  for (const d of parseDateArray(series.excludedDates)) {
+    dateSet.delete(d);
   }
 
   // 4. Filter out vacation periods and dates outside the requested range

@@ -1,0 +1,115 @@
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import express from "express";
+import { createServer, type Server } from "node:http";
+import type { AddressInfo } from "node:net";
+import { initDB } from "../../database.js";
+import { settingsRouter } from "../settings.js";
+import type { Database } from "sql.js";
+
+let db: Database;
+let server: Server;
+let baseUrl: string;
+
+async function createTestApp() {
+  db = await initDB();
+  const app = express();
+  app.use(express.json());
+  app.use("/api", settingsRouter);
+  server = createServer(app);
+  await new Promise<void>((resolve) => server.listen(0, resolve));
+  const { port } = server.address() as AddressInfo;
+  baseUrl = `http://localhost:${port}`;
+}
+
+async function teardown() {
+  await new Promise<void>((resolve, reject) =>
+    server.close((err) => (err ? reject(err) : resolve()))
+  );
+  db.close();
+}
+
+describe("Settings routes", () => {
+  beforeEach(async () => {
+    await createTestApp();
+  });
+
+  afterEach(async () => {
+    await teardown();
+  });
+
+  it("GET /api/settings — returns all settings as a key-value object", async () => {
+    const res = await fetch(`${baseUrl}/api/settings`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toEqual({
+      llm_provider: "openai",
+      bot_language: "de",
+      waha_url: "http://localhost:3008",
+    });
+  });
+
+  it("GET /api/settings/:key — returns single setting value", async () => {
+    const res = await fetch(`${baseUrl}/api/settings/bot_language`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toEqual({ key: "bot_language", value: "de" });
+  });
+
+  it("GET /api/settings/:key — returns 404 for unknown key", async () => {
+    const res = await fetch(`${baseUrl}/api/settings/nonexistent`);
+    expect(res.status).toBe(404);
+    const body = await res.json();
+    expect(body).toHaveProperty("error");
+  });
+
+  it("PUT /api/settings/:key — updates an existing setting", async () => {
+    const res = await fetch(`${baseUrl}/api/settings/bot_language`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ value: "en" }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toEqual({ key: "bot_language", value: "en" });
+  });
+
+  it("PUT /api/settings/:key — creates setting if it doesn't exist", async () => {
+    const res = await fetch(`${baseUrl}/api/settings/new_setting`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ value: "hello" }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toEqual({ key: "new_setting", value: "hello" });
+  });
+
+  it("PUT /api/settings/:key — returns 400 if value is missing", async () => {
+    const res = await fetch(`${baseUrl}/api/settings/bot_language`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body).toHaveProperty("error");
+  });
+
+  it("GET after PUT — confirms the update persisted", async () => {
+    await fetch(`${baseUrl}/api/settings/llm_provider`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ value: "anthropic" }),
+    });
+
+    const res = await fetch(`${baseUrl}/api/settings/llm_provider`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toEqual({ key: "llm_provider", value: "anthropic" });
+
+    // Also verify in the full settings list
+    const allRes = await fetch(`${baseUrl}/api/settings`);
+    const allBody = await allRes.json();
+    expect(allBody.llm_provider).toBe("anthropic");
+  });
+});

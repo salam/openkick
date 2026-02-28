@@ -7,7 +7,7 @@
     "dev": "tsx watch src/index.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "build": "tsc"
+    "build": "npm run test && tsc -b && echo 'Build complete'"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

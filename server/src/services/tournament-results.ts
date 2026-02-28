@@ -198,3 +198,44 @@ export function deleteResults(eventId: number): void {
   const db = getDB();
   db.run("DELETE FROM tournament_results WHERE eventId = ?", [eventId]);
 }
+
+// ── Trophy Cabinet ──────────────────────────────────────────────────
+
+export interface TrophyCabinetEntry {
+  id: number;
+  eventId: number;
+  eventTitle: string;
+  eventDate: string;
+  eventType: string;
+  placement: number | null;
+  totalTeams: number | null;
+  summary: string | null;
+  resultsUrl: string | null;
+  achievements: Achievement[];
+}
+
+export function getTrophyCabinet(limit = 50, offset = 0): TrophyCabinetEntry[] {
+  const db = getDB();
+  const rows = db.exec(
+    `SELECT tr.id, tr.eventId, e.title, e.date, e.type,
+            tr.placement, tr.totalTeams, tr.summary, tr.resultsUrl, tr.achievements
+     FROM tournament_results tr
+     JOIN events e ON tr.eventId = e.id
+     ORDER BY e.date DESC
+     LIMIT ? OFFSET ?`,
+    [limit, offset],
+  );
+  if (rows.length === 0) return [];
+  return rows[0].values.map((row) => ({
+    id: row[0] as number,
+    eventId: row[1] as number,
+    eventTitle: row[2] as string,
+    eventDate: row[3] as string,
+    eventType: row[4] as string,
+    placement: row[5] as number | null,
+    totalTeams: row[6] as number | null,
+    summary: row[7] as string | null,
+    resultsUrl: row[8] as string | null,
+    achievements: JSON.parse((row[9] as string) || "[]"),
+  }));
+}

@@ -1,5 +1,13 @@
 # OpenKick Release Notes
 
+## Version 1.2.0 (Feb 28, 2026, 22:35)
+
+* Tournament results tracking — manually record placement, summary, and trophies after tournaments
+* Import results from URL — paste a bracket/results URL and AI pre-fills placement and summary for review
+* Trophy cabinet — public page at /trophies showing all tournament achievements chronologically
+* Dashboard widget — latest trophies at a glance with links to full details
+* Team name field — set the official registered team name per tournament for better import accuracy
+
 ## Version 1.1.0 (Feb 28, 2026, 21:55)
 
 * Admin onboarding wizard: after creating your account, a 5-step guide walks you through the essential setup — club profile, email, AI assistant, WhatsApp, and inviting your team

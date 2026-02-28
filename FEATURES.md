@@ -41,6 +41,10 @@
 - [x] User management API (list, role changes, password reset, invite) with role-based permissions
 - [x] WAHA Docker setup wizard API (install Docker, pull/start/stop WAHA, QR proxy, session status)
 - [x] Onboarding status API (derives step/checklist completion from existing data, public GET for AuthGuard)
+- [x] Tournament results CRUD (placement, summary, achievements/trophies per event)
+- [x] LLM-based results import from bracket/results URL with team name matching
+- [x] Trophy cabinet API (public, paginated, chronological)
+- [x] Team name field on events for tournament registration identity
 
 ## Frontend (Web)
 
@@ -66,8 +70,120 @@
 - [x] Admin onboarding stepper (5-step wizard: Club Profile, SMTP, LLM, WAHA, Invite Team)
 - [x] Reusable settings form components (ClubProfile, SMTP, LLM, WAHA extracted from settings page)
 - [x] Dashboard onboarding checklist (holidays, training, players, parents, feeds — auto-hides when done)
+- [x] Tournament results form on event detail page (view/edit mode, predefined + custom achievements, URL import)
+- [x] Trophy cabinet page (/trophies — public, chronological, placement badges, achievement pills)
+- [x] Recent trophies dashboard widget (latest 5 results with placement badges)
 
 ## Infrastructure
 
 - [x] Docker compose for WAHA
 - [x] 421 server tests (Vitest)
+
+---
+
+## Remaining — Attendance via WhatsApp (PRD 4.5.1)
+
+- [ ] WhatsApp RSVP: parents confirm/decline attendance via chat message
+- [ ] Name-entry-first web flow (privacy mode for anonymous RSVP links)
+
+## Remaining — Tournament Management (PRD 4.5.2)
+
+- [ ] Open call mode (no participant limit)
+- [ ] Registration threshold alerts (notify coach when spots filling up)
+- [ ] Public tournament view with privacy-preserving initials
+- [ ] First-name initial disambiguation with last-name initial
+- [ ] Tournament team name management
+- [ ] Upcoming tournaments widget on homepage
+
+## Remaining — WhatsApp Confirmations (PRD 4.5.3)
+
+- [ ] WhatsApp confirmation message after RSVP (attendance + tournament)
+
+## Remaining — Parent Onboarding (PRD 4.5.4)
+
+- [ ] Group join link / QR code for parents
+- [ ] WhatsApp-based parent onboarding (name → child → birth year → consent)
+- [ ] Consent collection during onboarding
+
+## Remaining — Data Privacy & GDPR (PRD 4.5.5)
+
+- [ ] Data export for guardians (GDPR right of access)
+- [ ] Data deletion for guardians (GDPR right to erasure)
+- [ ] Explicit consent tracking per guardian
+
+## Remaining — Data Protection Audit (PRD 4.5.6)
+
+- [ ] Daily automated production audit (DB exposure, API bypass, directory listing, TLS, logs)
+- [ ] Audit alerting via WhatsApp/email
+- [ ] Audit script at tools/data-protection-audit.sh
+
+## Remaining — Security Audit Extensions (PRD 4.5.7)
+
+- [ ] Dependency vulnerability scanning (npm audit integration)
+- [ ] CI pipeline integration for security checks
+
+## Remaining — Security Disclosure (PRD 4.5.8)
+
+- [ ] GitHub private vulnerability reporting configuration
+
+## Remaining — Statistics & Reporting (PRD 4.5.9, blueprint: STATISTICS.md)
+
+- [ ] Semester-based period grouping (Spring: Feb–Jul, Autumn: Aug–Jan)
+- [ ] Training hours and person-hours statistics
+- [ ] Coach hours tracking
+- [ ] No-show detection and statistics
+- [ ] Attendance rate metrics per player/event
+- [ ] Tournament participation stats
+- [ ] Dashboard widgets (charts and cards)
+- [ ] Public homepage club statistics (cached)
+- [ ] CSV/PDF export for club board reporting
+
+## Remaining — Administrative Checklists (PRD 4.5.10, blueprint: CHECKLISTS.md)
+
+- [ ] Admin checklists (semester-based, auto-reset Feb 1 / Aug 1)
+- [ ] Per-training checklists (auto-created per training event)
+- [ ] Per-tournament checklists (auto-created per tournament)
+- [ ] Checklist templates with classification filtering (Sportamt, SFV, FVRZ)
+- [ ] Custom checklist items preserved across resets
+- [ ] Per-item completion tracking with user/timestamp
+
+## Remaining — Surveys & Questionnaires (PRD 4.5.11, blueprint: SURVEYS.md)
+
+- [ ] Survey builder (5 types: single choice, multi choice, rating, text, size picker)
+- [ ] Anonymous vs. identified survey modes
+- [ ] Survey templates: Trikot order, end-of-semester feedback
+- [ ] Shareable survey links with QR code generation
+- [ ] Survey deadlines and reminders
+- [ ] Results dashboard with aggregation
+- [ ] Close and archive surveys
+
+## Remaining — Payments (PRD 4.5.12, blueprint: PAYMENTS.md)
+
+- [ ] Stripe PSP integration (tournament fees, merchandise, donations)
+- [ ] Datatrans PSP integration (alternative provider)
+- [ ] Twint support (CHF only, via PSP)
+- [ ] Webhook-driven payment confirmation
+- [ ] Payment settings admin panel
+- [ ] Receipt generation
+- [ ] Refund functionality
+
+## In Progress — Live Ticker & Game History (blueprint: LIVE_TICKER.md)
+
+- [x] Match-day live score polling (cheerio scraper)
+- [x] LLM-based score extraction from web pages (generic fallback)
+- [x] Turnieragenda.ch dedicated parser (no LLM needed)
+- [x] Manual score entry for tournaments without online presence
+- [x] Crawl scheduler (node-cron, per-URL interval)
+- [x] Live ticker REST API (public + coach endpoints)
+- [ ] Privacy-preserving player initials in match results
+- [ ] Permanent game history storage
+- [ ] Trophy cabinet display
+- [x] Homepage live ticker widget (compact bar + detail page)
+- [ ] Brave Search API for results URL discovery
+
+## Remaining — Admin Security & PII Gating (blueprint: ADMIN_SECURITY.md)
+
+- [ ] Strong password enforcement (12+ chars, zxcvbn score 3+)
+- [ ] HIBP breach checking on admin login (k-anonymity)
+- [ ] PII masking middleware (phone, name, email)
+- [ ] Zero-trust: only strong-password admins see unmasked PII

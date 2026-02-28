@@ -120,6 +120,13 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   llm_provider: "openai",
   bot_language: "de",
   waha_url: "http://localhost:3008",
+  feeds_enabled: "true",
+  feed_rss_enabled: "true",
+  feed_atom_enabled: "true",
+  feed_activitypub_enabled: "true",
+  feed_atprotocol_enabled: "true",
+  feed_ics_enabled: "true",
+  feed_sitemap_enabled: "true",
 };
 
 export async function initDB(dbPath?: string): Promise<Database> {

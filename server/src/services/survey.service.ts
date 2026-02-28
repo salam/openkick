@@ -2,6 +2,8 @@ import { getDB, getLastInsertId } from "../database.js";
 import type {
   Survey,
   SurveyStatus,
+  SurveyResponse,
+  SubmitResponsePayload,
   QuestionParsed,
   QuestionType,
 } from "../models/survey.model.js";
@@ -115,4 +117,122 @@ export function listSurveys(teamId?: number): Survey[] {
   }
   const rows = rowsToObjects(result);
   return rows.map(rowToSurvey);
+}
+
+// ---------------------------------------------------------------------------
+// Submit response
+// ---------------------------------------------------------------------------
+
+export function submitResponse(
+  surveyId: number,
+  payload: SubmitResponsePayload,
+): SurveyResponse {
+  const db = getDB();
+
+  // 1. Get survey
+  const survey = getSurveyById(surveyId);
+  if (!survey) throw new Error("Survey not found");
+
+  // 2. Check status
+  if (survey.status !== "open") {
+    throw new Error("This survey is no longer accepting responses.");
+  }
+
+  // 3. Check deadline
+  if (survey.deadline && new Date(survey.deadline) < new Date()) {
+    throw new Error("This survey is no longer accepting responses.");
+  }
+
+  // 4. Check duplicate for identified (non-anonymous) surveys
+  if (!survey.anonymous && payload.player_nickname) {
+    const existing = db.exec(
+      "SELECT id FROM survey_responses WHERE survey_id = ? AND player_nickname = ?",
+      [surveyId, payload.player_nickname],
+    );
+    if (existing.length > 0 && existing[0].values.length > 0) {
+      throw new Error("You have already submitted a response to this survey.");
+    }
+  }
+
+  // 5. Validate answers
+  const questions = getQuestions(surveyId);
+  const questionMap = new Map<number, QuestionParsed>();
+  for (const q of questions) {
+    questionMap.set(q.id, q);
+  }
+
+  if (payload.answers.length !== questions.length) {
+    throw new Error("All questions must be answered.");
+  }
+
+  for (const answer of payload.answers) {
+    const question = questionMap.get(answer.question_id);
+    if (!question) {
+      throw new Error(`Invalid question_id: ${answer.question_id}`);
+    }
+
+    switch (question.type) {
+      case "star_rating": {
+        const num = Number(answer.value);
+        if (!Number.isInteger(num) || num < 1 || num > 5) {
+          throw new Error(
+            `star_rating value must be an integer between 1 and 5, got "${answer.value}"`,
+          );
+        }
+        break;
+      }
+      case "single_choice":
+      case "size_picker": {
+        const options = question.options ?? [];
+        if (!options.includes(answer.value)) {
+          throw new Error(
+            `"${answer.value}" is not a valid option for "${question.label}"`,
+          );
+        }
+        break;
+      }
+      case "multiple_choice": {
+        const options = question.options ?? [];
+        const selected: string[] = JSON.parse(answer.value);
+        for (const s of selected) {
+          if (!options.includes(s)) {
+            throw new Error(
+              `"${s}" is not a valid option for "${question.label}"`,
+            );
+          }
+        }
+        break;
+      }
+      case "free_text":
+        // Any value is OK
+        break;
+    }
+  }
+
+  // 6. INSERT response
+  const nickname = survey.anonymous ? null : (payload.player_nickname ?? null);
+  db.run(
+    "INSERT INTO survey_responses (survey_id, player_nickname) VALUES (?, ?)",
+    [surveyId, nickname],
+  );
+  const responseId = getLastInsertId();
+
+  // 7. INSERT each answer
+  for (const answer of payload.answers) {
+    db.run(
+      "INSERT INTO survey_answers (response_id, question_id, value) VALUES (?, ?, ?)",
+      [responseId, answer.question_id, answer.value],
+    );
+  }
+
+  // 8. Return the created response
+  const result = db.exec("SELECT * FROM survey_responses WHERE id = ?", [responseId]);
+  const rows = rowsToObjects(result);
+  const row = rows[0];
+  return {
+    id: row.id as number,
+    survey_id: row.survey_id as number,
+    player_nickname: (row.player_nickname as string) ?? null,
+    submitted_at: row.submitted_at as string,
+  };
 }

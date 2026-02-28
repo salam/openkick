@@ -5,6 +5,7 @@
 * llms.txt: Dynamic endpoint at /llms.txt with club name, public API docs, and live statistics — customizable via settings
 * MCP server: Read-only Model Context Protocol interface at /mcp for agent interoperability (club info, upcoming events, attendance stats, player categories)
 * robots.txt updated: Blocks data-modifying API paths while allowing read-only public endpoints
+* Club Profile: New settings section for club name, description, contact info, and logo upload — reflected in llms.txt and MCP server
 
 ## Version 1.0.2 (Feb 28, 2026, 22:00)
 

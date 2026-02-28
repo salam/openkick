@@ -28,6 +28,7 @@
 - [x] ICS calendar subscriptions (combined + per-type)
 - [x] Dynamic sitemap with feed URLs
 - [x] robots.txt with sitemap reference
+- [x] Club profile settings (name, description, contact info, logo upload)
 - [x] Dynamic llms.txt endpoint (club info, public API docs, live statistics from DB)
 - [x] MCP server at /mcp (read-only tools: club info, events, attendance stats, player categories)
 - [x] WebFinger + DID well-known discovery endpoints

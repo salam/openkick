@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  waha:
+    image: devlikeapro/waha
+    container_name: openkick-waha
+    restart: unless-stopped
+    ports:
+      - "${WAHA_PORT:-3008}:3000"
+    environment:
+      - WHATSAPP_HOOK_URL=${WEBHOOK_URL:-http://host.docker.internal:3001/api/whatsapp/webhook}
+      - WHATSAPP_HOOK_EVENTS=message
+      - WHATSAPP_DEFAULT_ENGINE=WEBJS
+    volumes:
+      - waha_data:/app/.sessions
+
+volumes:
+  waha_data:

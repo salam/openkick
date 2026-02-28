@@ -1,5 +1,15 @@
 # OpenKick Release Notes
 
+## Version 1.6.0 (Feb 28, 2026, 23:00)
+
+* Open call mode: create tournaments with no participant limit — all registrations accepted, teams formed automatically after deadline
+* Registration alerts: coaches get notified via WhatsApp and the dashboard when tournament spots are filling up (80%) or full
+* Public tournament view: shareable link (/tournaments/:id) shows team assignments with privacy-preserving initials — no full names visible
+* Name disambiguation: when two players share the same first initial, last-name initials are used automatically (e.g. "J. M." and "J. S.")
+* Team name: coaches can set the official tournament team name (e.g. "FC Example E1") displayed on public views
+* Upcoming tournaments widget: dashboard shows the next 3 tournaments with date, location, and registration status at a glance
+* Notification bell: in-app alerts for tournament threshold events, dismissible from the dashboard header
+
 ## Version 1.5.0 (Feb 28, 2026, 23:15)
 
 * WhatsApp RSVP: parents can now confirm or decline attendance by simply texting the bot (e.g. "Luca kommt" or "Mia ist krank")

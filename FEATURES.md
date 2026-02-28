@@ -49,6 +49,11 @@
 - [x] LLM-based results import from bracket/results URL with team name matching
 - [x] Trophy cabinet API (public, paginated, chronological)
 - [x] Team name field on events for tournament registration identity
+- [x] Public tournament API with privacy-preserving initials (GET /api/public/tournaments/:id)
+- [x] Player initials service with first-name collision disambiguation
+- [x] Notification system (in-app + WhatsApp threshold alerts)
+- [x] Tournament threshold alert service with deduplication
+- [x] Upcoming tournaments filter (?upcoming=true)
 
 ## Frontend (Web)
 
@@ -78,6 +83,12 @@
 - [x] Tournament results form on event detail page (view/edit mode, predefined + custom achievements, URL import)
 - [x] Trophy cabinet page (/trophies — public, chronological, placement badges, achievement pills)
 - [x] Recent trophies dashboard widget (latest 5 results with placement badges)
+- [x] Public tournament view page (/tournaments/:id — no auth, initials only)
+- [x] Upcoming tournaments widget on dashboard (next 3, status badges)
+- [x] Notification bell on dashboard (threshold alerts with dismiss)
+- [x] Team name field on event creation form (tournament type)
+- [x] Open call toggle on event creation (no participant limit mode)
+- [x] Last name initial field on player add/edit (for disambiguation)
 
 ## Infrastructure
 
@@ -91,14 +102,14 @@
 - [x] WhatsApp RSVP: parents confirm/decline attendance via chat message
 - [x] Name-entry-first web flow (privacy mode for anonymous RSVP links)
 
-## Remaining — Tournament Management (PRD 4.5.2)
+## Completed — Tournament Management (PRD 4.5.2)
 
-- [ ] Open call mode (no participant limit)
-- [ ] Registration threshold alerts (notify coach when spots filling up)
-- [ ] Public tournament view with privacy-preserving initials
-- [ ] First-name initial disambiguation with last-name initial
-- [ ] Tournament team name management
-- [ ] Upcoming tournaments widget on homepage
+- [x] Open call mode (no participant limit)
+- [x] Registration threshold alerts (notify coach when spots filling up)
+- [x] Public tournament view with privacy-preserving initials
+- [x] First-name initial disambiguation with last-name initial
+- [x] Tournament team name management
+- [x] Upcoming tournaments widget on homepage
 
 ## Remaining — WhatsApp Confirmations (PRD 4.5.3)
 

@@ -3,7 +3,11 @@ import express from "express";
 import cors from "cors";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { initDB } from "./database.js";
+import crypto from "node:crypto";
+import { initDB, getDB } from "./database.js";
+import { generalLimiter } from "./middleware/rateLimiter.js";
+import { AltchaCaptchaProvider, verifyCaptchaMiddleware } from "./middleware/captcha.js";
+import { captchaRouter } from "./routes/captcha.js";
 import { authRouter } from "./routes/auth.js";
 import { playersRouter } from "./routes/players.js";
 import { eventsRouter } from "./routes/events.js";
@@ -42,6 +46,23 @@ const DB_PATH = process.env.DB_PATH || "./data/openkick.db";
 
 async function main() {
   await initDB(DB_PATH);
+
+  const db = getDB();
+  const hmacKeyResult = db.exec("SELECT value FROM settings WHERE key = 'captcha_hmac_secret'");
+  let hmacKey: string;
+  if (hmacKeyResult.length === 0 || hmacKeyResult[0].values.length === 0) {
+    hmacKey = crypto.randomBytes(32).toString("hex");
+    db.run("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", ["captcha_hmac_secret", hmacKey]);
+  } else {
+    hmacKey = hmacKeyResult[0].values[0][0] as string;
+  }
+  const captchaProvider = new AltchaCaptchaProvider(hmacKey);
+
+  app.use("/api", generalLimiter);
+  app.post("/api/guardians/login", verifyCaptchaMiddleware(captchaProvider));
+  app.post("/api/attendance", verifyCaptchaMiddleware(captchaProvider));
+  app.use("/api", captchaRouter(captchaProvider));
+
   app.listen(PORT, () => {
     console.log(`Server listening on port ${PORT}`);
   });

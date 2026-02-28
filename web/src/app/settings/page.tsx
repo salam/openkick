@@ -3,45 +3,10 @@
 import { useEffect, useState, useCallback } from 'react';
 import { apiFetch } from '@/lib/api';
 import { getUserRole } from '@/lib/auth';
-import ImageCropUpload from '@/components/ImageCropUpload';
-
-const LLM_PROVIDERS = [
-  { value: 'openai', label: 'OpenAI' },
-  { value: 'anthropic', label: 'Claude (Anthropic)' },
-  { value: 'euria', label: 'Infomaniak Euria' },
-];
-
-interface ModelOption {
-  id: string;
-  label: string;
-  pricing: string;
-  tier: 'latest' | 'budget' | 'more';
-}
-
-const MODEL_SUGGESTIONS: Record<string, ModelOption[]> = {
-  openai: [
-    { id: 'gpt-4o', label: 'GPT-4o', pricing: '$2.50 / $10', tier: 'latest' },
-    { id: 'gpt-4o-mini', label: 'GPT-4o Mini', pricing: '$0.15 / $0.60', tier: 'budget' },
-    { id: 'gpt-5', label: 'GPT-5', pricing: '$1.25 / $10', tier: 'more' },
-    { id: 'gpt-5-mini', label: 'GPT-5 Mini', pricing: '$0.30 / $1.10', tier: 'more' },
-    { id: 'o3-mini', label: 'o3-mini', pricing: '$1.10 / $4.40', tier: 'more' },
-  ],
-  anthropic: [
-    { id: 'claude-sonnet-4-6-20260220', label: 'Claude Sonnet 4.6', pricing: '$3 / $15', tier: 'latest' },
-    { id: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5', pricing: '$1 / $5', tier: 'budget' },
-    { id: 'claude-opus-4-6-20260220', label: 'Claude Opus 4.6', pricing: '$15 / $75', tier: 'more' },
-    { id: 'claude-sonnet-4-5-20250514', label: 'Claude Sonnet 4.5', pricing: '$3 / $15', tier: 'more' },
-  ],
-  euria: [
-    { id: 'euria', label: 'Euria', pricing: 'Included', tier: 'latest' },
-  ],
-};
-
-const PROVIDER_DASHBOARD_LINKS: Record<string, { url: string; label: string }> = {
-  openai: { url: 'https://platform.openai.com/api-keys', label: 'OpenAI Dashboard' },
-  anthropic: { url: 'https://console.anthropic.com/settings/keys', label: 'Anthropic Console' },
-  euria: { url: 'https://manager.infomaniak.com', label: 'Infomaniak Manager' },
-};
+import ClubProfileForm from '@/components/settings/ClubProfileForm';
+import SmtpForm from '@/components/settings/SmtpForm';
+import LlmConfigForm from '@/components/settings/LlmConfigForm';
+import WahaConfigForm from '@/components/settings/WahaConfigForm';
 
 const BOT_LANGUAGES = [
   { value: 'de', label: 'Deutsch' },
@@ -95,8 +60,6 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState('');
-  const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
-  const [testingConnection, setTestingConnection] = useState(false);
   const [importUrl, setImportUrl] = useState('');
   const [importingUrl, setImportingUrl] = useState(false);
   const [presets, setPresets] = useState<{ group: string; presets: { id: string; label: string }[] }[]>([]);
@@ -106,11 +69,6 @@ export default function SettingsPage() {
   const [holidayMsg, setHolidayMsg] = useState('');
   const [upcomingVacations, setUpcomingVacations] = useState<{ name: string; startDate: string; endDate: string }[]>([]);
   const [suggestion, setSuggestion] = useState('');
-  const [smtpTestTo, setSmtpTestTo] = useState('');
-  const [testingSmtp, setTestingSmtp] = useState(false);
-  const [smtpTestResult, setSmtpTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
-  const [showMoreModels, setShowMoreModels] = useState(false);
-  const [useCustomModel, setUseCustomModel] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [logoMsg, setLogoMsg] = useState('');
   const [auditResult, setAuditResult] = useState<{
@@ -199,54 +157,20 @@ export default function SettingsPage() {
     }
   }
 
-  async function handleTestConnection() {
-    setTestingConnection(true);
-    setTestResult(null);
-    try {
-      const res = await apiFetch<{ success: boolean; message?: string }>(
-        '/api/settings/test-llm',
-        { method: 'POST' },
-      );
-      setTestResult({ ok: res.success, msg: res.message || 'Connection successful.' });
-    } catch {
-      setTestResult({ ok: false, msg: 'Connection test failed.' });
-    } finally {
-      setTestingConnection(false);
-    }
-  }
-
-  async function handleTestSmtp() {
-    setTestingSmtp(true);
-    setSmtpTestResult(null);
-    try {
-      // Save SMTP settings first
-      const smtpKeys = ['smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass', 'smtp_from'] as const;
-      const changed = smtpKeys.filter((k) => settings[k] !== original[k]);
-      if (changed.length > 0) {
-        await Promise.all(
-          changed.map((key) =>
-            apiFetch(`/api/settings/${key}`, {
-              method: 'PUT',
-              body: JSON.stringify({ value: settings[key] || '' }),
-            }),
-          ),
-        );
-        setOriginal((prev) => {
-          const next = { ...prev };
-          changed.forEach((k) => { next[k] = settings[k]; });
-          return next;
-        });
-      }
-      const res = await apiFetch<{ success: boolean; message?: string }>(
-        '/api/settings/test-smtp',
-        { method: 'POST', body: JSON.stringify({ to: smtpTestTo }) },
-      );
-      setSmtpTestResult({ ok: res.success, msg: res.message || 'Test email sent.' });
-    } catch {
-      setSmtpTestResult({ ok: false, msg: 'Failed to send test email.' });
-    } finally {
-      setTestingSmtp(false);
-    }
+  async function saveKeys(keys: string[]) {
+    await Promise.all(
+      keys.filter((k) => settings[k] !== original[k]).map((key) =>
+        apiFetch(`/api/settings/${key}`, {
+          method: 'PUT',
+          body: JSON.stringify({ value: settings[key] || '' }),
+        }),
+      ),
+    );
+    setOriginal((prev) => {
+      const next = { ...prev };
+      keys.forEach((k) => { next[k] = settings[k]; });
+      return next;
+    });
   }
 
   async function handleSyncPreset() {
@@ -480,79 +404,14 @@ export default function SettingsPage() {
         ) : (
           <div className="space-y-6">
             {/* Club Profile */}
-            <div className={cardClass}>
-              <h2 className="mb-4 text-lg font-semibold text-gray-900">
-                Club Profile
-              </h2>
-              <p className="mb-3 text-sm text-gray-500">
-                Public information shown on your club page, llms.txt, and feeds.
-              </p>
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="club_name" className={labelClass}>
-                    Club Name
-                  </label>
-                  <input
-                    id="club_name"
-                    type="text"
-                    value={settings.club_name || ''}
-                    onChange={(e) => update('club_name', e.target.value)}
-                    placeholder="FC My Club"
-                    className={inputClass}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="club_description" className={labelClass}>
-                    Description
-                  </label>
-                  <textarea
-                    id="club_description"
-                    value={settings.club_description || ''}
-                    onChange={(e) => update('club_description', e.target.value)}
-                    placeholder="A short description of your club..."
-                    rows={3}
-                    className={inputClass}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="contact_info" className={labelClass}>
-                    Contact Info
-                  </label>
-                  <input
-                    id="contact_info"
-                    type="text"
-                    value={settings.contact_info || ''}
-                    onChange={(e) => update('contact_info', e.target.value)}
-                    placeholder="info@yourclub.ch or a URL"
-                    className={inputClass}
-                  />
-                </div>
-                <div>
-                  <label className={labelClass}>Club Logo</label>
-                  <ImageCropUpload
-                    shape="round"
-                    outputSize={200}
-                    onCrop={handleLogoUpload}
-                    onRemove={handleLogoRemove}
-                    initialImage={
-                      settings.club_logo
-                        ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${settings.club_logo}`
-                        : undefined
-                    }
-                    disabled={uploadingLogo}
-                  />
-                  {logoMsg && (
-                    <p
-                      className={`mt-2 text-sm font-medium ${
-                        logoMsg.includes('Failed') ? 'text-red-600' : 'text-emerald-600'
-                      }`}
-                    >
-                      {logoMsg}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
+            <ClubProfileForm
+              settings={settings}
+              onUpdate={update}
+              onLogoUpload={handleLogoUpload}
+              onLogoRemove={handleLogoRemove}
+              uploadingLogo={uploadingLogo}
+              logoMsg={logoMsg}
+            />
 
             {/* Security Audit */}
             <div className={cardClass}>
@@ -655,234 +514,7 @@ export default function SettingsPage() {
             </div>
 
             {/* LLM Configuration */}
-            <div className={cardClass}>
-              <h2 className="mb-4 text-lg font-semibold text-gray-900">
-                LLM Configuration
-              </h2>
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="llm_provider" className={labelClass}>
-                    Provider
-                  </label>
-                  <select
-                    id="llm_provider"
-                    value={settings.llm_provider || ''}
-                    onChange={(e) => update('llm_provider', e.target.value)}
-                    className={inputClass}
-                  >
-                    <option value="">Select provider...</option>
-                    {LLM_PROVIDERS.map((p) => (
-                      <option key={p.value} value={p.value}>
-                        {p.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label htmlFor="llm_model" className={labelClass}>
-                    Model
-                  </label>
-                  {(() => {
-                    const provider = settings.llm_provider || '';
-                    const models = MODEL_SUGGESTIONS[provider] || [];
-                    const primaryModels = models.filter((m) => m.tier !== 'more');
-                    const moreModels = models.filter((m) => m.tier === 'more');
-                    const currentValue = settings.llm_model || '';
-                    const isKnownModel = models.some((m) => m.id === currentValue);
-
-                    if (!provider || useCustomModel) {
-                      return (
-                        <div className="space-y-1">
-                          <input
-                            id="llm_model"
-                            type="text"
-                            value={currentValue}
-                            onChange={(e) => update('llm_model', e.target.value)}
-                            placeholder="e.g. gpt-4o-mini, claude-sonnet-4-6-20260220"
-                            className={inputClass}
-                          />
-                          {provider && (
-                            <button
-                              type="button"
-                              onClick={() => setUseCustomModel(false)}
-                              className="text-xs text-blue-600 hover:text-blue-800"
-                            >
-                              ← Back to suggested models
-                            </button>
-                          )}
-                        </div>
-                      );
-                    }
-
-                    return (
-                      <div className="space-y-2">
-                        <div className="space-y-1">
-                          {primaryModels.map((m) => (
-                            <label
-                              key={m.id}
-                              className={`flex items-center justify-between rounded-md border px-3 py-2 cursor-pointer transition-colors ${
-                                currentValue === m.id
-                                  ? 'border-blue-500 bg-blue-50'
-                                  : 'border-gray-200 hover:border-gray-300 bg-white'
-                              }`}
-                            >
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="radio"
-                                  name="llm_model"
-                                  value={m.id}
-                                  checked={currentValue === m.id}
-                                  onChange={() => update('llm_model', m.id)}
-                                  className="text-blue-600"
-                                />
-                                <span className="text-sm font-medium text-gray-900">
-                                  {m.label}
-                                </span>
-                                {m.tier === 'latest' && (
-                                  <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 uppercase">
-                                    Latest
-                                  </span>
-                                )}
-                                {m.tier === 'budget' && (
-                                  <span className="rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold text-green-700 uppercase">
-                                    Budget
-                                  </span>
-                                )}
-                              </div>
-                              <span className="text-xs text-gray-500">
-                                {m.pricing} /M tokens
-                              </span>
-                            </label>
-                          ))}
-                        </div>
-
-                        {moreModels.length > 0 && (
-                          <div>
-                            <button
-                              type="button"
-                              onClick={() => setShowMoreModels(!showMoreModels)}
-                              className="text-xs text-gray-500 hover:text-gray-700"
-                            >
-                              {showMoreModels ? '▾ Hide more models' : '▸ More models...'}
-                            </button>
-                            {showMoreModels && (
-                              <div className="mt-1 space-y-1">
-                                {moreModels.map((m) => (
-                                  <label
-                                    key={m.id}
-                                    className={`flex items-center justify-between rounded-md border px-3 py-2 cursor-pointer transition-colors ${
-                                      currentValue === m.id
-                                        ? 'border-blue-500 bg-blue-50'
-                                        : 'border-gray-200 hover:border-gray-300 bg-white'
-                                    }`}
-                                  >
-                                    <div className="flex items-center gap-2">
-                                      <input
-                                        type="radio"
-                                        name="llm_model"
-                                        value={m.id}
-                                        checked={currentValue === m.id}
-                                        onChange={() => update('llm_model', m.id)}
-                                        className="text-blue-600"
-                                      />
-                                      <span className="text-sm text-gray-700">
-                                        {m.label}
-                                      </span>
-                                    </div>
-                                    <span className="text-xs text-gray-500">
-                                      {m.pricing} /M tokens
-                                    </span>
-                                  </label>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        <button
-                          type="button"
-                          onClick={() => setUseCustomModel(true)}
-                          className="text-xs text-gray-400 hover:text-gray-600"
-                        >
-                          Enter custom model ID...
-                        </button>
-
-                        {!isKnownModel && currentValue && (
-                          <p className="text-xs text-amber-600">
-                            Custom model: {currentValue}
-                          </p>
-                        )}
-                      </div>
-                    );
-                  })()}
-                </div>
-
-                <div>
-                  <label htmlFor="llm_api_key" className={labelClass}>
-                    API Key
-                  </label>
-                  <input
-                    id="llm_api_key"
-                    type="password"
-                    value={settings.llm_api_key || ''}
-                    onChange={(e) => update('llm_api_key', e.target.value)}
-                    placeholder="Enter API key"
-                    className={inputClass}
-                  />
-                  {settings.llm_provider && PROVIDER_DASHBOARD_LINKS[settings.llm_provider] && (
-                    <div className="mt-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2">
-                      <p className="text-xs text-blue-800">
-                        Get your API key from the{' '}
-                        <a
-                          href={PROVIDER_DASHBOARD_LINKS[settings.llm_provider].url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-medium underline hover:text-blue-900"
-                        >
-                          {PROVIDER_DASHBOARD_LINKS[settings.llm_provider].label} →
-                        </a>
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {settings.llm_provider === 'euria' && (
-                  <div>
-                    <label htmlFor="llm_product_id" className={labelClass}>
-                      Product ID
-                    </label>
-                    <input
-                      id="llm_product_id"
-                      type="text"
-                      value={settings.llm_product_id || ''}
-                      onChange={(e) => update('llm_product_id', e.target.value)}
-                      placeholder="Infomaniak Product ID"
-                      className={inputClass}
-                    />
-                  </div>
-                )}
-
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={handleTestConnection}
-                    disabled={testingConnection}
-                    className={btnSecondary}
-                  >
-                    {testingConnection ? 'Testing...' : 'Test Connection'}
-                  </button>
-                  {testResult && (
-                    <span
-                      className={`text-sm font-medium ${
-                        testResult.ok ? 'text-emerald-600' : 'text-red-600'
-                      }`}
-                    >
-                      {testResult.msg}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
+            <LlmConfigForm settings={settings} onUpdate={update} onSaveKeys={saveKeys} />
 
             {/* Bot Language */}
             <div className={cardClass}>
@@ -947,173 +579,10 @@ export default function SettingsPage() {
             </div>
 
             {/* WAHA Configuration */}
-            <div className={cardClass}>
-              <h2 className="mb-4 text-lg font-semibold text-gray-900">
-                WAHA Configuration
-              </h2>
-
-              <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-900 space-y-1.5">
-                <p className="font-medium">What is WAHA?</p>
-                <p>
-                  WAHA (WhatsApp HTTP API) is a self-hosted service that connects
-                  openkick to WhatsApp. It runs as a Docker container on your
-                  server and provides the bridge so the bot can receive and send
-                  messages.
-                </p>
-                <p>
-                  <span className="font-medium">URL</span> — the address where
-                  your WAHA instance is running. If WAHA runs on the same server,
-                  use{' '}
-                  <code className="rounded bg-amber-100 px-1 py-0.5 font-mono text-[11px]">
-                    http://localhost:3008
-                  </code>
-                  ; otherwise use the public URL of the machine hosting it.
-                </p>
-                <p>
-                  <span className="font-medium">Getting started</span> — follow
-                  the{' '}
-                  <a
-                    href="https://waha.devlike.pro/docs/overview/quick-start/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-medium underline hover:text-amber-700"
-                  >
-                    WAHA Quick Start guide →
-                  </a>{' '}
-                  to spin up the Docker container. Once running, open the dashboard at{' '}
-                  <code className="rounded bg-amber-100 px-1 py-0.5 font-mono text-[11px]">
-                    your-url/dashboard
-                  </code>{' '}
-                  to scan the QR code and link your WhatsApp account.
-                </p>
-              </div>
-
-              <div>
-                <label htmlFor="waha_url" className={labelClass}>
-                  WAHA URL
-                </label>
-                <input
-                  id="waha_url"
-                  type="text"
-                  value={settings.waha_url || ''}
-                  onChange={(e) => update('waha_url', e.target.value)}
-                  placeholder="http://localhost:3008"
-                  className={inputClass}
-                />
-              </div>
-              {settings.waha_url && (
-                <div className="mt-3 flex items-center gap-2">
-                  <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                  <span className="text-sm text-gray-500">
-                    Configured: {settings.waha_url}
-                  </span>
-                </div>
-              )}
-            </div>
+            <WahaConfigForm settings={settings} onUpdate={update} />
 
             {/* SMTP / Email Configuration */}
-            <div className={cardClass}>
-              <h2 className="mb-4 text-lg font-semibold text-gray-900">
-                Email (SMTP)
-              </h2>
-              <p className="mb-3 text-sm text-gray-500">
-                Required for password reset emails.
-              </p>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="smtp_host" className={labelClass}>
-                      SMTP Host
-                    </label>
-                    <input
-                      id="smtp_host"
-                      type="text"
-                      value={settings.smtp_host || ''}
-                      onChange={(e) => update('smtp_host', e.target.value)}
-                      placeholder="mail.example.com"
-                      className={inputClass}
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="smtp_port" className={labelClass}>
-                      Port
-                    </label>
-                    <input
-                      id="smtp_port"
-                      type="number"
-                      value={settings.smtp_port || '587'}
-                      onChange={(e) => update('smtp_port', e.target.value)}
-                      placeholder="587"
-                      className={inputClass}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label htmlFor="smtp_user" className={labelClass}>
-                    Username
-                  </label>
-                  <input
-                    id="smtp_user"
-                    type="text"
-                    value={settings.smtp_user || ''}
-                    onChange={(e) => update('smtp_user', e.target.value)}
-                    placeholder="user@example.com"
-                    className={inputClass}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="smtp_pass" className={labelClass}>
-                    Password
-                  </label>
-                  <input
-                    id="smtp_pass"
-                    type="password"
-                    value={settings.smtp_pass || ''}
-                    onChange={(e) => update('smtp_pass', e.target.value)}
-                    placeholder="Enter SMTP password"
-                    className={inputClass}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="smtp_from" className={labelClass}>
-                    From Address
-                  </label>
-                  <input
-                    id="smtp_from"
-                    type="email"
-                    value={settings.smtp_from || ''}
-                    onChange={(e) => update('smtp_from', e.target.value)}
-                    placeholder="noreply@yourclub.com"
-                    className={inputClass}
-                  />
-                </div>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="email"
-                    value={smtpTestTo}
-                    onChange={(e) => setSmtpTestTo(e.target.value)}
-                    placeholder="Send test to..."
-                    className={inputClass + ' max-w-xs'}
-                  />
-                  <button
-                    onClick={handleTestSmtp}
-                    disabled={testingSmtp || !smtpTestTo}
-                    className={btnSecondary + ' whitespace-nowrap'}
-                  >
-                    {testingSmtp ? 'Sending...' : 'Send Test Email'}
-                  </button>
-                </div>
-                {smtpTestResult && (
-                  <p
-                    className={`text-sm font-medium ${
-                      smtpTestResult.ok ? 'text-emerald-600' : 'text-red-600'
-                    }`}
-                  >
-                    {smtpTestResult.msg}
-                  </p>
-                )}
-              </div>
-            </div>
+            <SmtpForm settings={settings} onUpdate={update} onSaveKeys={saveKeys} />
 
             {/* Holiday Sources */}
             <div className={cardClass}>

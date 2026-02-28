@@ -286,6 +286,22 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   contact_info: "",
   club_logo: "",
   onboarding_completed: "false",
+  // SEO & Social Media
+  og_title: "",
+  og_description: "",
+  og_image: "",
+  twitter_title: "",
+  twitter_description: "",
+  twitter_handle: "",
+  meta_keywords: "",
+  // Security contact
+  security_contact_email: "",
+  security_contact_url: "",
+  security_pgp_key_url: "",
+  security_policy_url: "",
+  security_acknowledgments_url: "",
+  security_preferred_languages: "en, de",
+  security_canonical_url: "",
 };
 
 export async function initDB(dbPath?: string): Promise<Database> {

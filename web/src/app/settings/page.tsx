@@ -40,6 +40,13 @@ const SETTING_KEYS = [
   'smtp_pass',
   'smtp_from',
   'captcha_provider',
+  'feeds_enabled',
+  'feed_rss_enabled',
+  'feed_atom_enabled',
+  'feed_activitypub_enabled',
+  'feed_atprotocol_enabled',
+  'feed_ics_enabled',
+  'feed_sitemap_enabled',
 ] as const;
 
 type SettingsMap = Record<string, string>;
@@ -627,6 +634,48 @@ export default function SettingsPage() {
                     </p>
                   </div>
                 )}
+              </div>
+            </div>
+
+            {/* Public Feeds */}
+            <div className={cardClass}>
+              <h2 className="mb-4 text-lg font-semibold text-gray-900">
+                Public Feeds
+              </h2>
+              <p className="mb-3 text-sm text-gray-500">
+                Control which public feeds are available. Disabling the master toggle turns off all feeds.
+              </p>
+              <div className="space-y-3">
+                {[
+                  { key: 'feeds_enabled', label: 'All Feeds (Master Toggle)' },
+                  { key: 'feed_rss_enabled', label: 'RSS 2.0' },
+                  { key: 'feed_atom_enabled', label: 'Atom 1.0' },
+                  { key: 'feed_ics_enabled', label: 'Calendar (ICS)' },
+                  { key: 'feed_activitypub_enabled', label: 'ActivityPub (Mastodon)' },
+                  { key: 'feed_atprotocol_enabled', label: 'AT Protocol (Bluesky)' },
+                  { key: 'feed_sitemap_enabled', label: 'Include in Sitemap' },
+                ].map(({ key, label }) => (
+                  <label key={key} className="flex items-center justify-between cursor-pointer">
+                    <span className={`text-sm ${key === 'feeds_enabled' ? 'font-semibold' : ''} text-gray-700`}>
+                      {label}
+                    </span>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={settings[key] !== 'false'}
+                      onClick={() => update(key, settings[key] === 'false' ? 'true' : 'false')}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        settings[key] === 'false' ? 'bg-gray-300' : 'bg-emerald-500'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          settings[key] === 'false' ? 'translate-x-1' : 'translate-x-6'
+                        }`}
+                      />
+                    </button>
+                  </label>
+                ))}
               </div>
             </div>
 

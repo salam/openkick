@@ -1,0 +1,455 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import express from "express";
+import { createServer, type Server } from "node:http";
+import type { AddressInfo } from "node:net";
+import { initDB } from "../../database.js";
+import { calendarRouter } from "../calendar.js";
+import type { Database } from "sql.js";
+
+let db: Database;
+let server: Server;
+let baseUrl: string;
+
+async function createTestApp() {
+  db = await initDB();
+  const app = express();
+  app.use(express.json());
+  app.use("/api", calendarRouter);
+  server = createServer(app);
+  await new Promise<void>((resolve) => server.listen(0, resolve));
+  const { port } = server.address() as AddressInfo;
+  baseUrl = `http://localhost:${port}`;
+}
+
+async function teardown() {
+  await new Promise<void>((resolve, reject) =>
+    server.close((err) => (err ? reject(err) : resolve()))
+  );
+  db.close();
+}
+
+// ── Training Schedule CRUD ──────────────────────────────────────────
+
+describe("Training Schedule routes", () => {
+  beforeEach(async () => {
+    await createTestApp();
+  });
+
+  afterEach(async () => {
+    await teardown();
+  });
+
+  it("POST /api/training-schedule — creates recurring training day", async () => {
+    const res = await fetch(`${baseUrl}/api/training-schedule`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        dayOfWeek: 1,
+        startTime: "18:00",
+        endTime: "19:30",
+        location: "Sportplatz A",
+        categoryFilter: "E,F",
+        validFrom: "2026-01-01",
+        validTo: "2026-06-30",
+      }),
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body).toHaveProperty("id");
+    expect(body.dayOfWeek).toBe(1);
+    expect(body.startTime).toBe("18:00");
+    expect(body.endTime).toBe("19:30");
+    expect(body.location).toBe("Sportplatz A");
+    expect(body.categoryFilter).toBe("E,F");
+    expect(body.validFrom).toBe("2026-01-01");
+    expect(body.validTo).toBe("2026-06-30");
+  });
+
+  it("POST /api/training-schedule — returns 400 if required fields missing", async () => {
+    const res = await fetch(`${baseUrl}/api/training-schedule`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dayOfWeek: 1 }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("GET /api/training-schedule — returns all training schedules", async () => {
+    // Create two schedules
+    await fetch(`${baseUrl}/api/training-schedule`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dayOfWeek: 1, startTime: "18:00", endTime: "19:30" }),
+    });
+    await fetch(`${baseUrl}/api/training-schedule`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dayOfWeek: 3, startTime: "17:30", endTime: "19:00" }),
+    });
+
+    const res = await fetch(`${baseUrl}/api/training-schedule`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(Array.isArray(body)).toBe(true);
+    expect(body).toHaveLength(2);
+  });
+
+  it("PUT /api/training-schedule/:id — updates training schedule", async () => {
+    const createRes = await fetch(`${baseUrl}/api/training-schedule`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dayOfWeek: 1, startTime: "18:00", endTime: "19:30" }),
+    });
+    const { id } = await createRes.json();
+
+    const res = await fetch(`${baseUrl}/api/training-schedule/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ startTime: "17:00", location: "Halle B" }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.startTime).toBe("17:00");
+    expect(body.location).toBe("Halle B");
+    // Original fields should remain
+    expect(body.dayOfWeek).toBe(1);
+    expect(body.endTime).toBe("19:30");
+  });
+
+  it("PUT /api/training-schedule/:id — returns 404 for non-existent schedule", async () => {
+    const res = await fetch(`${baseUrl}/api/training-schedule/999`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ startTime: "17:00" }),
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it("DELETE /api/training-schedule/:id — removes training schedule", async () => {
+    const createRes = await fetch(`${baseUrl}/api/training-schedule`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dayOfWeek: 1, startTime: "18:00", endTime: "19:30" }),
+    });
+    const { id } = await createRes.json();
+
+    const delRes = await fetch(`${baseUrl}/api/training-schedule/${id}`, { method: "DELETE" });
+    expect(delRes.status).toBe(204);
+
+    // Should be gone
+    const getRes = await fetch(`${baseUrl}/api/training-schedule`);
+    const body = await getRes.json();
+    expect(body).toHaveLength(0);
+  });
+
+  it("DELETE /api/training-schedule/:id — returns 404 for non-existent schedule", async () => {
+    const res = await fetch(`${baseUrl}/api/training-schedule/999`, { method: "DELETE" });
+    expect(res.status).toBe(404);
+  });
+});
+
+// ── Vacation CRUD ───────────────────────────────────────────────────
+
+describe("Vacation routes", () => {
+  beforeEach(async () => {
+    await createTestApp();
+  });
+
+  afterEach(async () => {
+    await teardown();
+  });
+
+  it("POST /api/vacations — creates custom vacation period", async () => {
+    const res = await fetch(`${baseUrl}/api/vacations`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "Sportferien",
+        startDate: "2026-02-09",
+        endDate: "2026-02-22",
+        source: "manual",
+      }),
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body).toHaveProperty("id");
+    expect(body.name).toBe("Sportferien");
+    expect(body.startDate).toBe("2026-02-09");
+    expect(body.endDate).toBe("2026-02-22");
+    expect(body.source).toBe("manual");
+  });
+
+  it("POST /api/vacations — returns 400 if required fields missing", async () => {
+    const res = await fetch(`${baseUrl}/api/vacations`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "Test" }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("GET /api/vacations — returns all vacation periods", async () => {
+    await fetch(`${baseUrl}/api/vacations`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "Sportferien", startDate: "2026-02-09", endDate: "2026-02-22", source: "manual" }),
+    });
+    await fetch(`${baseUrl}/api/vacations`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "Herbstferien", startDate: "2026-10-05", endDate: "2026-10-18", source: "manual" }),
+    });
+
+    const res = await fetch(`${baseUrl}/api/vacations`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(Array.isArray(body)).toBe(true);
+    expect(body).toHaveLength(2);
+  });
+
+  it("DELETE /api/vacations/:id — removes vacation period", async () => {
+    const createRes = await fetch(`${baseUrl}/api/vacations`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "Sportferien", startDate: "2026-02-09", endDate: "2026-02-22", source: "manual" }),
+    });
+    const { id } = await createRes.json();
+
+    const delRes = await fetch(`${baseUrl}/api/vacations/${id}`, { method: "DELETE" });
+    expect(delRes.status).toBe(204);
+
+    const getRes = await fetch(`${baseUrl}/api/vacations`);
+    const body = await getRes.json();
+    expect(body).toHaveLength(0);
+  });
+
+  it("DELETE /api/vacations/:id — returns 404 for non-existent vacation", async () => {
+    const res = await fetch(`${baseUrl}/api/vacations/999`, { method: "DELETE" });
+    expect(res.status).toBe(404);
+  });
+
+  it("POST /api/vacations/import-ics — accepts ICS content and creates vacation periods", async () => {
+    const icsContent = `BEGIN:VCALENDAR
+BEGIN:VEVENT
+DTSTART;VALUE=DATE:20260209
+DTEND;VALUE=DATE:20260222
+SUMMARY:Sportferien
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;VALUE=DATE:20261005
+DTEND;VALUE=DATE:20261018
+SUMMARY:Herbstferien
+END:VEVENT
+END:VCALENDAR`;
+
+    const res = await fetch(`${baseUrl}/api/vacations/import-ics`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ icsContent }),
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.imported).toBe(2);
+
+    // Verify they are stored
+    const getRes = await fetch(`${baseUrl}/api/vacations`);
+    const vacations = await getRes.json();
+    expect(vacations).toHaveLength(2);
+    expect(vacations[0].source).toBe("ics-import");
+  });
+
+  it("POST /api/vacations/import-url — accepts URL and extracts vacation periods via LLM", async () => {
+    // Mock the extractHolidaysFromUrl function
+    const { extractHolidaysFromUrl } = await import("../../services/holidays.js");
+    const mockExtract = vi.spyOn(await import("../../services/holidays.js"), "extractHolidaysFromUrl");
+    mockExtract.mockResolvedValueOnce([
+      { name: "Sportferien", startDate: "2026-02-09", endDate: "2026-02-22", source: "https://example.com" },
+    ]);
+
+    const res = await fetch(`${baseUrl}/api/vacations/import-url`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: "https://example.com/holidays" }),
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.imported).toBe(1);
+
+    mockExtract.mockRestore();
+  });
+
+  it("POST /api/vacations/sync-zurich — syncs Zurich holidays for a given year", async () => {
+    const res = await fetch(`${baseUrl}/api/vacations/sync-zurich`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ year: 2026 }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.synced).toBeGreaterThan(0);
+
+    // Verify they are in the DB
+    const getRes = await fetch(`${baseUrl}/api/vacations`);
+    const vacations = await getRes.json();
+    expect(vacations.length).toBeGreaterThan(0);
+    expect(vacations[0].source).toBe("zurich-official");
+  });
+});
+
+// ── Calendar Endpoint ───────────────────────────────────────────────
+
+describe("Calendar endpoint", () => {
+  beforeEach(async () => {
+    await createTestApp();
+  });
+
+  afterEach(async () => {
+    await teardown();
+  });
+
+  it("GET /api/calendar?year=2026 — returns events, trainings, vacations for the year", async () => {
+    // Create a training schedule: Monday (1)
+    await fetch(`${baseUrl}/api/training-schedule`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        dayOfWeek: 1,
+        startTime: "18:00",
+        endTime: "19:30",
+        validFrom: "2026-01-01",
+        validTo: "2026-12-31",
+      }),
+    });
+
+    // Create an event in the events table directly
+    db.run(
+      "INSERT INTO events (type, title, date, startTime) VALUES (?, ?, ?, ?)",
+      ["tournament", "Spring Cup", "2026-04-15", "10:00"]
+    );
+
+    const res = await fetch(`${baseUrl}/api/calendar?year=2026`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toHaveProperty("events");
+    expect(body).toHaveProperty("trainings");
+    expect(body).toHaveProperty("vacations");
+    expect(Array.isArray(body.events)).toBe(true);
+    expect(Array.isArray(body.trainings)).toBe(true);
+    expect(Array.isArray(body.vacations)).toBe(true);
+
+    // Should have events
+    expect(body.events.length).toBeGreaterThanOrEqual(1);
+
+    // Should have many Monday trainings in 2026
+    expect(body.trainings.length).toBeGreaterThan(40);
+  });
+
+  it("GET /api/calendar?month=2026-03 — returns data filtered to March 2026", async () => {
+    // Create a training schedule: Wednesday (3)
+    await fetch(`${baseUrl}/api/training-schedule`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        dayOfWeek: 3,
+        startTime: "17:30",
+        endTime: "19:00",
+        validFrom: "2026-01-01",
+        validTo: "2026-12-31",
+      }),
+    });
+
+    // Create events in and out of March
+    db.run("INSERT INTO events (type, title, date) VALUES (?, ?, ?)", ["training", "March Event", "2026-03-15"]);
+    db.run("INSERT INTO events (type, title, date) VALUES (?, ?, ?)", ["training", "April Event", "2026-04-15"]);
+
+    const res = await fetch(`${baseUrl}/api/calendar?month=2026-03`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+
+    // Only March event
+    expect(body.events).toHaveLength(1);
+    expect(body.events[0].title).toBe("March Event");
+
+    // March 2026 has Wednesdays on: 4, 11, 18, 25
+    expect(body.trainings).toHaveLength(4);
+    // All should be in March
+    for (const t of body.trainings) {
+      expect(t.date.startsWith("2026-03")).toBe(true);
+    }
+  });
+
+  it("Trainings during vacation weeks are auto-marked as cancelled", async () => {
+    // Create a training schedule: Monday (1)
+    await fetch(`${baseUrl}/api/training-schedule`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        dayOfWeek: 1,
+        startTime: "18:00",
+        endTime: "19:30",
+        validFrom: "2026-01-01",
+        validTo: "2026-12-31",
+      }),
+    });
+
+    // Create a vacation period covering some Mondays in March
+    await fetch(`${baseUrl}/api/vacations`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "Test Vacation",
+        startDate: "2026-03-09",
+        endDate: "2026-03-15",
+        source: "manual",
+      }),
+    });
+
+    const res = await fetch(`${baseUrl}/api/calendar?month=2026-03`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+
+    // March 2026 Mondays: 2, 9, 16, 23, 30
+    expect(body.trainings.length).toBe(5);
+
+    // The training on March 9 should be cancelled (within vacation period)
+    const march9 = body.trainings.find((t: any) => t.date === "2026-03-09");
+    expect(march9).toBeDefined();
+    expect(march9.cancelled).toBe(true);
+
+    // Trainings outside vacation should not be cancelled
+    const march2 = body.trainings.find((t: any) => t.date === "2026-03-02");
+    expect(march2).toBeDefined();
+    expect(march2.cancelled).toBe(false);
+  });
+
+  it("GET /api/calendar — returns 400 if no year or month parameter", async () => {
+    const res = await fetch(`${baseUrl}/api/calendar`);
+    expect(res.status).toBe(400);
+  });
+
+  it("Training schedule validFrom/validTo are respected", async () => {
+    // Schedule valid only in February
+    await fetch(`${baseUrl}/api/training-schedule`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        dayOfWeek: 1,
+        startTime: "18:00",
+        endTime: "19:30",
+        validFrom: "2026-02-01",
+        validTo: "2026-02-28",
+      }),
+    });
+
+    // March calendar should have no trainings
+    const res = await fetch(`${baseUrl}/api/calendar?month=2026-03`);
+    const body = await res.json();
+    expect(body.trainings).toHaveLength(0);
+
+    // February calendar should have trainings
+    const febRes = await fetch(`${baseUrl}/api/calendar?month=2026-02`);
+    const febBody = await febRes.json();
+    // Feb 2026 Mondays: 2, 9, 16, 23
+    expect(febBody.trainings).toHaveLength(4);
+  });
+});

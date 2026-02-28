@@ -45,11 +45,41 @@ Matches existing codebase: Tailwind v4, emerald-500 primary, hand-built componen
 
 Add keys to `de`, `en`, `fr` blocks in `web/src/lib/i18n.ts`.
 
+## Contextual Checklist Widget
+
+A reusable `<EventChecklist>` component that shows a collapsible checklist widget on event detail pages. Appears on training and tournament event detail pages (`EventDetailClient.tsx`).
+
+### Appearance
+
+```
+┌─ Checklist ──────────────────── 2/5 ── ▼ ──┐
+│ ☑ Balls, cones, bibs packed                │
+│ ☑ First-aid kit available                  │
+│ ○ Attendance taken                         │
+│ ○ Field condition checked                  │
+│ ○ Water / drinks reminder sent             │
+│ [+ Add item]                               │
+└────────────────────────────────────────────┘
+```
+
+- Collapsed by default — shows only the header with progress (e.g. "2/5")
+- Click header to expand/collapse
+- Same toggle, add, delete interactions as the dashboard page
+- Only visible to coaches/admins (check `getUserRole()`)
+- Fetches checklist by `eventId`: `GET /api/admin/checklists?eventId=X`
+
+### Where it appears
+
+- `web/src/app/events/[id]/EventDetailClient.tsx` — as a new `<section>` after the attendance section, for training and tournament events only
+- The component is extracted to `web/src/components/EventChecklist.tsx` for reuse
+
 ## Files
 
 | File | Action |
 |------|--------|
-| `web/src/app/dashboard/checklists/page.tsx` | **New** |
+| `web/src/app/dashboard/checklists/page.tsx` | **New** — main admin page |
+| `web/src/components/EventChecklist.tsx` | **New** — reusable collapsible widget |
+| `web/src/app/events/[id]/EventDetailClient.tsx` | **Modify** — embed `<EventChecklist>` |
 | `web/src/lib/i18n.ts` | **Modify** — add translation keys |
 
 ## Out of Scope

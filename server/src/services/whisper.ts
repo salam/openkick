@@ -13,7 +13,7 @@ export async function transcribeAudio(
 
   // Create FormData with the audio file
   const formData = new FormData();
-  formData.append("file", new Blob([audioBuffer]), filename);
+  formData.append("file", new Blob([new Uint8Array(audioBuffer)]), filename);
   formData.append("model", "whisper-1");
 
   // POST to OpenAI Whisper API

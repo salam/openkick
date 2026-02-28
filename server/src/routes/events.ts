@@ -102,7 +102,7 @@ eventsRouter.get("/events", (req: Request, res: Response) => {
 
   sql += " ORDER BY date ASC";
 
-  const rows = rowsToObjects(db.exec(sql, params));
+  const rows = rowsToObjects(db.exec(sql, params as import("sql.js").SqlValue[]));
   res.json(rows);
 });
 

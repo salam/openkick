@@ -24,7 +24,7 @@ settingsRouter.get("/settings/:key", (req: Request, res: Response) => {
   const db = getDB();
   const { key } = req.params;
 
-  const result = db.exec("SELECT key, value FROM settings WHERE key = ?", [key]);
+  const result = db.exec("SELECT key, value FROM settings WHERE key = ?", [key as string]);
   if (result.length === 0 || result[0].values.length === 0) {
     res.status(404).json({ error: "Setting not found" });
     return;
@@ -45,7 +45,7 @@ settingsRouter.put("/settings/:key", (req: Request, res: Response) => {
     return;
   }
 
-  db.run("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", [key, String(value)]);
+  db.run("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", [key as string, String(value)]);
 
   res.json({ key, value: String(value) });
 });

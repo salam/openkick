@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import SubscribeCard from '@/components/SubscribeCard';
+import TournamentWidget from '@/components/TournamentWidget';
 
 export default function Home() {
   return (
@@ -21,6 +22,8 @@ export default function Home() {
           Dashboard
         </Link>
       </div>
+
+      <TournamentWidget />
 
       <SubscribeCard />
     </main>

@@ -79,6 +79,32 @@ You'll get a notification when:
 - A player cancels after the deadline
 - The waiting list changes
 
+## Event Series
+
+Instead of creating individual events week after week, you can set up a recurring series.
+
+### Create a Series
+
+Go to **Events > New Event** and toggle **Create as Series** at the top of the form. Fill in:
+
+| Field | What it means |
+| --- | --- |
+| **Day of week** | Which day the event repeats (e.g. Monday) |
+| **Start date** | First occurrence |
+| **End date** | Last occurrence (e.g. end of season) |
+| **Deadline offset** | How far before the event parents must respond (24h, 48h, or 72h) |
+
+The series automatically skips vacation weeks based on your configured holiday calendar.
+
+### Manage Individual Dates
+
+Each instance of a series can be managed independently:
+
+- **Cancel a single date:** Open the event and click **Cancel this instance** — only that date is removed, the rest continue as normal.
+- **RSVP works as usual:** Parents respond to each week individually. Behind the scenes, the system creates a dedicated event for that date when the first response comes in.
+
+You can also go directly to the series creation form by clicking **Create Series** on the events page when no events exist yet.
+
 ## Communication
 
 ### Broadcast Messages

@@ -1,5 +1,15 @@
 # OpenKick Release Notes
 
+## Version 1.0.9 (Feb 28, 2026, 21:45)
+
+* Event series: create recurring weekly events (e.g. "every Monday") with a start and end date
+* Series automatically skip vacation weeks — no manual cleanup needed
+* Per-instance control: edit or cancel individual dates without affecting the rest of the series
+* RSVP on series events works seamlessly — instances are created on demand when parents respond
+* Empty state: dashboard and events pages now show helpful "Create Event" and "Create Series" buttons when no events exist
+* Series badge: event cards show a subtle "Series" label so you can tell recurring events apart
+* Calendar sidebar: new "Event Series" section lists all active series with their schedule
+
 ## Version 1.0.8 (Mar 1, 2026, 05:30)
 
 * WhatsApp setup wizard: guided 4-step assistant during onboarding to install Docker, configure and start WAHA, and connect WhatsApp — no terminal needed

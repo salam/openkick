@@ -6,6 +6,10 @@
 - [x] JWT auth for coaches/admins + passwordless token links for parents
 - [x] Player & guardian CRUD with SFV category auto-calculation
 - [x] Events CRUD with category filtering
+- [x] Event series with weekly recurrence, vacation skipping, and lazy materialization
+- [x] Event series CRUD API (create, list, detail with expansion, update, delete with cascade)
+- [x] Auto-materialize series instances on RSVP
+- [x] Per-instance editing, cancellation, and exclusion for series
 - [x] Attendance tracking with automatic waitlist promotion
 - [x] Settings management (key-value store)
 - [x] Multi-provider LLM abstraction (OpenAI, Claude, Infomaniak Euria)
@@ -48,6 +52,10 @@
 - [x] Broadcast composer with template selection
 - [x] Admin settings page (LLM, bot language, holidays, WAHA)
 - [x] Event creation with tournament import (URL/PDF)
+- [x] Event series creation mode (weekly recurrence, date range, deadline offset)
+- [x] Empty state buttons on dashboard and events pages (Create Event / Create Series)
+- [x] Series badge on event cards and calendar sidebar section
+- [x] Event detail page series awareness (banner, cancel instance, RSVP auto-materialize)
 - [x] i18n with browser language detection (de/fr/en)
 - [x] Homepage subscribe card widget (calendar, RSS, social feeds)
 - [x] Admin feed toggle switches on settings page

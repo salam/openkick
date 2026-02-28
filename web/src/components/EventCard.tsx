@@ -1,6 +1,8 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { t, getLanguage } from '@/lib/i18n';
 
 interface EventCardProps {
   id: string;
@@ -22,10 +24,10 @@ const typeBadgeStyles: Record<string, string> = {
   match: 'bg-orange-100 text-orange-700',
 };
 
-const typeLabels: Record<string, string> = {
-  training: 'Training',
-  tournament: 'Tournament',
-  match: 'Match',
+const typeI18nKeys: Record<string, string> = {
+  training: 'type_training',
+  tournament: 'type_tournament',
+  match: 'type_match',
 };
 
 function isDeadlineApproaching(deadline: string): boolean {
@@ -50,6 +52,13 @@ export default function EventCard({
 }: EventCardProps) {
   const deadlineClose = deadline ? isDeadlineApproaching(deadline) : false;
 
+  const [, setLang] = useState(() => getLanguage());
+  useEffect(() => {
+    function onLangChange() { setLang(getLanguage()); }
+    window.addEventListener('languagechange', onLangChange);
+    return () => window.removeEventListener('languagechange', onLangChange);
+  }, []);
+
   return (
     <Link
       href={`/events/${id}/`}
@@ -60,13 +69,13 @@ export default function EventCard({
         <div className="flex items-center gap-1.5">
           {seriesId && (
             <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
-              Series
+              {t('series')}
             </span>
           )}
           <span
             className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${typeBadgeStyles[type] || 'bg-gray-100 text-gray-700'}`}
           >
-            {typeLabels[type] || type}
+            {typeI18nKeys[type] ? t(typeI18nKeys[type]) : type}
           </span>
         </div>
       </div>
@@ -104,11 +113,11 @@ export default function EventCard({
       {/* Footer: attendance + deadline */}
       <div className="flex items-center justify-between border-t border-gray-100 pt-3">
         <span className="text-sm font-medium text-gray-700">
-          {attendingCount}/{totalPlayers} attending
+          {attendingCount}/{totalPlayers} {t('attending')}
         </span>
         {deadlineClose && (
           <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700">
-            Deadline soon
+            {t('deadline_soon')}
           </span>
         )}
       </div>

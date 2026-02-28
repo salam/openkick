@@ -4,6 +4,7 @@ import cors from "cors";
 import { initDB } from "./database.js";
 import { playersRouter } from "./routes/players.js";
 import { eventsRouter } from "./routes/events.js";
+import { attendanceRouter } from "./routes/attendance.js";
 
 const app = express();
 
@@ -17,6 +18,7 @@ app.get("/api/health", (_req, res) => {
 
 app.use("/api", playersRouter);
 app.use("/api", eventsRouter);
+app.use("/api", attendanceRouter);
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
 const DB_PATH = process.env.DB_PATH || "./data/openkick.db";

@@ -196,3 +196,85 @@ setupWahaRouter.get("/waha/session", async (_req: Request, res: Response) => {
     res.status(502).json({ error: message });
   }
 });
+
+// ── GET /waha/groups ──────────────────────────────────────────────
+
+setupWahaRouter.get("/waha/groups", async (_req: Request, res: Response) => {
+  const wahaUrl = getWahaUrl();
+  try {
+    const upstream = await fetch(`${wahaUrl}/api/default/groups`, {
+      headers: { "Content-Type": "application/json" },
+    });
+    if (!upstream.ok) {
+      const text = await upstream.text().catch(() => "");
+      res.status(upstream.status).json({ error: text || `WAHA responded with ${upstream.status}` });
+      return;
+    }
+    const data = await upstream.json();
+    res.json(data);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.status(502).json({ error: message });
+  }
+});
+
+// ── POST /waha/groups/join ────────────────────────────────────────
+
+setupWahaRouter.post("/waha/groups/join", async (req: Request, res: Response) => {
+  const { inviteLink } = req.body;
+
+  if (!inviteLink || typeof inviteLink !== "string") {
+    res.status(400).json({ error: "inviteLink is required" });
+    return;
+  }
+
+  const wahaUrl = getWahaUrl();
+  try {
+    const upstream = await fetch(`${wahaUrl}/api/default/groups/join`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: inviteLink }),
+    });
+    if (!upstream.ok) {
+      const text = await upstream.text().catch(() => "");
+      res.status(upstream.status).json({ error: text || `WAHA responded with ${upstream.status}` });
+      return;
+    }
+    const data = await upstream.json();
+    res.json(data);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.status(502).json({ error: message });
+  }
+});
+
+// ── POST /waha/groups/leave ───────────────────────────────────────
+
+setupWahaRouter.post("/waha/groups/leave", async (req: Request, res: Response) => {
+  const { groupId } = req.body;
+
+  if (!groupId || typeof groupId !== "string") {
+    res.status(400).json({ error: "groupId is required" });
+    return;
+  }
+
+  const wahaUrl = getWahaUrl();
+  try {
+    const upstream = await fetch(
+      `${wahaUrl}/api/default/groups/${encodeURIComponent(groupId)}/leave`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      },
+    );
+    if (!upstream.ok) {
+      const text = await upstream.text().catch(() => "");
+      res.status(upstream.status).json({ error: text || `WAHA responded with ${upstream.status}` });
+      return;
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.status(502).json({ error: message });
+  }
+});

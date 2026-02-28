@@ -12,6 +12,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
     "altcha-lib": "^1.4.1",
+    "archiver": "^7.0.1",
     "bcryptjs": "^3.0.3",
     "cheerio": "^1.2.0",
     "cors": "^2.8.5",
@@ -25,10 +26,13 @@
     "nodemailer": "^7.0.10",
     "openai": "^4.59.0",
     "pdfjs-dist": "^5.4.149",
+    "png-to-ico": "^3.0.1",
+    "sharp": "^0.34.5",
     "sql.js": "^1.13.0",
     "ws": "^8.18.3"
   },
   "devDependencies": {
+    "@types/archiver": "^7.0.0",
     "@types/basic-auth": "^1.1.8",
     "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.19",

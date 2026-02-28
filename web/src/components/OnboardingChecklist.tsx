@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
+import { t, getLanguage } from '@/lib/i18n';
 
 interface OnboardingStatus {
   onboardingCompleted: boolean;
@@ -16,19 +17,28 @@ interface OnboardingStatus {
   };
 }
 
-const CHECKLIST_ITEMS = [
-  { key: 'hasHolidays', label: 'Add holidays & vacations', href: '/settings#holidays' },
-  { key: 'hasTrainings', label: 'Create your first training', href: '/events/new/' },
-  { key: 'hasPlayers', label: 'Add players to the roster', href: '/players/' },
-  { key: 'hasGuardians', label: 'Invite parents & guardians', href: '/players/' },
-  { key: 'hasTournaments', label: 'Open your first tournament', href: '/events/new/' },
-  { key: 'hasFeedsConfigured', label: 'Set up public feeds (optional)', href: '/settings#feeds' },
+const CHECKLIST_KEYS = [
+  { key: 'hasHolidays', i18nKey: 'checklist_holidays', href: '/settings#holidays' },
+  { key: 'hasTrainings', i18nKey: 'checklist_training', href: '/events/new/' },
+  { key: 'hasPlayers', i18nKey: 'checklist_players', href: '/players/' },
+  { key: 'hasGuardians', i18nKey: 'checklist_guardians', href: '/players/' },
+  { key: 'hasTournaments', i18nKey: 'checklist_tournament', href: '/events/new/' },
+  { key: 'hasFeedsConfigured', i18nKey: 'checklist_feeds', href: '/settings#feeds' },
 ] as const;
 
+function getChecklistItems() {
+  return CHECKLIST_KEYS.map((item) => ({
+    ...item,
+    label: t(item.i18nKey),
+  }));
+}
+
 // Static tips shown below the checklist — not trackable, just helpful nudges
-const TIPS = [
-  { label: 'Log previous match results to build your club history', href: '/events/new/' },
-];
+function getTips() {
+  return [
+    { label: t('tip_log_results'), href: '/events/new/' },
+  ];
+}
 
 const DISMISS_KEY = 'onboarding_checklist_dismissed';
 
@@ -36,6 +46,12 @@ export default function OnboardingChecklist() {
   const [status, setStatus] = useState<OnboardingStatus | null>(null);
   const [dismissed, setDismissed] = useState(true); // default hidden until loaded
   const [collapsed, setCollapsed] = useState(false);
+  const [, setLang] = useState(() => getLanguage());
+  useEffect(() => {
+    function onLangChange() { setLang(getLanguage()); }
+    window.addEventListener('languagechange', onLangChange);
+    return () => window.removeEventListener('languagechange', onLangChange);
+  }, []);
 
   useEffect(() => {
     setDismissed(localStorage.getItem(DISMISS_KEY) === 'true');
@@ -50,12 +66,15 @@ export default function OnboardingChecklist() {
   // Nothing to render if: still loading, dismissed, stepper not finished, or all done
   if (!status || dismissed || !status.onboardingCompleted) return null;
 
-  const completedCount = CHECKLIST_ITEMS.filter(
+  const checklistItems = getChecklistItems();
+  const tips = getTips();
+
+  const completedCount = checklistItems.filter(
     (item) => status.checklist[item.key],
   ).length;
 
   // All items complete — auto-hide
-  if (completedCount === CHECKLIST_ITEMS.length) return null;
+  if (completedCount === checklistItems.length) return null;
 
   function handleDismiss() {
     localStorage.setItem(DISMISS_KEY, 'true');
@@ -70,16 +89,16 @@ export default function OnboardingChecklist() {
         onClick={() => setCollapsed((c) => !c)}
         className="flex w-full items-center justify-between"
       >
-        <h2 className="text-lg font-semibold text-gray-900">Getting Started</h2>
+        <h2 className="text-lg font-semibold text-gray-900">{t('getting_started')}</h2>
         <span className="text-sm text-gray-500">
-          {completedCount} of {CHECKLIST_ITEMS.length} done
+          {completedCount} / {checklistItems.length} {t('done')}
         </span>
       </button>
 
       {!collapsed && (
         <>
           <ul className="mt-4 space-y-3">
-            {CHECKLIST_ITEMS.map((item) => {
+            {checklistItems.map((item) => {
               const done = status.checklist[item.key];
               return (
                 <li key={item.key} className="flex items-center justify-between">
@@ -143,9 +162,9 @@ export default function OnboardingChecklist() {
           </ul>
 
           {/* Static tips */}
-          {TIPS.length > 0 && (
+          {tips.length > 0 && (
             <div className="mt-3 border-t border-gray-100 pt-3">
-              {TIPS.map((tip) => (
+              {tips.map((tip) => (
                 <div key={tip.label} className="flex items-center gap-3">
                   <span className="flex h-5 w-5 items-center justify-center text-gray-300">
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
@@ -169,7 +188,7 @@ export default function OnboardingChecklist() {
               onClick={handleDismiss}
               className="rounded-md px-3 py-1.5 text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-700"
             >
-              Dismiss
+              {t('dismiss')}
             </button>
           </div>
         </>

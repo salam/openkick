@@ -18,6 +18,7 @@ import { broadcastsRouter } from "./routes/broadcasts.js";
 import { calendarRouter } from "./routes/calendar.js";
 import { teamsRouter } from "./routes/teams.js";
 import { llmsRouter } from "./routes/llms.js";
+import { feedsRouter, wellKnownRouter } from "./routes/feeds.js";
 
 const app = express();
 
@@ -43,6 +44,8 @@ app.use("/api/whatsapp", whatsappRouter);
 app.use("/api", broadcastsRouter);
 app.use("/api", calendarRouter);
 app.use("/api", teamsRouter);
+app.use(wellKnownRouter);
+app.use("/api", feedsRouter);
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
 const DB_PATH = process.env.DB_PATH || "./data/openkick.db";

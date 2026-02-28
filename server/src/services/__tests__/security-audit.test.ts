@@ -11,6 +11,7 @@ describe("security audit service", () => {
   });
 
   afterEach(() => {
+    db.close();
     vi.restoreAllMocks();
   });
 

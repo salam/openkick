@@ -1,7 +1,8 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { t, getLanguage } from '@/lib/i18n';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -38,12 +39,18 @@ interface CalendarViewProps {
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-const MONTH_NAMES = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
+const MONTH_KEYS = [
+  'month_jan', 'month_feb', 'month_mar', 'month_apr', 'month_may', 'month_jun',
+  'month_jul', 'month_aug', 'month_sep', 'month_oct', 'month_nov', 'month_dec',
 ];
 
-const DAY_HEADERS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
+const DAY_HEADER_KEYS = ['day_mon', 'day_tue', 'day_wed', 'day_thu', 'day_fri', 'day_sat', 'day_sun'];
+
+const TYPE_KEYS: Record<string, string> = {
+  training: 'type_training',
+  tournament: 'type_tournament',
+  match: 'type_match',
+};
 
 function getDaysInMonth(year: number, month: number): number {
   return new Date(year, month + 1, 0).getDate();
@@ -119,13 +126,13 @@ function YearlyView({
             className="rounded-lg border border-gray-200 bg-white p-3 text-left transition-shadow hover:shadow-md"
           >
             <h3 className="mb-2 text-sm font-semibold text-gray-900">
-              {MONTH_NAMES[mi]}
+              {t(MONTH_KEYS[mi])}
             </h3>
             {/* Day headers */}
             <div className="mb-1 grid grid-cols-7 gap-px text-center">
-              {DAY_HEADERS.map((d) => (
-                <span key={d} className="text-[10px] font-medium text-gray-400">
-                  {d}
+              {DAY_HEADER_KEYS.map((dk) => (
+                <span key={dk} className="text-[10px] font-medium text-gray-400">
+                  {t(dk)}
                 </span>
               ))}
             </div>
@@ -239,7 +246,7 @@ function MonthlyView({
           </svg>
         </button>
         <h2 className="text-lg font-semibold text-gray-900">
-          {MONTH_NAMES[month]} {year}
+          {t(MONTH_KEYS[month])} {year}
         </h2>
         <button
           type="button"
@@ -255,9 +262,9 @@ function MonthlyView({
 
       {/* Day headers */}
       <div className="mb-1 grid grid-cols-7 gap-px text-center">
-        {DAY_HEADERS.map((d) => (
-          <span key={d} className="py-2 text-xs font-medium text-gray-500">
-            {d}
+        {DAY_HEADER_KEYS.map((dk) => (
+          <span key={dk} className="py-2 text-xs font-medium text-gray-500">
+            {t(dk)}
           </span>
         ))}
       </div>
@@ -275,6 +282,8 @@ function MonthlyView({
           const vacation = isInVacation(dateStr, vacations);
           const today = isToday(dateStr);
           const hasTraining = dayEvents.some((e) => e.type === 'training' && !e.cancelled);
+          // Vacations that start on this day (for subtle label)
+          const vacationStarts = vacations.filter((v) => v.startDate === dateStr);
 
           return (
             <button
@@ -297,6 +306,15 @@ function MonthlyView({
                 {day}
               </span>
               <div className="mt-1 space-y-0.5">
+                {/* Vacation labels: show on start day of multi-day, or on the day for single-day */}
+                {vacationStarts.map((v) => (
+                  <div
+                    key={`vl-${v.id}`}
+                    className="truncate rounded px-1 py-0.5 text-[10px] text-purple-400 sm:text-xs"
+                  >
+                    {v.name}
+                  </div>
+                ))}
                 {dayEvents.slice(0, 3).map((ev) => (
                   <div
                     key={ev.id}
@@ -333,18 +351,56 @@ function ListView({
   events: CalendarEvent[];
   vacations: CalendarVacation[];
 }) {
-  // Group events by month
+  // Group events and vacations by month
+  type ListItem =
+    | { kind: 'event'; data: CalendarEvent }
+    | { kind: 'vacation'; data: CalendarVacation };
+
   const grouped = useMemo(() => {
-    const sorted = [...events].sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
-    );
-    const map: Record<string, CalendarEvent[]> = {};
-    for (const ev of sorted) {
+    const map: Record<string, ListItem[]> = {};
+
+    // Add events
+    for (const ev of events) {
       const key = ev.date.slice(0, 7); // YYYY-MM
-      (map[key] ??= []).push(ev);
+      (map[key] ??= []).push({ kind: 'event', data: ev });
     }
-    return map;
-  }, [events]);
+
+    // Add vacations into each month they span (deduplicate by id+month)
+    const addedVacMonths = new Set<string>();
+    for (const v of vacations) {
+      const start = new Date(v.startDate + 'T00:00:00');
+      const end = new Date(v.endDate + 'T00:00:00');
+      const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
+      while (cursor <= end) {
+        const key = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}`;
+        const dedup = `${v.id}:${key}`;
+        if (!addedVacMonths.has(dedup)) {
+          addedVacMonths.add(dedup);
+          (map[key] ??= []).push({ kind: 'vacation', data: v });
+        }
+        cursor.setMonth(cursor.getMonth() + 1);
+      }
+    }
+
+    // Sort each month: vacations first (by startDate), then events (by date)
+    for (const key of Object.keys(map)) {
+      map[key].sort((a, b) => {
+        const dateA = a.kind === 'event' ? a.data.date : a.data.startDate;
+        const dateB = b.kind === 'event' ? b.data.date : b.data.startDate;
+        if (dateA !== dateB) return dateA.localeCompare(dateB);
+        // Vacations before events on same date
+        if (a.kind !== b.kind) return a.kind === 'vacation' ? -1 : 1;
+        return 0;
+      });
+    }
+
+    // Sort month keys
+    const sorted: Record<string, ListItem[]> = {};
+    for (const key of Object.keys(map).sort()) {
+      sorted[key] = map[key];
+    }
+    return sorted;
+  }, [events, vacations]);
 
   function scrollToToday() {
     const el = document.getElementById('calendar-today');
@@ -361,39 +417,42 @@ function ListView({
         onClick={scrollToToday}
         className="sticky top-0 z-10 mb-4 rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-md transition-colors hover:bg-emerald-700"
       >
-        Scroll to today
+        {t('scroll_to_today')}
       </button>
 
-      {/* Vacation banners */}
-      {vacations.length > 0 && (
-        <div className="mb-6 space-y-2">
-          {vacations.map((v) => (
-            <div
-              key={v.id}
-              className="rounded-lg bg-purple-50 px-4 py-3 text-sm font-medium text-purple-700"
-            >
-              <span className="mr-2 inline-block h-2 w-2 rounded-full bg-purple-400" />
-              {v.name}: {v.startDate} &ndash; {v.endDate}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Grouped events */}
+      {/* Grouped events and vacations */}
       {Object.keys(grouped).length === 0 ? (
         <div className="rounded-lg border border-gray-200 bg-white py-12 text-center">
-          <p className="text-sm text-gray-400">No events found</p>
+          <p className="text-sm text-gray-400">{t('no_events_found')}</p>
         </div>
       ) : (
-        Object.entries(grouped).map(([monthKey, monthEvents]) => {
+        Object.entries(grouped).map(([monthKey, items]) => {
           const [y, m] = monthKey.split('-').map(Number);
+          // Track rendered vacation IDs to avoid duplicates within a month
+          const renderedVacations = new Set<string>();
           return (
             <div key={monthKey} className="mb-8">
               <h3 className="mb-3 text-base font-semibold text-gray-900">
-                {MONTH_NAMES[m - 1]} {y}
+                {t(MONTH_KEYS[m - 1])} {y}
               </h3>
               <div className="space-y-2">
-                {monthEvents.map((ev) => {
+                {items.map((item, idx) => {
+                  if (item.kind === 'vacation') {
+                    const v = item.data;
+                    if (renderedVacations.has(v.id)) return null;
+                    renderedVacations.add(v.id);
+                    return (
+                      <div
+                        key={`vac-${v.id}`}
+                        className="rounded-lg border border-purple-200 bg-purple-50 px-4 py-3 text-sm font-medium text-purple-700"
+                      >
+                        <span className="mr-2 inline-block h-2 w-2 rounded-full bg-purple-400" />
+                        {v.name}: {v.startDate} &ndash; {v.endDate}
+                      </div>
+                    );
+                  }
+
+                  const ev = item.data;
                   const vacation = isInVacation(ev.date, vacations);
                   const isTodayEvent = ev.date === todayStr;
 
@@ -440,7 +499,7 @@ function ListView({
                             : typeBadgeStyle[ev.type] || 'bg-gray-100 text-gray-700'
                         }`}
                       >
-                        {ev.cancelled ? 'Cancelled' : ev.type.charAt(0).toUpperCase() + ev.type.slice(1)}
+                        {ev.cancelled ? t('cancelled') : t(TYPE_KEYS[ev.type] || ev.type)}
                       </span>
 
                       {/* Attendance */}
@@ -468,11 +527,29 @@ export default function CalendarView({
   year,
   month,
   events,
-  vacations,
+  vacations: rawVacations,
   onMonthClick,
   onDayClick,
   onChangeMonth,
 }: CalendarViewProps) {
+  const [, setLang] = useState(() => getLanguage());
+  useEffect(() => {
+    function onLangChange() { setLang(getLanguage()); }
+    window.addEventListener('languagechange', onLangChange);
+    return () => window.removeEventListener('languagechange', onLangChange);
+  }, []);
+
+  // Deduplicate vacations by name+startDate+endDate (guards against duplicate DB rows)
+  const vacations = useMemo(() => {
+    const seen = new Set<string>();
+    return rawVacations.filter((v) => {
+      const key = `${v.name}|${v.startDate}|${v.endDate}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [rawVacations]);
+
   if (viewMode === 'yearly') {
     return (
       <YearlyView

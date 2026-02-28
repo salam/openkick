@@ -1,5 +1,10 @@
 # OpenKick Release Notes
 
+## Version 1.0.7 (Mar 1, 2026, 05:00)
+
+* Holiday auto-sync: selected holiday preset is now automatically re-synced daily in the background
+* Holiday preset selection is remembered across server restarts and page reloads
+
 ## Version 1.0.6 (Mar 1, 2026, 03:30)
 
 * Holiday sync: fixed bug where "Sync Zurich Holidays" always failed (missing year parameter)

@@ -9,13 +9,13 @@ export default function Home() {
       <div className="flex gap-4">
         <Link
           href="/login/"
-          className="rounded-lg bg-blue-600 px-6 py-3 text-white hover:bg-blue-700"
+          className="rounded-xl bg-emerald-500 px-6 py-3 text-sm font-medium text-white transition hover:bg-emerald-600"
         >
           Login
         </Link>
         <Link
           href="/dashboard/"
-          className="rounded-lg border border-gray-300 px-6 py-3 hover:bg-gray-50"
+          className="rounded-xl border border-gray-300 px-6 py-3 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
         >
           Dashboard
         </Link>

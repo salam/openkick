@@ -176,7 +176,7 @@ function CalendarPageContent() {
                 onClick={() => setViewMode(vm.value)}
                 className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
                   viewMode === vm.value
-                    ? 'bg-emerald-600 text-white'
+                    ? 'bg-emerald-500 text-white'
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
@@ -225,7 +225,7 @@ function CalendarPageContent() {
             setShowTrainingForm(false);
             setFormError('');
           }}
-          className="rounded-lg bg-purple-50 px-4 py-2 text-sm font-medium text-purple-700 transition-colors hover:bg-purple-100"
+          className="rounded-xl bg-purple-50 px-4 py-2 text-sm font-medium text-purple-700 transition-colors hover:bg-purple-100"
         >
           + Add Vacation
         </button>
@@ -236,7 +236,7 @@ function CalendarPageContent() {
             setShowVacationForm(false);
             setFormError('');
           }}
-          className="rounded-lg bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700 transition-colors hover:bg-emerald-100"
+          className="rounded-xl bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700 transition-colors hover:bg-emerald-100"
         >
           + Add Training Day
         </button>
@@ -272,7 +272,7 @@ function CalendarPageContent() {
             <button
               type="button"
               onClick={handleAddVacation}
-              className="rounded-md bg-purple-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-purple-700"
+              className="rounded-xl bg-purple-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-purple-700"
             >
               Save
             </button>
@@ -282,7 +282,7 @@ function CalendarPageContent() {
                 setShowVacationForm(false);
                 setFormError('');
               }}
-              className="rounded-md px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100"
+              className="rounded-xl px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100"
             >
               Cancel
             </button>
@@ -323,7 +323,7 @@ function CalendarPageContent() {
             <button
               type="button"
               onClick={handleAddTraining}
-              className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
+              className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-600"
             >
               Save
             </button>
@@ -333,7 +333,7 @@ function CalendarPageContent() {
                 setShowTrainingForm(false);
                 setFormError('');
               }}
-              className="rounded-md px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100"
+              className="rounded-xl px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100"
             >
               Cancel
             </button>

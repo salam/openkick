@@ -55,7 +55,7 @@ export default function ResetPasswordClient() {
     <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-green-700">OpenKick</h1>
+          <h1 className="text-3xl font-bold text-emerald-600">OpenKick</h1>
           <p className="mt-1 text-sm text-gray-500">Youth Football Management</p>
         </div>
 
@@ -71,7 +71,7 @@ export default function ResetPasswordClient() {
               </p>
               <a
                 href="/forgot-password/"
-                className="text-sm text-green-600 hover:underline"
+                className="text-sm text-emerald-600 hover:underline"
               >
                 Request a new reset link
               </a>
@@ -92,7 +92,7 @@ export default function ResetPasswordClient() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="mb-4 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+                className="mb-4 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                 placeholder="••••••••"
                 autoComplete="new-password"
               />
@@ -105,7 +105,7 @@ export default function ResetPasswordClient() {
                 required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="mb-6 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+                className="mb-6 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                 placeholder="••••••••"
                 autoComplete="new-password"
               />
@@ -113,7 +113,7 @@ export default function ResetPasswordClient() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full rounded-lg bg-green-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50"
+                className="w-full rounded-xl bg-emerald-500 px-6 py-3 text-sm font-medium text-white transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 disabled:opacity-50"
               >
                 {loading ? '...' : 'Reset Password'}
               </button>

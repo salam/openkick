@@ -99,7 +99,7 @@ export default function DashboardPage() {
             onClick={() => setFilter(btn.value)}
             className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
               filter === btn.value
-                ? 'bg-emerald-600 text-white'
+                ? 'bg-emerald-500 text-white'
                 : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
             }`}
           >

@@ -241,7 +241,7 @@ export default function BroadcastComposer() {
             <select
               value={selectedEventId}
               onChange={(e) => setSelectedEventId(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
             >
               <option value="">None</option>
               {events.map((ev) => (
@@ -258,7 +258,7 @@ export default function BroadcastComposer() {
           <button
             onClick={handleGenerate}
             disabled={generating}
-            className="mb-5 rounded-lg bg-emerald-600 px-5 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+            className="mb-5 rounded-xl bg-emerald-500 px-6 py-3 text-sm font-medium text-white transition hover:bg-emerald-600 disabled:opacity-50"
           >
             {generating ? 'Generating...' : selectedTemplate === 'custom' ? 'Start Writing' : 'Generate Message'}
           </button>
@@ -288,7 +288,7 @@ export default function BroadcastComposer() {
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
               >
                 <option value="">All categories</option>
                 {SFV_CATEGORIES.map((cat) => (
@@ -312,7 +312,7 @@ export default function BroadcastComposer() {
           <button
             onClick={() => setConfirmOpen(true)}
             disabled={sending}
-            className="rounded-lg bg-green-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+            className="rounded-xl bg-emerald-500 px-6 py-3 text-sm font-medium text-white transition hover:bg-emerald-600 disabled:opacity-50"
           >
             Send Broadcast
           </button>
@@ -336,14 +336,14 @@ export default function BroadcastComposer() {
             <div className="mt-4 flex justify-end gap-3">
               <button
                 onClick={() => setConfirmOpen(false)}
-                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSend}
                 disabled={sending}
-                className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-600 disabled:opacity-50"
               >
                 {sending ? 'Sending...' : 'Confirm & Send'}
               </button>

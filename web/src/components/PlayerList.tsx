@@ -59,7 +59,7 @@ export default function PlayerList({ players, onEdit, onDelete }: PlayerListProp
           placeholder="Search players..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 sm:max-w-xs"
+          className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 sm:max-w-xs"
         />
       </div>
 
@@ -97,13 +97,13 @@ export default function PlayerList({ players, onEdit, onDelete }: PlayerListProp
                       <div className="flex gap-2">
                         <button
                           onClick={() => onEdit(player)}
-                          className="rounded px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-50"
+                          className="rounded-lg px-2 py-1 text-xs font-medium text-emerald-600 hover:bg-emerald-50"
                         >
                           Edit
                         </button>
                         <button
                           onClick={() => onDelete(player)}
-                          className="rounded px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                          className="rounded-lg px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
                         >
                           Delete
                         </button>
@@ -133,13 +133,13 @@ export default function PlayerList({ players, onEdit, onDelete }: PlayerListProp
                 <div className="flex gap-2">
                   <button
                     onClick={() => onEdit(player)}
-                    className="rounded bg-green-50 px-3 py-1 text-xs font-medium text-green-700 hover:bg-green-100"
+                    className="rounded-lg bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-600 hover:bg-emerald-100"
                   >
                     Edit
                   </button>
                   <button
                     onClick={() => onDelete(player)}
-                    className="rounded bg-red-50 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-100"
+                    className="rounded-lg bg-red-50 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-100"
                   >
                     Delete
                   </button>

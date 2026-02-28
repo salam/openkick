@@ -242,8 +242,8 @@ export default function NewEventPage() {
       <h1 className="mb-6 text-2xl font-bold text-gray-900">Create Event</h1>
 
       {/* ── Import section ── */}
-      <div className="mb-8 rounded-xl border-2 border-dashed border-green-300 bg-green-50/50 p-6">
-        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-green-800">
+      <div className="mb-8 rounded-xl border-2 border-dashed border-emerald-300 bg-emerald-50/50 p-6">
+        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-emerald-700">
           Import from Tournament
         </h2>
 
@@ -258,13 +258,13 @@ export default function NewEventPage() {
               value={importUrl}
               onChange={(e) => setImportUrl(e.target.value)}
               placeholder="https://example.com/tournament"
-              className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+              className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
             />
             <button
               type="button"
               onClick={handleImportUrl}
               disabled={importingUrl || !importUrl.trim()}
-              className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+              className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-600 disabled:opacity-50"
             >
               {importingUrl ? 'Importing...' : 'Import'}
             </button>
@@ -277,7 +277,7 @@ export default function NewEventPage() {
             Import from PDF
           </label>
           <label
-            className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 ${importingPdf ? 'opacity-50 pointer-events-none' : ''}`}
+            className={`inline-flex cursor-pointer items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 ${importingPdf ? 'opacity-50 pointer-events-none' : ''}`}
           >
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -300,7 +300,7 @@ export default function NewEventPage() {
 
         {/* Import feedback */}
         {importSuccess && (
-          <div className="mt-3 rounded-lg bg-green-100 p-3 text-sm text-green-800">
+          <div className="mt-3 rounded-lg bg-emerald-100 p-3 text-sm text-emerald-700">
             {importSuccess}
           </div>
         )}
@@ -324,7 +324,7 @@ export default function NewEventPage() {
           <select
             value={form.type}
             onChange={(e) => setForm({ ...form, type: e.target.value })}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
           >
             {EVENT_TYPES.map((t) => (
               <option key={t} value={t}>
@@ -342,7 +342,7 @@ export default function NewEventPage() {
             value={form.title}
             onChange={(e) => setForm({ ...form, title: e.target.value })}
             required
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
           />
         </div>
 
@@ -353,7 +353,7 @@ export default function NewEventPage() {
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
             rows={3}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
           />
         </div>
 
@@ -366,7 +366,7 @@ export default function NewEventPage() {
               value={form.date}
               onChange={(e) => setForm({ ...form, date: e.target.value })}
               required
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
             />
           </div>
           <div>
@@ -375,7 +375,7 @@ export default function NewEventPage() {
               type="time"
               value={form.startTime}
               onChange={(e) => setForm({ ...form, startTime: e.target.value })}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
             />
           </div>
           <div>
@@ -386,7 +386,7 @@ export default function NewEventPage() {
               type="time"
               value={form.attendanceTime}
               onChange={(e) => setForm({ ...form, attendanceTime: e.target.value })}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
             />
           </div>
         </div>
@@ -398,7 +398,7 @@ export default function NewEventPage() {
             type="datetime-local"
             value={form.deadline}
             onChange={(e) => setForm({ ...form, deadline: e.target.value })}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 sm:max-w-xs"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 sm:max-w-xs"
           />
         </div>
 
@@ -413,7 +413,7 @@ export default function NewEventPage() {
               min={1}
               value={form.maxParticipants}
               onChange={(e) => setForm({ ...form, maxParticipants: e.target.value })}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
             />
           </div>
           <div>
@@ -425,7 +425,7 @@ export default function NewEventPage() {
               min={1}
               value={form.minParticipants}
               onChange={(e) => setForm({ ...form, minParticipants: e.target.value })}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
             />
           </div>
         </div>
@@ -437,7 +437,7 @@ export default function NewEventPage() {
             type="text"
             value={form.location}
             onChange={(e) => setForm({ ...form, location: e.target.value })}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
           />
         </div>
 
@@ -475,7 +475,7 @@ export default function NewEventPage() {
               aria-checked={form.recurring}
               onClick={() => setForm({ ...form, recurring: !form.recurring, recurrenceDays: [] })}
               className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors ${
-                form.recurring ? 'bg-green-600' : 'bg-gray-200'
+                form.recurring ? 'bg-emerald-500' : 'bg-gray-200'
               }`}
             >
               <span
@@ -497,9 +497,9 @@ export default function NewEventPage() {
                     key={day}
                     type="button"
                     onClick={() => toggleRecurrenceDay(day)}
-                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                    className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
                       selected
-                        ? 'bg-green-600 text-white'
+                        ? 'bg-emerald-500 text-white'
                         : 'border border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
                     }`}
                   >
@@ -514,7 +514,7 @@ export default function NewEventPage() {
         {/* Attachment */}
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-700">Attachment (PDF)</label>
-          <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50">
+          <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50">
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
@@ -547,7 +547,7 @@ export default function NewEventPage() {
           <button
             type="submit"
             disabled={submitting || !form.title.trim() || !form.date}
-            className="rounded-lg bg-green-600 px-6 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-green-700 disabled:opacity-50"
+            className="rounded-xl bg-emerald-500 px-6 py-3 text-sm font-medium text-white transition hover:bg-emerald-600 disabled:opacity-50"
           >
             {submitting ? 'Creating...' : 'Create Event'}
           </button>

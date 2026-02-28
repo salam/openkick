@@ -105,6 +105,23 @@ describe("attendance service", () => {
     expect(p4Record?.status).toBe("waitlist");
   });
 
+  it("should set attending (not waitlist) when maxParticipants is null (open call)", () => {
+    const eventId = createEvent({ title: "Open Cup" }); // no maxParticipants => null
+    const playerIds: number[] = [];
+    for (let i = 0; i < 20; i++) {
+      const playerId = createPlayer(`Player${i}`);
+      playerIds.push(playerId);
+      const result = setAttendance(eventId, playerId, "attending", "web");
+      expect(result.finalStatus).toBe("attending");
+    }
+    // Verify zero waitlisted
+    const rows = db.exec(
+      `SELECT COUNT(*) FROM attendance WHERE eventId = ? AND status = 'waitlist'`,
+      [eventId],
+    );
+    expect(rows[0].values[0][0]).toBe(0);
+  });
+
   it("getAttendanceForEvent returns all records for the event", () => {
     const eventId = createEvent();
     const p1 = createPlayer("A");

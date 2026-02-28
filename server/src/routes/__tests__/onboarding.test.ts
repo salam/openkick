@@ -38,8 +38,11 @@ describe("Onboarding routes", () => {
     await teardown();
   });
 
-  it("GET /api/onboarding/status — returns expected shape with all steps false initially", async () => {
-    const res = await fetch(`${baseUrl}/api/onboarding/status`);
+  it("GET /api/onboarding/status — returns full shape with auth token, all steps false initially", async () => {
+    const token = generateJWT({ id: 1, role: "admin" });
+    const res = await fetch(`${baseUrl}/api/onboarding/status`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     expect(res.status).toBe(200);
     const body = await res.json();
 
@@ -62,12 +65,15 @@ describe("Onboarding routes", () => {
   });
 
   it("GET /api/onboarding/status — clubProfile becomes true after changing club_name", async () => {
+    const token = generateJWT({ id: 1, role: "admin" });
     db.run("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", [
       "club_name",
       "FC Test",
     ]);
 
-    const res = await fetch(`${baseUrl}/api/onboarding/status`);
+    const res = await fetch(`${baseUrl}/api/onboarding/status`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     expect(res.status).toBe(200);
     const body = await res.json();
 
@@ -75,12 +81,15 @@ describe("Onboarding routes", () => {
   });
 
   it("GET /api/onboarding/status — email step becomes true after setting smtp_host", async () => {
+    const token = generateJWT({ id: 1, role: "admin" });
     db.run("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", [
       "smtp_host",
       "smtp.example.com",
     ]);
 
-    const res = await fetch(`${baseUrl}/api/onboarding/status`);
+    const res = await fetch(`${baseUrl}/api/onboarding/status`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     expect(res.status).toBe(200);
     const body = await res.json();
 
@@ -112,16 +121,17 @@ describe("Onboarding routes", () => {
     expect(body).toHaveProperty("error");
   });
 
-  it("GET /api/onboarding/status — works without auth token", async () => {
+  it("GET /api/onboarding/status — without auth returns only onboardingCompleted", async () => {
     const res = await fetch(`${baseUrl}/api/onboarding/status`);
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toHaveProperty("onboardingCompleted");
-    expect(body).toHaveProperty("steps");
-    expect(body).toHaveProperty("checklist");
+    expect(body).not.toHaveProperty("steps");
+    expect(body).not.toHaveProperty("checklist");
   });
 
   it("GET /api/onboarding/status — checklist reflects inserted data", async () => {
+    const token = generateJWT({ id: 1, role: "admin" });
     db.run(
       "INSERT INTO players (name) VALUES (?)",
       ["Test Player"]
@@ -139,7 +149,9 @@ describe("Onboarding routes", () => {
       ["+41791234567", "parent"]
     );
 
-    const res = await fetch(`${baseUrl}/api/onboarding/status`);
+    const res = await fetch(`${baseUrl}/api/onboarding/status`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     expect(res.status).toBe(200);
     const body = await res.json();
 

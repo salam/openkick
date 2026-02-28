@@ -4,10 +4,6 @@ import { authMiddleware, requireRole } from "../auth.js";
 
 export const onboardingRouter = Router();
 
-/**
- * Helper: read a single setting value from the database.
- * Returns the value string, or an empty string if the key is missing.
- */
 function getSetting(key: string): string {
   const db = getDB();
   const result = db.exec("SELECT value FROM settings WHERE key = ?", [key]);
@@ -15,29 +11,14 @@ function getSetting(key: string): string {
   return (result[0].values[0][0] as string) ?? "";
 }
 
-/**
- * Helper: return the row count for a given table, with an optional WHERE clause.
- */
-function countRows(table: string, where?: string): number {
+function queryCount(sql: string, params?: unknown[]): number {
   const db = getDB();
-  const sql = where
-    ? `SELECT COUNT(*) FROM ${table} WHERE ${where}`
-    : `SELECT COUNT(*) FROM ${table}`;
-  const result = db.exec(sql);
+  const result = db.exec(sql, params);
   if (result.length === 0 || result[0].values.length === 0) return 0;
   return (result[0].values[0][0] as number) ?? 0;
 }
 
-/**
- * GET /onboarding/status
- *
- * Returns the current onboarding state derived from existing data.
- * This endpoint is publicly accessible (no auth required) so the
- * frontend AuthGuard can check it before the user is logged in.
- */
-onboardingRouter.get("/onboarding/status", (_req: Request, res: Response) => {
-  const onboardingCompleted = getSetting("onboarding_completed") === "true";
-
+function buildFullStatus() {
   const clubName = getSetting("club_name");
   const smtpHost = getSetting("smtp_host");
   const llmApiKey = getSetting("llm_api_key");
@@ -51,14 +32,30 @@ onboardingRouter.get("/onboarding/status", (_req: Request, res: Response) => {
   };
 
   const checklist = {
-    hasHolidays: countRows("vacation_periods") > 0,
-    hasTrainings: countRows("event_series") > 0,
-    hasPlayers: countRows("players") > 0,
-    hasGuardians: countRows("guardians", "role = 'parent'") > 0,
+    hasHolidays: queryCount("SELECT COUNT(*) FROM vacation_periods") > 0,
+    hasTrainings: queryCount("SELECT COUNT(*) FROM event_series") > 0,
+    hasPlayers: queryCount("SELECT COUNT(*) FROM players") > 0,
+    hasGuardians: queryCount("SELECT COUNT(*) FROM guardians WHERE role = ?", ["parent"]) > 0,
+    // Feeds are enabled by default in DEFAULT_SETTINGS; always true
     hasFeedsConfigured: true,
   };
 
-  res.json({ onboardingCompleted, steps, checklist });
+  return { steps, checklist };
+}
+
+// Public endpoint — returns only onboardingCompleted flag to unauthenticated callers,
+// full status (steps + checklist) to authenticated callers.
+onboardingRouter.get("/onboarding/status", (req: Request, res: Response) => {
+  const onboardingCompleted = getSetting("onboarding_completed") === "true";
+
+  // Check if request has a valid auth token (optional)
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith("Bearer ")) {
+    const { steps, checklist } = buildFullStatus();
+    res.json({ onboardingCompleted, steps, checklist });
+  } else {
+    res.json({ onboardingCompleted });
+  }
 });
 
 /**

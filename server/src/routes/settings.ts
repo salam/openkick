@@ -1,5 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import { getDB } from "../database.js";
+import { sendEmail } from "../services/email.js";
 
 export const settingsRouter = Router();
 
@@ -48,4 +49,20 @@ settingsRouter.put("/settings/:key", (req: Request, res: Response) => {
   db.run("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", [key as string, String(value)]);
 
   res.json({ key, value: String(value) });
+});
+
+// POST /api/settings/test-smtp — send a test email to verify SMTP config
+settingsRouter.post("/settings/test-smtp", async (req: Request, res: Response) => {
+  const { to } = req.body;
+  if (!to) {
+    res.status(400).json({ success: false, message: "to address is required" });
+    return;
+  }
+  try {
+    await sendEmail(to, "OpenKick SMTP Test", "<p>SMTP configuration is working.</p>");
+    res.json({ success: true, message: "Test email sent successfully." });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.status(500).json({ success: false, message });
+  }
 });

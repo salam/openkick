@@ -4,6 +4,7 @@ import path from "node:path";
 
 let _db: Database | null = null;
 let _dbPath: string | undefined;
+let _lastInsertRowId = 0;
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS players (
@@ -108,7 +109,8 @@ CREATE TABLE IF NOT EXISTS vacation_periods (
   startDate TEXT NOT NULL,
   endDate TEXT NOT NULL,
   source TEXT NOT NULL DEFAULT 'manual',
-  createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+  createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(name, startDate, endDate, source)
 );
 
 CREATE TABLE IF NOT EXISTS training_schedule (
@@ -154,6 +156,7 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   club_description: "A youth football club.",
   contact_info: "",
   club_logo: "",
+  onboarding_completed: "false",
 };
 
 export async function initDB(dbPath?: string): Promise<Database> {
@@ -196,11 +199,16 @@ export async function initDB(dbPath?: string): Promise<Database> {
 
   _dbPath = dbPath;
 
-  // Auto-persist: wrap db.run so every mutation is saved to disk
+  // Auto-persist: wrap db.run so every mutation is saved to disk.
+  // db.export() (called by saveDB) resets last_insert_rowid() to 0 in
+  // sql.js, so we capture it before saving and expose via getLastInsertId().
   if (dbPath) {
     const originalRun = db.run.bind(db);
     db.run = (...args: Parameters<typeof db.run>) => {
       const result = originalRun(...args);
+      const rowIdResult = db.exec("SELECT last_insert_rowid()");
+      _lastInsertRowId =
+        (rowIdResult[0]?.values[0]?.[0] as number) ?? 0;
       saveDB(db, dbPath);
       return result;
     };
@@ -225,4 +233,16 @@ export function getDB(): Database {
     throw new Error("Database not initialized. Call initDB() first.");
   }
   return _db;
+}
+
+/**
+ * Return the rowid from the most recent INSERT executed via db.run().
+ * Use this instead of SELECT last_insert_rowid() — db.export() in the
+ * auto-persist wrapper resets that SQLite function to 0.
+ */
+export function getLastInsertId(): number {
+  if (_lastInsertRowId !== 0) return _lastInsertRowId;
+  if (!_db) return 0;
+  const result = _db.exec("SELECT last_insert_rowid()");
+  return (result[0]?.values[0]?.[0] as number) ?? 0;
 }

@@ -1,5 +1,12 @@
 # OpenKick Release Notes
 
+## Version 1.0.8 (Mar 1, 2026, 05:30)
+
+* WhatsApp setup wizard: guided 4-step assistant during onboarding to install Docker, configure and start WAHA, and connect WhatsApp — no terminal needed
+* Docker auto-detection: wizard checks if Docker is installed and offers one-click installation if missing
+* WAHA configuration: choose port and engine (WEBJS or NOWEB) from a simple dropdown
+* QR code connection: scan to link your WhatsApp number directly from the setup screen
+
 ## Version 1.0.7 (Mar 1, 2026, 05:00)
 
 * Holiday auto-sync: selected holiday preset is now automatically re-synced daily in the background

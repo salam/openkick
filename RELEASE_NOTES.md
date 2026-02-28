@@ -1,5 +1,11 @@
 # OpenKick Release Notes
 
+## Version 1.0.3 (Feb 28, 2026, 23:00)
+
+* llms.txt: Dynamic endpoint at /llms.txt with club name, public API docs, and live statistics — customizable via settings
+* MCP server: Read-only Model Context Protocol interface at /mcp for agent interoperability (club info, upcoming events, attendance stats, player categories)
+* robots.txt updated: Blocks data-modifying API paths while allowing read-only public endpoints
+
 ## Version 1.0.2 (Feb 28, 2026, 22:00)
 
 * Public feeds: Subscribe to club events via RSS 2.0, Atom 1.0, or calendar (ICS)

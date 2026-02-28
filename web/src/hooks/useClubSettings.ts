@@ -1,10 +1,6 @@
 'use client';
-import { useEffect, useState } from 'react';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-const CACHE_KEY = 'openkick_club_settings';
-
-interface ClubSettings {
+export interface ClubSettings {
   club_name: string;
   club_description: string;
   club_logo: string;
@@ -30,32 +26,14 @@ const DEFAULTS: ClubSettings = {
   meta_keywords: '',
 };
 
+declare global {
+  interface Window {
+    __CLUB_SETTINGS__?: Partial<ClubSettings>;
+  }
+}
+
+/** Reads club settings injected server-side into window.__CLUB_SETTINGS__. */
 export function useClubSettings(): ClubSettings {
-  const [settings, setSettings] = useState<ClubSettings>(() => {
-    if (typeof window === 'undefined') return DEFAULTS;
-    try {
-      const cached = localStorage.getItem(CACHE_KEY);
-      if (cached) return { ...DEFAULTS, ...JSON.parse(cached) };
-    } catch { /* ignore */ }
-    return DEFAULTS;
-  });
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch(`${API_URL}/api/settings`)
-      .then((r) => r.json())
-      .then((all: Record<string, string>) => {
-        if (cancelled) return;
-        const next: ClubSettings = { ...DEFAULTS };
-        for (const k of Object.keys(DEFAULTS) as (keyof ClubSettings)[]) {
-          if (all[k]) next[k] = all[k];
-        }
-        setSettings(next);
-        localStorage.setItem(CACHE_KEY, JSON.stringify(next));
-      })
-      .catch(() => { /* use cached or defaults */ });
-    return () => { cancelled = true; };
-  }, []);
-
-  return settings;
+  if (typeof window === 'undefined') return DEFAULTS;
+  return { ...DEFAULTS, ...window.__CLUB_SETTINGS__ };
 }

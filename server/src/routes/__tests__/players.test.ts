@@ -172,6 +172,40 @@ describe("Players routes", () => {
     expect(getBody.category).toBe("D-9");
   });
 
+  it("POST /api/players — accepts and returns lastNameInitial", async () => {
+    const res = await fetch(`${baseUrl}/api/players`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "Jonas", yearOfBirth: 2015, lastNameInitial: "M" }),
+    });
+    expect(res.status).toBe(201);
+    const player = await res.json();
+    expect(player.lastNameInitial).toBe("M");
+  });
+
+  it("PUT /api/players/:id — updates lastNameInitial", async () => {
+    const createRes = await fetch(`${baseUrl}/api/players`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "Jonas", yearOfBirth: 2015 }),
+    });
+    const { id } = await createRes.json();
+
+    const res = await fetch(`${baseUrl}/api/players/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lastNameInitial: "S" }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.lastNameInitial).toBe("S");
+
+    // Verify it persists on GET
+    const getRes = await fetch(`${baseUrl}/api/players/${id}`);
+    const getBody = await getRes.json();
+    expect(getBody.lastNameInitial).toBe("S");
+  });
+
   it("DELETE /api/players/:id — removes player", async () => {
     const createRes = await fetch(`${baseUrl}/api/players`, {
       method: "POST",

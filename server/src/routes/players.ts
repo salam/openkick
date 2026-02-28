@@ -1,5 +1,5 @@
 import { Router, type Request, type Response } from "express";
-import { getDB } from "../database.js";
+import { getDB, getLastInsertId } from "../database.js";
 import { getCategoryForBirthYear } from "../services/categories.js";
 import {
   hashPassword,
@@ -43,7 +43,7 @@ function withCategory(player: Record<string, unknown>): Record<string, unknown> 
 
 // POST /api/players
 playersRouter.post("/players", (req: Request, res: Response) => {
-  const { name, yearOfBirth, position, notes, category } = req.body;
+  const { name, yearOfBirth, position, notes, category, lastNameInitial } = req.body;
   if (!name) {
     res.status(400).json({ error: "name is required" });
     return;
@@ -51,12 +51,11 @@ playersRouter.post("/players", (req: Request, res: Response) => {
 
   const db = getDB();
   db.run(
-    "INSERT INTO players (name, yearOfBirth, position, notes, category) VALUES (?, ?, ?, ?, ?)",
-    [name, yearOfBirth ?? null, position ?? null, notes ?? null, category ?? null],
+    "INSERT INTO players (name, yearOfBirth, position, notes, category, lastNameInitial) VALUES (?, ?, ?, ?, ?, ?)",
+    [name, yearOfBirth ?? null, position ?? null, notes ?? null, category ?? null, lastNameInitial ?? null],
   );
 
-  const result = db.exec("SELECT last_insert_rowid() AS id");
-  const id = result[0].values[0][0] as number;
+  const id = getLastInsertId();
 
   const rows = rowsToObjects(db.exec("SELECT * FROM players WHERE id = ?", [id]));
   const player = withCategory(rows[0]);
@@ -68,7 +67,19 @@ playersRouter.post("/players", (req: Request, res: Response) => {
 playersRouter.get("/players", (_req: Request, res: Response) => {
   const db = getDB();
   const rows = rowsToObjects(db.exec("SELECT * FROM players ORDER BY name"));
-  const players = rows.map(withCategory);
+  const players = rows.map((row) => {
+    const player = withCategory(row);
+    const guardians = rowsToObjects(
+      db.exec(
+        `SELECT g.id, g.phone, g.name, g.email, g.role, g.language
+         FROM guardians g
+         JOIN guardian_players gp ON g.id = gp.guardianId
+         WHERE gp.playerId = ?`,
+        [player.id],
+      ),
+    );
+    return { ...player, guardians };
+  });
   res.json(players);
 });
 
@@ -117,10 +128,11 @@ playersRouter.put("/players/:id", (req: Request, res: Response) => {
   const notes = req.body.notes ?? current.notes;
   // category: if explicitly provided in body (even null), use it; otherwise keep current
   const category = "category" in req.body ? req.body.category : current.category;
+  const lastNameInitial = req.body.lastNameInitial ?? current.lastNameInitial;
 
   db.run(
-    "UPDATE players SET name = ?, yearOfBirth = ?, position = ?, notes = ?, category = ? WHERE id = ?",
-    [name, yearOfBirth, position, notes, category, id],
+    "UPDATE players SET name = ?, yearOfBirth = ?, position = ?, notes = ?, category = ?, lastNameInitial = ? WHERE id = ?",
+    [name, yearOfBirth, position, notes, category, lastNameInitial, id],
   );
 
   const rows = rowsToObjects(db.exec("SELECT * FROM players WHERE id = ?", [id]));
@@ -139,6 +151,8 @@ playersRouter.delete("/players/:id", (req: Request, res: Response) => {
     return;
   }
 
+  db.run("DELETE FROM team_players WHERE playerId = ?", [id]);
+  db.run("DELETE FROM attendance WHERE playerId = ?", [id]);
   db.run("DELETE FROM guardian_players WHERE playerId = ?", [id]);
   db.run("DELETE FROM players WHERE id = ?", [id]);
   res.status(204).end();
@@ -184,8 +198,7 @@ playersRouter.post("/guardians", async (req: Request, res: Response) => {
     ],
   );
 
-  const result = db.exec("SELECT last_insert_rowid() AS id");
-  const id = result[0].values[0][0] as number;
+  const id = getLastInsertId();
 
   const rows = rowsToObjects(
     db.exec(

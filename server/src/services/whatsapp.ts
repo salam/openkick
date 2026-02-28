@@ -23,6 +23,28 @@ export async function sendMessage(
   });
 }
 
+export async function reactToMessage(
+  messageId: string,
+  reaction: string,
+): Promise<void> {
+  const db = getDB();
+  const result = db.exec(
+    "SELECT value FROM settings WHERE key = 'waha_url'",
+  );
+  const wahaUrl =
+    (result[0]?.values[0]?.[0] as string) || "http://localhost:3008";
+
+  await fetch(`${wahaUrl}/api/reaction`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      messageId,
+      reaction,
+      session: "default",
+    }),
+  });
+}
+
 export interface ParsedAttendance {
   playerName: string | null;
   status: "attending" | "absent";

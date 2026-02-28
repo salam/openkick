@@ -110,4 +110,23 @@ describe("whatsapp service", () => {
       });
     });
   });
+
+  describe("reactToMessage", () => {
+    it("calls WAHA PUT /api/reaction with correct payload", async () => {
+      fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
+
+      const { reactToMessage } = await import("../whatsapp.js");
+      await reactToMessage("false_41791234567@c.us_AAAAAA", "👀");
+
+      expect(fetchMock).toHaveBeenCalledOnce();
+      const [url, options] = fetchMock.mock.calls[0];
+      expect(url).toBe("http://localhost:3008/api/reaction");
+      expect(options.method).toBe("PUT");
+
+      const body = JSON.parse(options.body);
+      expect(body.messageId).toBe("false_41791234567@c.us_AAAAAA");
+      expect(body.reaction).toBe("👀");
+      expect(body.session).toBe("default");
+    });
+  });
 });

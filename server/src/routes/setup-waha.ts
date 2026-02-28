@@ -1,0 +1,198 @@
+import { Router, type Request, type Response } from "express";
+import { spawn } from "node:child_process";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { getDB } from "../database.js";
+import { authMiddleware, requireRole } from "../auth.js";
+import { DockerService } from "../services/docker.service.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const VALID_ENGINES = ["WEBJS", "NOWEB"] as const;
+
+export const setupWahaRouter = Router();
+
+// All endpoints require admin JWT
+setupWahaRouter.use(authMiddleware, requireRole("admin"));
+
+const docker = new DockerService();
+
+// ── Helper: read waha_url from settings ─────────────────────────────
+
+function getWahaUrl(): string {
+  const db = getDB();
+  const result = db.exec("SELECT value FROM settings WHERE key = 'waha_url'");
+  return (result[0]?.values[0]?.[0] as string) || process.env.WAHA_URL || "http://localhost:3008";
+}
+
+// ── Helper: send SSE event ──────────────────────────────────────────
+
+function sendSSE(res: Response, data: Record<string, unknown>): void {
+  res.write(`data: ${JSON.stringify(data)}\n\n`);
+}
+
+// ── GET /docker/status ──────────────────────────────────────────────
+
+setupWahaRouter.get("/docker/status", async (_req: Request, res: Response) => {
+  try {
+    const result = await docker.checkDaemon();
+    res.json(result);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.status(500).json({ error: message });
+  }
+});
+
+// ── POST /docker/install ────────────────────────────────────────────
+// Runs the install-docker.sh script and streams output as SSE.
+// Uses spawn (not exec) with a hardcoded script path -- no user input
+// is interpolated into the command, so shell injection is not possible.
+
+setupWahaRouter.post("/docker/install", (req: Request, res: Response) => {
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+  });
+
+  const scriptPath = path.resolve(__dirname, "../../../tools/install-docker.sh");
+  const child = spawn("bash", [scriptPath]);
+
+  child.stdout.on("data", (chunk: Buffer) => {
+    sendSSE(res, { type: "progress", text: chunk.toString().trim() });
+  });
+
+  child.stderr.on("data", (chunk: Buffer) => {
+    sendSSE(res, { type: "progress", text: chunk.toString().trim() });
+  });
+
+  child.on("close", (code) => {
+    if (code === 0) {
+      sendSSE(res, { type: "done" });
+    } else {
+      sendSSE(res, { type: "error", text: `Install script exited with code ${code}` });
+    }
+    res.end();
+  });
+
+  child.on("error", (err) => {
+    sendSSE(res, { type: "error", text: err.message });
+    res.end();
+  });
+
+  req.on("close", () => {
+    child.kill();
+  });
+});
+
+// ── GET /waha/status ────────────────────────────────────────────────
+
+setupWahaRouter.get("/waha/status", async (_req: Request, res: Response) => {
+  try {
+    const result = await docker.getWahaStatus();
+    res.json(result);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.status(500).json({ error: message });
+  }
+});
+
+// ── POST /waha/install ──────────────────────────────────────────────
+
+setupWahaRouter.post("/waha/install", async (req: Request, res: Response) => {
+  const { port, engine } = req.body;
+
+  // Validate port
+  const portNum = Number(port);
+  if (!Number.isFinite(portNum) || portNum < 1024 || portNum > 65535) {
+    res.status(400).json({ error: "Port must be a number between 1024 and 65535" });
+    return;
+  }
+
+  // Validate engine
+  if (!engine || !VALID_ENGINES.includes(engine)) {
+    res.status(400).json({ error: "Engine must be one of: WEBJS, NOWEB" });
+    return;
+  }
+
+  // Stream progress via SSE
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+  });
+
+  try {
+    await docker.installWaha(
+      { port: portNum, engine },
+      (msg) => sendSSE(res, { type: "progress", text: msg }),
+    );
+
+    // Save waha_url setting
+    const db = getDB();
+    db.run("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", [
+      "waha_url",
+      `http://localhost:${portNum}`,
+    ]);
+
+    sendSSE(res, { type: "done", wahaUrl: `http://localhost:${portNum}` });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    sendSSE(res, { type: "error", text: message });
+  }
+
+  res.end();
+});
+
+// ── POST /waha/start ────────────────────────────────────────────────
+
+setupWahaRouter.post("/waha/start", async (_req: Request, res: Response) => {
+  try {
+    await docker.startWaha();
+    res.json({ ok: true });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.status(500).json({ error: message });
+  }
+});
+
+// ── POST /waha/stop ─────────────────────────────────────────────────
+
+setupWahaRouter.post("/waha/stop", async (_req: Request, res: Response) => {
+  try {
+    await docker.stopWaha();
+    res.json({ ok: true });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.status(500).json({ error: message });
+  }
+});
+
+// ── GET /waha/qr ────────────────────────────────────────────────────
+
+setupWahaRouter.get("/waha/qr", async (_req: Request, res: Response) => {
+  const wahaUrl = getWahaUrl();
+  try {
+    const upstream = await fetch(`${wahaUrl}/api/screenshot?session=default`);
+    const contentType = upstream.headers.get("content-type") || "image/png";
+    res.setHeader("Content-Type", contentType);
+    const buffer = Buffer.from(await upstream.arrayBuffer());
+    res.send(buffer);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.status(502).json({ error: message });
+  }
+});
+
+// ── GET /waha/session ───────────────────────────────────────────────
+
+setupWahaRouter.get("/waha/session", async (_req: Request, res: Response) => {
+  const wahaUrl = getWahaUrl();
+  try {
+    const upstream = await fetch(`${wahaUrl}/api/sessions/default`);
+    const data = await upstream.json();
+    res.json(data);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.status(502).json({ error: message });
+  }
+});

@@ -23,6 +23,7 @@ import { llmsRouter } from "./routes/llms.js";
 import { feedsRouter, wellKnownRouter } from "./routes/feeds.js";
 import { mcpRouter } from "./mcp/index.js";
 import { securityAuditRouter } from "./routes/security-audit.js";
+import { setupWahaRouter } from "./routes/setup-waha.js";
 
 const app = express();
 
@@ -53,6 +54,7 @@ app.use("/api", teamsRouter);
 app.use(wellKnownRouter);
 app.use("/api", feedsRouter);
 app.use("/api", securityAuditRouter);
+app.use("/api/setup-waha", setupWahaRouter);
 app.use("/mcp", mcpRouter);
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;

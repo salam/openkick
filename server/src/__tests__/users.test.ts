@@ -144,3 +144,44 @@ describe("PUT /api/users/:id/role", () => {
     expect(res.status).toBe(400);
   });
 });
+
+describe("POST /api/users/:id/reset-password", () => {
+  it("returns 403 for a coach", async () => {
+    const coachId = insertUser("Coach", "coach@test.com", "coach");
+    const token = generateJWT({ id: coachId, role: "coach" });
+    const res = await request(app)
+      .post(`/api/users/${coachId}/reset-password`)
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(403);
+  });
+
+  it("sends reset email and returns 204 for admin", async () => {
+    const { sendEmail } = await import("../services/email.js");
+    const adminId = insertUser("Admin", "admin@test.com", "admin");
+    const coachId = insertUser("Coach", "coach@test.com", "coach");
+    const token = generateJWT({ id: adminId, role: "admin" });
+
+    const res = await request(app)
+      .post(`/api/users/${coachId}/reset-password`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.status).toBe(204);
+    expect(sendEmail).toHaveBeenCalledWith(
+      "coach@test.com",
+      "Password Reset",
+      expect.stringContaining("reset-password"),
+    );
+
+    const row = db.exec("SELECT resetToken FROM guardians WHERE id = ?", [coachId]);
+    expect(row[0].values[0][0]).toBeTruthy();
+  });
+
+  it("returns 404 for non-existent user", async () => {
+    const adminId = insertUser("Admin", "admin@test.com", "admin");
+    const token = generateJWT({ id: adminId, role: "admin" });
+    const res = await request(app)
+      .post("/api/users/999/reset-password")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(404);
+  });
+});

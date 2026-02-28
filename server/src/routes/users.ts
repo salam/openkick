@@ -1,6 +1,8 @@
 import { Router, type Request, type Response } from "express";
+import crypto from "node:crypto";
 import { getDB } from "../database.js";
 import { authMiddleware, requireRole } from "../auth.js";
+import { sendEmail } from "../services/email.js";
 
 export const usersRouter = Router();
 
@@ -73,5 +75,50 @@ usersRouter.put(
 
     db.run("UPDATE guardians SET role = ? WHERE id = ?", [role, targetId]);
     res.json({ id: targetId, role });
+  },
+);
+
+// POST /api/users/:id/reset-password — admin triggers password reset email
+usersRouter.post(
+  "/users/:id/reset-password",
+  authMiddleware,
+  requireRole("admin"),
+  async (req: Request, res: Response) => {
+    const targetId = Number(req.params.id);
+    const db = getDB();
+
+    const result = db.exec(
+      "SELECT id, email FROM guardians WHERE id = ? AND role IN ('admin', 'coach')",
+      [targetId],
+    );
+
+    if (result.length === 0 || result[0].values.length === 0) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    const email = result[0].values[0][1] as string;
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+
+    db.run(
+      "UPDATE guardians SET resetToken = ?, resetTokenExpiry = ? WHERE id = ?",
+      [resetToken, resetTokenExpiry, targetId],
+    );
+
+    const baseUrl = process.env.CORS_ORIGIN?.split(",")[0] || "http://localhost:3000";
+    const resetUrl = `${baseUrl}/reset-password/${resetToken}/`;
+
+    try {
+      await sendEmail(
+        email,
+        "Password Reset",
+        `<p>Click <a href="${resetUrl}">here</a> to reset your password.</p>`,
+      );
+    } catch (err) {
+      console.error("Failed to send password reset email:", err);
+    }
+
+    res.status(204).send();
   },
 );

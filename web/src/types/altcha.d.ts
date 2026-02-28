@@ -3,6 +3,7 @@ declare namespace JSX {
     'altcha-widget': React.DetailedHTMLProps<
       React.HTMLAttributes<HTMLElement> & {
         challengeurl?: string;
+        challengejson?: string;
         hidefooter?: boolean;
       },
       HTMLElement

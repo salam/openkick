@@ -119,6 +119,113 @@ describe("Attendance routes", () => {
     expect(body).toHaveLength(2);
   });
 
+  it("POST /api/attendance with synthetic series eventId — auto-materializes and returns real eventId", async () => {
+    // Create an event series directly in DB
+    db.run(
+      `INSERT INTO event_series (type, title, description, startTime, attendanceTime, location, categoryRequirement, maxParticipants, minParticipants, recurrenceDay, startDate, endDate, deadlineOffsetHours)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        "training",
+        "Weekly Training",
+        "Regular training session",
+        "18:00",
+        "17:45",
+        "Main Field",
+        null,
+        20,
+        5,
+        1, // Monday
+        "2026-01-01",
+        "2026-12-31",
+        24,
+      ],
+    );
+    const seriesResult = db.exec("SELECT last_insert_rowid() AS id");
+    const seriesId = seriesResult[0].values[0][0] as number;
+
+    const playerId = createPlayer("SeriesPlayer");
+
+    // RSVP using synthetic eventId
+    const res = await fetch(`${baseUrl}/api/attendance`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        eventId: `series-${seriesId}-2026-03-02`,
+        playerId,
+        status: "attending",
+        source: "web",
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.finalStatus).toBe("attending");
+    // The returned eventId should be a real number
+    expect(typeof body.eventId).toBe("number");
+    expect(body.eventId).toBeGreaterThan(0);
+
+    // Verify the materialized event exists in DB with correct seriesId and date
+    const eventRows = db.exec(
+      "SELECT * FROM events WHERE seriesId = ? AND date = ?",
+      [seriesId, "2026-03-02"],
+    );
+    expect(eventRows.length).toBe(1);
+    expect(eventRows[0].values.length).toBe(1);
+
+    // Verify event fields were copied from the series template
+    const cols = eventRows[0].columns;
+    const vals = eventRows[0].values[0];
+    const event: Record<string, unknown> = {};
+    cols.forEach((col, i) => { event[col] = vals[i]; });
+
+    expect(event.type).toBe("training");
+    expect(event.title).toBe("Weekly Training");
+    expect(event.startTime).toBe("18:00");
+    expect(event.attendanceTime).toBe("17:45");
+    expect(event.location).toBe("Main Field");
+    expect(event.maxParticipants).toBe(20);
+    expect(event.minParticipants).toBe(5);
+    expect(event.seriesId).toBe(seriesId);
+    // deadline should be computed (24h before the event date + startTime)
+    expect(event.deadline).toBeTruthy();
+  });
+
+  it("POST /api/attendance with synthetic series eventId — reuses existing materialized event", async () => {
+    // Create an event series
+    db.run(
+      `INSERT INTO event_series (type, title, recurrenceDay, startDate, endDate)
+       VALUES (?, ?, ?, ?, ?)`,
+      ["training", "Reuse Test", 1, "2026-01-01", "2026-12-31"],
+    );
+    const seriesResult = db.exec("SELECT last_insert_rowid() AS id");
+    const seriesId = seriesResult[0].values[0][0] as number;
+
+    // Pre-materialize an event for this series+date
+    db.run(
+      "INSERT INTO events (type, title, date, seriesId) VALUES (?, ?, ?, ?)",
+      ["training", "Reuse Test", "2026-03-09", seriesId],
+    );
+    const eventResult = db.exec("SELECT last_insert_rowid() AS id");
+    const existingEventId = eventResult[0].values[0][0] as number;
+
+    const playerId = createPlayer("ReusePlayer");
+
+    const res = await fetch(`${baseUrl}/api/attendance`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        eventId: `series-${seriesId}-2026-03-09`,
+        playerId,
+        status: "attending",
+        source: "web",
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.eventId).toBe(existingEventId);
+  });
+
   it("DELETE /api/attendance/:id — removes attendance record", async () => {
     const eventId = createEvent();
     const playerId = createPlayer("Del");

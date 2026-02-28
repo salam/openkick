@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
+import { t, getLanguage } from '@/lib/i18n';
 import ClubProfileForm from '@/components/settings/ClubProfileForm';
 import SmtpForm from '@/components/settings/SmtpForm';
 import LlmConfigForm from '@/components/settings/LlmConfigForm';
@@ -12,37 +13,32 @@ import InviteTeamForm from '@/components/settings/InviteTeamForm';
 const STEPS = [
   {
     key: 'clubProfile',
-    title: 'Club Profile',
-    description:
-      'This is how your club appears to parents and players. Give it a name so everyone knows where they belong.',
+    titleKey: 'step_club',
+    descKey: 'step_club_desc',
     required: true,
   },
   {
     key: 'email',
-    title: 'Email (SMTP)',
-    description:
-      "Needed for password resets and notifications to parents. Without this, users can't recover their accounts.",
+    titleKey: 'step_email',
+    descKey: 'step_email_desc',
     required: false,
   },
   {
     key: 'llm',
-    title: 'AI Assistant',
-    description:
-      'Powers automatic lineup suggestions and message drafts. Connects to OpenAI, Claude, or Euria.',
+    titleKey: 'step_ai',
+    descKey: 'step_ai_desc',
     required: false,
   },
   {
     key: 'waha',
-    title: 'WhatsApp Bot',
-    description:
-      'Send attendance reminders directly via WhatsApp. Requires a self-hosted WAHA instance.',
+    titleKey: 'step_whatsapp',
+    descKey: 'step_whatsapp_desc',
     required: false,
   },
   {
     key: 'invite',
-    title: 'Invite Team',
-    description:
-      'Add coaches or other admins who can help manage events and players.',
+    titleKey: 'step_invite',
+    descKey: 'step_invite_desc',
     required: false,
   },
 ];
@@ -65,6 +61,12 @@ export default function OnboardingPage() {
   const [loading, setLoading] = useState(true);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [logoMsg, setLogoMsg] = useState('');
+  const [, setLang] = useState(() => getLanguage());
+  useEffect(() => {
+    function onLangChange() { setLang(getLanguage()); }
+    window.addEventListener('languagechange', onLangChange);
+    return () => window.removeEventListener('languagechange', onLangChange);
+  }, []);
 
   const loadSettings = useCallback(async () => {
     try {
@@ -126,10 +128,10 @@ export default function OnboardingPage() {
         { method: 'POST', body: JSON.stringify({ data: base64, filename: 'logo.jpg' }) },
       );
       update('club_logo', res.value);
-      setLogoMsg('Logo uploaded successfully.');
+      setLogoMsg(t('logo_uploaded'));
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
-      setLogoMsg(msg ? `Failed to upload logo: ${msg}` : 'Failed to upload logo.');
+      setLogoMsg(msg ? `${t('failed_upload_logo')}: ${msg}` : t('failed_upload_logo'));
     } finally {
       setUploadingLogo(false);
       setTimeout(() => setLogoMsg(''), 5000);
@@ -141,9 +143,9 @@ export default function OnboardingPage() {
     try {
       await apiFetch('/api/settings/remove-logo', { method: 'DELETE' });
       update('club_logo', '');
-      setLogoMsg('Logo removed.');
+      setLogoMsg(t('logo_removed'));
     } catch {
-      setLogoMsg('Failed to remove logo.');
+      setLogoMsg(t('failed_remove_logo'));
     } finally {
       setUploadingLogo(false);
       setTimeout(() => setLogoMsg(''), 3000);
@@ -237,7 +239,7 @@ export default function OnboardingPage() {
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-xl font-bold text-gray-900">OpenKick</h1>
         <span className="text-sm text-gray-500">
-          Step {currentStep + 1} of {STEPS.length}
+          {t('step_of')} {currentStep + 1} {t('of')} {STEPS.length}
         </span>
       </div>
 
@@ -256,9 +258,9 @@ export default function OnboardingPage() {
       {/* Step title and description */}
       <div className="mb-4">
         <h2 className="mb-1 text-lg font-semibold text-gray-900">
-          {STEPS[currentStep].title}
+          {t(STEPS[currentStep].titleKey)}
         </h2>
-        <p className="text-gray-600">{STEPS[currentStep].description}</p>
+        <p className="text-gray-600">{t(STEPS[currentStep].descKey)}</p>
       </div>
 
       {/* Step content */}
@@ -272,7 +274,7 @@ export default function OnboardingPage() {
               onClick={() => setCurrentStep((prev) => prev - 1)}
               className="text-sm font-medium text-gray-600 hover:text-gray-900"
             >
-              &larr; Back
+              &larr; {t('back')}
             </button>
           )}
         </div>
@@ -283,7 +285,7 @@ export default function OnboardingPage() {
               onClick={() => setCurrentStep((prev) => prev + 1)}
               className="text-sm text-gray-500 hover:text-gray-700"
             >
-              Skip for now
+              {t('skip_for_now')}
             </button>
           )}
           <button
@@ -292,10 +294,10 @@ export default function OnboardingPage() {
             className="rounded-xl bg-emerald-500 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-600 disabled:opacity-50"
           >
             {saving
-              ? 'Saving...'
+              ? t('saving')
               : isLastStep
-                ? 'Finish'
-                : 'Save & Continue \u2192'}
+                ? t('finish')
+                : t('save_continue')}
           </button>
         </div>
       </div>

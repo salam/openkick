@@ -5,11 +5,6 @@ import { apiFetch } from '@/lib/api';
 import { getUserRole } from '@/lib/auth';
 import ImageCropUpload from '@/components/ImageCropUpload';
 
-interface SettingRecord {
-  key: string;
-  value: string;
-}
-
 const LLM_PROVIDERS = [
   { value: 'openai', label: 'OpenAI' },
   { value: 'anthropic', label: 'Claude (Anthropic)' },
@@ -104,10 +99,13 @@ export default function SettingsPage() {
   const [testingConnection, setTestingConnection] = useState(false);
   const [importUrl, setImportUrl] = useState('');
   const [importingUrl, setImportingUrl] = useState(false);
-  const [syncingZurich, setSyncingZurich] = useState(false);
+  const [presets, setPresets] = useState<{ group: string; presets: { id: string; label: string }[] }[]>([]);
+  const [selectedPreset, setSelectedPreset] = useState('');
+  const [syncing, setSyncing] = useState(false);
   const [uploadingIcs, setUploadingIcs] = useState(false);
   const [holidayMsg, setHolidayMsg] = useState('');
   const [upcomingVacations, setUpcomingVacations] = useState<{ name: string; startDate: string; endDate: string }[]>([]);
+  const [suggestion, setSuggestion] = useState('');
   const [smtpTestTo, setSmtpTestTo] = useState('');
   const [testingSmtp, setTestingSmtp] = useState(false);
   const [smtpTestResult, setSmtpTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
@@ -117,8 +115,8 @@ export default function SettingsPage() {
   const [logoMsg, setLogoMsg] = useState('');
   const [auditResult, setAuditResult] = useState<{
     timestamp: string;
-    checks: { id: string; category: string; status: 'pass' | 'warn' | 'fail'; message: string; detail?: string }[];
-    summary: { pass: number; warn: number; fail: number };
+    checks: { id: string; category: string; status: 'pass' | 'warn' | 'fail' | 'info'; message: string; detail?: string }[];
+    summary: { pass: number; warn: number; fail: number; info: number };
   } | null>(null);
   const [runningAudit, setRunningAudit] = useState(false);
   const [auditExpanded, setAuditExpanded] = useState(false);
@@ -128,18 +126,15 @@ export default function SettingsPage() {
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [inviteName, setInviteName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
+  const [lastAdminInfoId, setLastAdminInfoId] = useState<number | null>(null);
   const [inviteRole, setInviteRole] = useState('coach');
   const [inviting, setInviting] = useState(false);
 
   const loadSettings = useCallback(async () => {
     try {
-      const data = await apiFetch<SettingRecord[]>('/api/settings');
-      const map: SettingsMap = {};
-      data.forEach((s) => {
-        map[s.key] = s.value;
-      });
-      setSettings(map);
-      setOriginal(map);
+      const data = await apiFetch<SettingsMap>('/api/settings');
+      setSettings(data);
+      setOriginal(data);
     } catch {
       // settings not available yet
     } finally {
@@ -166,6 +161,15 @@ export default function SettingsPage() {
   }, []);
 
   useEffect(() => { loadUsers(); }, [loadUsers]);
+
+  useEffect(() => {
+    apiFetch<{ group: string; presets: { id: string; label: string }[] }[]>('/api/vacations/presets')
+      .then((data) => {
+        setPresets(data);
+        if (data[0]?.presets[0]) setSelectedPreset(data[0].presets[0].id);
+      })
+      .catch(() => {});
+  }, []);
 
   function update(key: string, value: string) {
     setSettings((prev) => ({ ...prev, [key]: value }));
@@ -244,27 +248,40 @@ export default function SettingsPage() {
     }
   }
 
-  async function handleSyncZurich() {
-    setSyncingZurich(true);
+  async function handleSyncPreset() {
+    if (!selectedPreset) return;
+    setSyncing(true);
     setHolidayMsg('');
     try {
-      const year = new Date().getFullYear();
-      const data = await apiFetch<{ synced: number; upcoming: { name: string; startDate: string; endDate: string }[] }>('/api/vacations/sync-zurich', {
+      const data = await apiFetch<{ synced: number; upcoming: { name: string; startDate: string; endDate: string }[] }>('/api/vacations/sync', {
         method: 'POST',
-        body: JSON.stringify({ year }),
+        body: JSON.stringify({ presetId: selectedPreset }),
       });
       setUpcomingVacations(data.upcoming || []);
       const summary = (data.upcoming || [])
         .map((v) => `${v.name} (${v.startDate} – ${v.endDate})`)
         .join(', ');
-      setHolidayMsg(summary ? `Synced! Next: ${summary}` : 'Zurich holidays synced successfully.');
+      setHolidayMsg(summary ? `Synced! Next: ${summary}` : 'Holidays synced successfully.');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
-      setHolidayMsg(`Failed to sync Zurich holidays: ${msg}`);
+      setHolidayMsg(`Failed to sync holidays: ${msg}`);
     } finally {
-      setSyncingZurich(false);
+      setSyncing(false);
       setTimeout(() => setHolidayMsg(''), 5000);
     }
+  }
+
+  function handleSuggestSource() {
+    if (!suggestion.trim()) return;
+    const title = encodeURIComponent('Holiday source request');
+    const body = encodeURIComponent(
+      `**Requested region / source:**\n${suggestion}\n\n_Submitted from OpenKick settings_`,
+    );
+    window.open(
+      `https://github.com/your-org/openkick/issues/new?title=${title}&body=${body}&labels=holiday-source`,
+      '_blank',
+    );
+    setSuggestion('');
   }
 
   async function handleImportUrl() {
@@ -361,8 +378,8 @@ export default function SettingsPage() {
     try {
       const result = await apiFetch<{
         timestamp: string;
-        checks: { id: string; category: string; status: 'pass' | 'warn' | 'fail'; message: string; detail?: string }[];
-        summary: { pass: number; warn: number; fail: number };
+        checks: { id: string; category: string; status: 'pass' | 'warn' | 'fail' | 'info'; message: string; detail?: string }[];
+        summary: { pass: number; warn: number; fail: number; info: number };
       }>('/api/security-audit');
       setAuditResult(result);
       setAuditExpanded(true);
@@ -421,6 +438,15 @@ export default function SettingsPage() {
 
   const hasChanges = SETTING_KEYS.some((k) => settings[k] !== original[k]);
 
+  useEffect(() => {
+    if (!hasChanges) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [hasChanges]);
+
   const cardClass = 'rounded-lg border border-gray-200 bg-white p-6';
   const labelClass = 'block text-sm font-medium text-gray-700 mb-1';
   const inputClass =
@@ -430,7 +456,21 @@ export default function SettingsPage() {
 
   return (
       <div className="mx-auto max-w-3xl">
-        <h1 className="mb-6 text-2xl font-bold text-gray-900">Settings</h1>
+        <div className="mb-6 flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+          {hasChanges && !loading && (
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium text-amber-600">Unsaved changes!</span>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="rounded-xl bg-emerald-500 px-5 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-600 disabled:opacity-50"
+              >
+                {saving ? 'Saving...' : 'Save Settings'}
+              </button>
+            </div>
+          )}
+        </div>
 
         {loading ? (
           <div className="flex justify-center py-12">
@@ -556,6 +596,9 @@ export default function SettingsPage() {
                     {auditResult.summary.fail > 0 && (
                       <span className="text-red-600 font-medium">{auditResult.summary.fail} failed</span>
                     )}
+                    {auditResult.summary.info > 0 && (
+                      <span className="text-gray-500 font-medium">{auditResult.summary.info} skipped</span>
+                    )}
                   </div>
 
                   <button
@@ -568,7 +611,7 @@ export default function SettingsPage() {
 
                   {auditExpanded && (
                     <div className="space-y-2">
-                      {(['fail', 'warn', 'pass'] as const).map(status =>
+                      {(['fail', 'warn', 'pass', 'info'] as const).map(status =>
                         auditResult.checks
                           .filter(c => c.status === status)
                           .map(check => (
@@ -577,11 +620,13 @@ export default function SettingsPage() {
                                 ? 'border-red-200 bg-red-50'
                                 : check.status === 'warn'
                                   ? 'border-amber-200 bg-amber-50'
-                                  : 'border-gray-100 bg-gray-50'
+                                  : check.status === 'info'
+                                    ? 'border-gray-200 bg-gray-50'
+                                    : 'border-gray-100 bg-gray-50'
                             }`}>
                               <div className="flex items-start gap-2">
                                 <span className="mt-0.5 flex-shrink-0">
-                                  {check.status === 'pass' ? '✔' : check.status === 'warn' ? '⚠' : '✘'}
+                                  {check.status === 'pass' ? '✔' : check.status === 'warn' ? '⚠' : check.status === 'info' ? '—' : '✘'}
                                 </span>
                                 <div>
                                   <p className={`font-medium ${
@@ -1075,14 +1120,34 @@ export default function SettingsPage() {
                 Holiday Sources
               </h2>
               <div className="space-y-4">
+                {/* Region Picker */}
                 <div>
-                  <button
-                    onClick={handleSyncZurich}
-                    disabled={syncingZurich}
-                    className={btnSecondary}
-                  >
-                    {syncingZurich ? 'Syncing...' : 'Sync Zurich Holidays'}
-                  </button>
+                  <label htmlFor="holiday_preset" className={labelClass}>
+                    School holiday region
+                  </label>
+                  <div className="flex gap-2">
+                    <select
+                      id="holiday_preset"
+                      value={selectedPreset}
+                      onChange={(e) => setSelectedPreset(e.target.value)}
+                      className={inputClass}
+                    >
+                      {presets.map((g) => (
+                        <optgroup key={g.group} label={g.group}>
+                          {g.presets.map((p) => (
+                            <option key={p.id} value={p.id}>{p.label}</option>
+                          ))}
+                        </optgroup>
+                      ))}
+                    </select>
+                    <button
+                      onClick={handleSyncPreset}
+                      disabled={syncing || !selectedPreset}
+                      className={btnSecondary + ' whitespace-nowrap'}
+                    >
+                      {syncing ? 'Syncing...' : 'Sync'}
+                    </button>
+                  </div>
                   {upcomingVacations.length > 0 && (
                     <ul className="mt-3 space-y-1">
                       {upcomingVacations.map((v) => (
@@ -1096,41 +1161,71 @@ export default function SettingsPage() {
                   )}
                 </div>
 
-                <div>
-                  <label htmlFor="import_url" className={labelClass}>
-                    Import from URL
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      id="import_url"
-                      type="text"
-                      value={importUrl}
-                      onChange={(e) => setImportUrl(e.target.value)}
-                      placeholder="Paste holidays URL..."
-                      className={inputClass}
-                    />
-                    <button
-                      onClick={handleImportUrl}
-                      disabled={importingUrl || !importUrl.trim()}
-                      className={btnSecondary + ' whitespace-nowrap'}
-                    >
-                      {importingUrl ? 'Importing...' : 'Import'}
-                    </button>
+                {/* Manual Import */}
+                <div className="border-t border-gray-200 pt-4">
+                  <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">
+                    Or import manually
+                  </p>
+                  <div className="space-y-3">
+                    <div>
+                      <label htmlFor="import_url" className={labelClass}>
+                        Import from URL
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          id="import_url"
+                          type="text"
+                          value={importUrl}
+                          onChange={(e) => setImportUrl(e.target.value)}
+                          placeholder="Paste holidays URL..."
+                          className={inputClass}
+                        />
+                        <button
+                          onClick={handleImportUrl}
+                          disabled={importingUrl || !importUrl.trim()}
+                          className={btnSecondary + ' whitespace-nowrap'}
+                        >
+                          {importingUrl ? 'Importing...' : 'Import'}
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label htmlFor="upload_ics" className={labelClass}>
+                        Upload ICS File
+                      </label>
+                      <input
+                        id="upload_ics"
+                        type="file"
+                        accept=".ics"
+                        onChange={handleUploadIcs}
+                        disabled={uploadingIcs}
+                        className="text-sm text-gray-600 file:mr-3 file:rounded-md file:border file:border-gray-300 file:bg-white file:px-4 file:py-2 file:text-sm file:font-medium file:text-gray-700 file:shadow-sm hover:file:bg-gray-50"
+                      />
+                    </div>
                   </div>
                 </div>
 
-                <div>
-                  <label htmlFor="upload_ics" className={labelClass}>
-                    Upload ICS File
-                  </label>
-                  <input
-                    id="upload_ics"
-                    type="file"
-                    accept=".ics"
-                    onChange={handleUploadIcs}
-                    disabled={uploadingIcs}
-                    className="text-sm text-gray-600 file:mr-3 file:rounded-md file:border file:border-gray-300 file:bg-white file:px-4 file:py-2 file:text-sm file:font-medium file:text-gray-700 file:shadow-sm hover:file:bg-gray-50"
-                  />
+                {/* Suggest a Source */}
+                <div className="border-t border-gray-200 pt-4">
+                  <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">
+                    Missing your region?
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={suggestion}
+                      onChange={(e) => setSuggestion(e.target.value)}
+                      placeholder="Describe the region or paste a URL..."
+                      className={inputClass}
+                    />
+                    <button
+                      onClick={handleSuggestSource}
+                      disabled={!suggestion.trim()}
+                      className={btnSecondary + ' whitespace-nowrap'}
+                    >
+                      Suggest
+                    </button>
+                  </div>
                 </div>
 
                 {holidayMsg && (
@@ -1332,16 +1427,40 @@ export default function SettingsPage() {
                           <td className="py-2">{u.name || '\u2014'}</td>
                           <td className="py-2 text-gray-600">{u.email}</td>
                           <td className="py-2">
-                            {isAdmin ? (
-                              <select
-                                value={u.role}
-                                onChange={(e) => handleRoleChange(u.id, e.target.value)}
-                                className="rounded border border-gray-300 px-2 py-1 text-sm"
-                              >
-                                <option value="coach">Coach</option>
-                                <option value="admin">Admin</option>
-                              </select>
-                            ) : (
+                            {isAdmin ? (() => {
+                              const adminCount = users.filter((x) => x.role === 'admin').length;
+                              const isOnlyAdmin = u.role === 'admin' && adminCount <= 1;
+                              return (
+                                <div className="flex items-center gap-1.5">
+                                  <select
+                                    value={u.role}
+                                    onChange={(e) => handleRoleChange(u.id, e.target.value)}
+                                    disabled={isOnlyAdmin}
+                                    className={`rounded border border-gray-300 px-2 py-1 text-sm ${isOnlyAdmin ? 'cursor-not-allowed opacity-50' : ''}`}
+                                  >
+                                    <option value="coach">Coach</option>
+                                    <option value="admin">Admin</option>
+                                  </select>
+                                  {isOnlyAdmin && (
+                                    <div className="relative">
+                                      <button
+                                        type="button"
+                                        onClick={() => setLastAdminInfoId(lastAdminInfoId === u.id ? null : u.id)}
+                                        className="flex h-5 w-5 items-center justify-center rounded-full border border-gray-300 text-xs text-gray-400 hover:border-gray-400 hover:text-gray-600"
+                                        aria-label="Info"
+                                      >
+                                        i
+                                      </button>
+                                      {lastAdminInfoId === u.id && (
+                                        <div className="absolute left-6 top-1/2 z-10 w-56 -translate-y-1/2 rounded-lg border border-gray-200 bg-white p-3 text-xs text-gray-600 shadow-lg">
+                                          There must always be at least one admin. Invite another admin first before changing this role.
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })() : (
                               <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${u.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-emerald-100 text-emerald-700'}`}>
                                 {u.role}
                               </span>
@@ -1374,6 +1493,9 @@ export default function SettingsPage() {
               >
                 {saving ? 'Saving...' : 'Save Settings'}
               </button>
+              {hasChanges && (
+                <span className="text-sm font-medium text-amber-600">Unsaved changes!</span>
+              )}
               {saveMsg && (
                 <span
                   className={`text-sm font-medium ${

@@ -3,11 +3,10 @@ import { getDB, getLastInsertId } from "../database.js";
 import {
   parseICS,
   extractHolidaysFromUrl,
-  syncZurichHolidays,
-  getZurichHolidays,
-  getZurichPublicHolidays,
+  syncPresetHolidays,
   getUpcomingVacations,
 } from "../services/holidays.js";
+import { getPresetGroups, getPresetById } from "../services/holiday-presets.js";
 import { expandSeries, type SeriesTemplate, type VacationPeriod, type MaterializedEvent } from "../services/event-series.js";
 
 export const calendarRouter = Router();
@@ -138,7 +137,7 @@ calendarRouter.post("/vacations", (req: Request, res: Response) => {
 // GET /api/vacations
 calendarRouter.get("/vacations", (_req: Request, res: Response) => {
   const db = getDB();
-  const rows = rowsToObjects(db.exec("SELECT * FROM vacation_periods ORDER BY startDate ASC"));
+  const rows = rowsToObjects(db.exec("SELECT MIN(id) as id, name, startDate, endDate, source, MIN(createdAt) as createdAt FROM vacation_periods GROUP BY name, startDate, endDate ORDER BY startDate ASC"));
   res.json(rows);
 });
 
@@ -205,20 +204,29 @@ calendarRouter.post("/vacations/import-url", async (req: Request, res: Response)
   }
 });
 
-// POST /api/vacations/sync-zurich
-calendarRouter.post("/vacations/sync-zurich", (req: Request, res: Response) => {
-  const { year } = req.body;
+// GET /api/vacations/presets
+calendarRouter.get("/vacations/presets", (_req: Request, res: Response) => {
+  res.json(getPresetGroups());
+});
 
-  if (!year) {
-    res.status(400).json({ error: "year is required" });
+// POST /api/vacations/sync
+calendarRouter.post("/vacations/sync", (req: Request, res: Response) => {
+  const { presetId, year } = req.body;
+
+  if (!presetId) {
+    res.status(400).json({ error: "presetId is required" });
     return;
   }
 
-  syncZurichHolidays(year);
-  const schoolHolidays = getZurichHolidays(year);
-  const publicHolidays = getZurichPublicHolidays(year);
+  if (!getPresetById(presetId)) {
+    res.status(400).json({ error: `Unknown preset: ${presetId}` });
+    return;
+  }
+
+  const syncYear = year ?? new Date().getFullYear();
+  const result = syncPresetHolidays(presetId, syncYear);
   const upcoming = getUpcomingVacations(3);
-  res.json({ synced: schoolHolidays.length + publicHolidays.length, upcoming });
+  res.json({ ...result, upcoming });
 });
 
 // ── Calendar Endpoint ───────────────────────────────────────────────
@@ -262,7 +270,7 @@ calendarRouter.get("/calendar", (req: Request, res: Response) => {
   // 2. Vacation periods overlapping with the date range
   const vacations = rowsToObjects(
     db.exec(
-      "SELECT * FROM vacation_periods WHERE endDate >= ? AND startDate <= ? ORDER BY startDate ASC",
+      "SELECT MIN(id) as id, name, startDate, endDate, source, MIN(createdAt) as createdAt FROM vacation_periods WHERE endDate >= ? AND startDate <= ? GROUP BY name, startDate, endDate ORDER BY startDate ASC",
       [startDate, endDate],
     ),
   );

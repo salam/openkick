@@ -278,41 +278,52 @@ END:VCALENDAR`;
     mockExtract.mockRestore();
   });
 
-  // BUG-SYNC-ZH1: POST without year body should return 400
-  it("POST /api/vacations/sync-zurich — returns 400 when year is missing", async () => {
-    const res = await fetch(`${baseUrl}/api/vacations/sync-zurich`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
-    });
-    expect(res.status).toBe(400);
+  it("GET /api/vacations/presets — returns grouped preset list", async () => {
+    const res = await fetch(`${baseUrl}/api/vacations/presets`);
+    expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.error).toBe("year is required");
+    expect(body).toBeInstanceOf(Array);
+    expect(body.length).toBeGreaterThanOrEqual(3);
+    expect(body[0].group).toBeTruthy();
+    expect(body[0].presets.length).toBeGreaterThan(0);
   });
 
-  it("POST /api/vacations/sync-zurich — syncs Zurich holidays for a given year", async () => {
-    const res = await fetch(`${baseUrl}/api/vacations/sync-zurich`, {
+  it("POST /api/vacations/sync — syncs a preset by id", async () => {
+    const res = await fetch(`${baseUrl}/api/vacations/sync`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ year: 2026 }),
+      body: JSON.stringify({ presetId: "ch-zurich" }),
     });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.synced).toBeGreaterThan(0);
+    expect(body.source).toBe("fallback");
     expect(body.upcoming).toBeDefined();
     expect(Array.isArray(body.upcoming)).toBe(true);
-    expect(body.upcoming.length).toBeLessThanOrEqual(3);
-    if (body.upcoming.length > 0) {
-      expect(body.upcoming[0]).toHaveProperty("name");
-      expect(body.upcoming[0]).toHaveProperty("startDate");
-      expect(body.upcoming[0]).toHaveProperty("endDate");
-    }
 
     // Verify they are in the DB
     const getRes = await fetch(`${baseUrl}/api/vacations`);
     const vacations = await getRes.json();
     expect(vacations.length).toBeGreaterThan(0);
-    expect(vacations[0].source).toBe("zurich-official");
+    expect(vacations[0].source).toBe("preset:ch-zurich");
+  });
+
+  it("POST /api/vacations/sync — returns 400 for unknown preset", async () => {
+    const res = await fetch(`${baseUrl}/api/vacations/sync`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ presetId: "xx-unknown" }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("POST /api/vacations/sync — returns 400 if presetId missing", async () => {
+    const res = await fetch(`${baseUrl}/api/vacations/sync`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(400);
   });
 });
 

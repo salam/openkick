@@ -12,7 +12,10 @@ export default function AltchaWidget({
   onVerify,
   challengeUrl,
 }: AltchaWidgetProps) {
-  const widgetRef = useRef<HTMLElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const onVerifyRef = useRef(onVerify);
+  onVerifyRef.current = onVerify;
+
   const [challengeJson, setChallengeJson] = useState<string | null>(null);
   const [error, setError] = useState(false);
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -37,14 +40,21 @@ export default function AltchaWidget({
   }, [url]);
 
   useEffect(() => {
-    const el = widgetRef.current;
-    if (!el) return;
+    if (!challengeJson || !containerRef.current) return;
+
+    const container = containerRef.current;
+    while (container.firstChild) {
+      container.removeChild(container.firstChild);
+    }
+
+    const widget = document.createElement('altcha-widget');
+    widget.setAttribute('challengejson', challengeJson);
+    widget.setAttribute('hidefooter', '');
 
     const handleVerify = (e: Event) => {
       const detail = (e as CustomEvent).detail;
       if (detail?.payload) {
-        setError(false);
-        onVerify(detail.payload);
+        onVerifyRef.current(detail.payload);
       }
     };
 
@@ -52,13 +62,16 @@ export default function AltchaWidget({
       setError(true);
     };
 
-    el.addEventListener('verification', handleVerify);
-    el.addEventListener('error', handleError);
+    widget.addEventListener('verification', handleVerify);
+    widget.addEventListener('error', handleError);
+
+    container.appendChild(widget);
+
     return () => {
-      el.removeEventListener('verification', handleVerify);
-      el.removeEventListener('error', handleError);
+      widget.removeEventListener('verification', handleVerify);
+      widget.removeEventListener('error', handleError);
     };
-  }, [onVerify, challengeJson]);
+  }, [challengeJson]);
 
   if (error) {
     return (
@@ -76,11 +89,5 @@ export default function AltchaWidget({
     );
   }
 
-  return (
-    <altcha-widget
-      ref={widgetRef}
-      challengejson={challengeJson}
-      hidefooter
-    />
-  );
+  return <div ref={containerRef} />;
 }

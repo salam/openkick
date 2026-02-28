@@ -1,12 +1,10 @@
 declare namespace JSX {
   interface IntrinsicElements {
-    'altcha-widget': React.DetailedHTMLProps<
-      React.HTMLAttributes<HTMLElement> & {
-        challengeurl?: string;
-        challengejson?: string;
-        hidefooter?: boolean;
-      },
-      HTMLElement
-    >;
+    'altcha-widget': React.HTMLAttributes<HTMLElement> & {
+      challengeurl?: string;
+      challengejson?: string;
+      hidefooter?: boolean;
+      ref?: React.Ref<HTMLElement>;
+    };
   }
 }

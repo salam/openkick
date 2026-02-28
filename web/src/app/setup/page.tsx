@@ -27,7 +27,7 @@ export default function SetupPage() {
   const [loading, setLoading] = useState(false);
 
   const goToDashboard = useCallback(() => {
-    router.push('/dashboard/');
+    router.push('/onboarding/');
   }, [router]);
 
   useEffect(() => {

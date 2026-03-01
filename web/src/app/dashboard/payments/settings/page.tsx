@@ -44,6 +44,25 @@ const PROVIDER_NAMES: Record<string, string> = {
   datatrans: 'Datatrans',
 };
 
+const PROVIDER_HELP: Record<string, { steps: { i18nKey: string; url?: string }[] }> = {
+  stripe: {
+    steps: [
+      { i18nKey: 'payments_help_stripe_signup', url: 'https://dashboard.stripe.com/register' },
+      { i18nKey: 'payments_help_stripe_keys', url: 'https://dashboard.stripe.com/apikeys' },
+      { i18nKey: 'payments_help_stripe_webhooks', url: 'https://dashboard.stripe.com/webhooks' },
+      { i18nKey: 'payments_help_stripe_twint' },
+    ],
+  },
+  datatrans: {
+    steps: [
+      { i18nKey: 'payments_help_datatrans_signup', url: 'https://www.datatrans.ch/en/contact' },
+      { i18nKey: 'payments_help_datatrans_admin', url: 'https://admin.sandbox.datatrans.com' },
+      { i18nKey: 'payments_help_datatrans_keys' },
+      { i18nKey: 'payments_help_datatrans_twint' },
+    ],
+  },
+};
+
 const USE_CASE_LABELS: Record<string, string> = {
   tournament_fee: 'payments_tournament_fee',
   survey_order: 'payments_merchandise',
@@ -162,6 +181,25 @@ export default function PaymentSettingsPage() {
                 </label>
               </div>
             </div>
+
+            {prov.enabled && PROVIDER_HELP[prov.id] && (
+              <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 p-3">
+                <p className="mb-2 text-xs font-semibold text-blue-800">{t('payments_help_title')}</p>
+                <ol className="list-inside list-decimal space-y-1 text-xs text-blue-700">
+                  {PROVIDER_HELP[prov.id].steps.map((step) => (
+                    <li key={step.i18nKey}>
+                      {step.url ? (
+                        <a href={step.url} target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-900">
+                          {t(step.i18nKey)}
+                        </a>
+                      ) : (
+                        t(step.i18nKey)
+                      )}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
 
             {prov.enabled && (
               <div className="grid gap-3 sm:grid-cols-2">

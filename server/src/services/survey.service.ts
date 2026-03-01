@@ -348,7 +348,6 @@ export function createTrikotOrderTemplate(
     null,
     createdBy,
     [
-      { type: "free_text", label: "Player name", sort_order: 0 },
       {
         type: "size_picker",
         label: "Trikot size",
@@ -356,18 +355,18 @@ export function createTrikotOrderTemplate(
           "116", "128", "140", "152", "164",
           "XS", "S", "M", "L", "XL", "XXL",
         ]),
-        sort_order: 1,
+        sort_order: 0,
       },
       {
         type: "single_choice",
         label: "Cap size",
         options_json: JSON.stringify(["Adjustable", "S-M", "L-XL"]),
-        sort_order: 2,
+        sort_order: 1,
       },
       {
         type: "free_text",
         label: "Name or number to print on back (optional)",
-        sort_order: 3,
+        sort_order: 2,
       },
     ],
   );

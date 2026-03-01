@@ -353,11 +353,10 @@ describe("survey service — templates", () => {
     expect(survey.created_by).toBe(42);
 
     const questions = getQuestions(survey.id);
-    expect(questions.length).toBe(4);
-    expect(questions[0].type).toBe("free_text");
-    expect(questions[1].type).toBe("size_picker");
-    expect(questions[2].type).toBe("single_choice");
-    expect(questions[3].type).toBe("free_text");
+    expect(questions.length).toBe(3);
+    expect(questions[0].type).toBe("size_picker");
+    expect(questions[1].type).toBe("single_choice");
+    expect(questions[2].type).toBe("free_text");
   });
 
   it("createFeedbackTemplate creates anonymous survey with 5 questions", () => {

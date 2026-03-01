@@ -540,6 +540,60 @@ export async function initDB(dbPath?: string): Promise<Database> {
     }
   }
 
+  // One-time migration: update old English labels → i18n keys in templates and items
+  const LABEL_MIGRATION: Record<string, string> = {
+    "Liability insurance (Haftpflichtversicherung) valid and renewed": "cl_admin_insurance",
+    "Liability insurance valid and renewed": "cl_admin_insurance",
+    "Accident insurance for players confirmed": "cl_admin_accident",
+    "Coach certifications (J+S, SFV C-Diploma) up to date": "cl_admin_certs",
+    "Facility usage permits / field reservations secured": "cl_admin_permits",
+    "Parent consent forms / disclaimers collected for all players": "cl_admin_consent",
+    "First-aid kit inspected and restocked": "cl_admin_firstaid",
+    "Bills and invoices paid (membership fees, tournament fees)": "cl_admin_bills",
+    "Registration with Sportamt Zurich submitted": "cl_admin_sportamt_reg",
+    "Sportamt Zurich subsidy application filed": "cl_admin_sportamt_sub",
+    "SFV team registration and licence fees paid": "cl_admin_sfv_reg",
+    "SFV coach licence renewals submitted": "cl_admin_sfv_coach",
+    "FVRZ league registration submitted": "cl_admin_fvrz_reg",
+    "FVRZ referee assignments acknowledged": "cl_admin_fvrz_ref",
+    "Balls, cones, bibs packed": "cl_training_equipment",
+    "First-aid kit available": "cl_training_firstaid",
+    "Attendance taken": "cl_training_attendance",
+    "Field condition checked": "cl_training_field",
+    "Water / drinks reminder sent to parents": "cl_training_drinks",
+    "Registration submitted before deadline": "cl_tournament_reg",
+    "Teams formed and published": "cl_tournament_teams",
+    "Custom Trikots ordered (sizing via survey)": "cl_tournament_jerseys_order",
+    "Trikots packed and accounted for": "cl_tournament_jerseys_pack",
+    "Tournament rules / PDF downloaded and reviewed": "cl_tournament_rules",
+    "Transport organised (drivers, carpooling)": "cl_tournament_transport",
+    "Player passes / ID cards prepared": "cl_tournament_passes",
+    "Post-tournament feedback survey sent": "cl_tournament_feedback",
+  };
+  for (const [oldLabel, newKey] of Object.entries(LABEL_MIGRATION)) {
+    db.run("UPDATE checklist_items SET label = ? WHERE label = ? AND is_custom = 0", [newKey, oldLabel]);
+  }
+  // Also update template items_json to use i18n keys
+  const allTemplates = db.exec("SELECT id, items_json FROM checklist_templates");
+  if (allTemplates.length > 0) {
+    for (const row of allTemplates[0].values) {
+      const [id, itemsJson] = row as [number, string];
+      try {
+        const items = JSON.parse(itemsJson) as { label: string; sortOrder: number }[];
+        let changed = false;
+        for (const item of items) {
+          if (LABEL_MIGRATION[item.label]) {
+            item.label = LABEL_MIGRATION[item.label];
+            changed = true;
+          }
+        }
+        if (changed) {
+          db.run("UPDATE checklist_templates SET items_json = ? WHERE id = ?", [JSON.stringify(items), id]);
+        }
+      } catch { /* skip malformed */ }
+    }
+  }
+
   _dbPath = dbPath;
 
   // Auto-persist: wrap db.run so every mutation is saved to disk.

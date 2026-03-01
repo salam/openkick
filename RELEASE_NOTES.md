@@ -1,5 +1,37 @@
 # OpenKick Release Notes
 
+## Version 1.12 (Sat, Mar 1 2026)
+
+* Checklists dashboard page with Admin/Training/Tournament tabs
+* Collapsible checklist widget on training and tournament event detail pages
+* Add custom checklist items, toggle completion, delete custom items
+* Progress bar and completion timestamps on dashboard cards
+
+## Version 1.11 (Sat, Mar 1 2026)
+
+* Stripe PSP integration (card, Apple Pay, Google Pay, Twint)
+* Datatrans PSP integration (cards, PostFinance, Twint)
+* Twint support (CHF only, routed through PSP)
+* Webhook-driven payment confirmation for both providers
+* Admin payment settings panel (provider config, use case management)
+* Transaction log with status filtering and pagination
+* PDF receipt generation and download
+* Full and partial refund support
+* Privacy-first: no card data or PII stored
+
+## Version 1.10 (Sat, Mar 1 2026)
+
+* Homepage widgets: Recent Trophies and Upcoming Tournaments shown on the public homepage
+* Login renamed to "Coach Login" / "Trainer-Login" / "Connexion Entraineur" across all languages
+* Smart login/dashboard button: shows "Dashboard" if logged in, "Coach Login" otherwise
+* Public Imprint page (/imprint) with structured legal information from settings
+* Public Privacy Policy page (/privacy) with GDPR-compliant template (data collected, legal basis, retention, your rights)
+* Legal & Privacy settings section: organisation name, address, responsible person, DPO, free-text extras
+* Dynamic browser title and favicon from club settings on all pages
+* Footer restyled: Security: security.txt | Imprint · Privacy · [Coach Login] button
+* Widget labels (Recent Trophies, Upcoming Tournaments, View All) fully localised (DE/EN/FR)
+* Footer reacts to language toggle
+
 ## Version 1.9 (Sat, Mar 1 2026)
 
 * Surveys & Questionnaires: coaches can create surveys with 5 question types (single choice, multi choice, star rating, free text, size picker)

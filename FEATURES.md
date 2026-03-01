@@ -134,6 +134,10 @@
 - [x] Data export for guardians (GDPR right of access)
 - [x] Data deletion for guardians (GDPR right to erasure)
 - [x] Explicit consent tracking per guardian
+- [x] Public /privacy page with GDPR template (data collected, legal basis, retention, rights)
+- [x] Public /imprint page with structured legal information
+- [x] Legal & Privacy settings section (org name, address, responsible person, DPO, free-text extras)
+- [x] Dynamic browser title and favicon from club settings (global DynamicHead component)
 
 ## Remaining — Data Protection Audit (PRD 4.5.6)
 
@@ -173,7 +177,7 @@
 - [x] Per-item completion tracking with user/timestamp
 - [x] Classification management endpoints (GET/PUT)
 - [ ] Reminder/n8n integration (future)
-- [ ] Frontend UI (future)
+- [x] Frontend UI — dashboard page with tabbed view + event detail widget
 
 ## Remaining — Surveys & Questionnaires (PRD 4.5.11, blueprint: SURVEYS.md)
 
@@ -185,15 +189,16 @@
 - [ ] Results dashboard with aggregation
 - [ ] Close and archive surveys
 
-## Remaining — Payments (PRD 4.5.12, blueprint: PAYMENTS.md)
+## Completed — Payments (PRD 4.5.12, blueprint: PAYMENTS.md)
 
-- [ ] Stripe PSP integration (tournament fees, merchandise, donations)
-- [ ] Datatrans PSP integration (alternative provider)
-- [ ] Twint support (CHF only, via PSP)
-- [ ] Webhook-driven payment confirmation
-- [ ] Payment settings admin panel
-- [ ] Receipt generation
-- [ ] Refund functionality
+- [x] Stripe PSP integration (tournament fees, merchandise, donations)
+- [x] Datatrans PSP integration (alternative provider)
+- [x] Twint support (CHF only, via PSP)
+- [x] Webhook-driven payment confirmation
+- [x] Payment settings admin panel
+- [x] Receipt generation (PDF)
+- [x] Refund functionality (full and partial)
+- [x] Transaction log with filtering
 
 ## Completed — Live Ticker & Game History (blueprint: LIVE_TICKER.md)
 

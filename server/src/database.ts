@@ -278,7 +278,7 @@ CREATE TABLE IF NOT EXISTS surveys (
   status TEXT NOT NULL DEFAULT 'open',
   deadline TEXT,
   price_per_item REAL,
-  created_by INTEGER REFERENCES guardians(id),
+  created_by INTEGER,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

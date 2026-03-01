@@ -942,7 +942,7 @@ export default function EventDetailClient() {
       )}
 
       {/* ── Coach: Event checklist ── */}
-      {isCoach && ['training', 'tournament'].includes(event.type) && (
+      {isCoach && (
         <EventChecklist eventId={event.id} />
       )}
 

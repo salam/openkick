@@ -283,7 +283,7 @@ function ChecklistCard({
                 )}
               </button>
               <span className={`flex-1 text-sm ${item.completed ? 'text-gray-400 line-through' : 'text-gray-700'}`}>
-                {item.label}
+                {item.is_custom ? item.label : (t(item.label) || item.label)}
               </span>
               {item.is_custom === 1 && (
                 <div className="flex items-center gap-1.5">

@@ -34,6 +34,7 @@ interface EventDetail {
   recurring?: number;
   recurrenceRule?: string;
   attachmentUrl?: string;
+  fee?: number;
   attendanceSummary: AttendanceSummary;
   seriesId?: number;
   results?: {
@@ -265,6 +266,11 @@ export default function EventDetailClient() {
   // Reminder
   const [reminderSent, setReminderSent] = useState(false);
 
+  // Payment
+  const [feePaymentEnabled, setFeePaymentEnabled] = useState(false);
+  const [feeCurrency, setFeeCurrency] = useState('CHF');
+  const [payingFee, setPayingFee] = useState(false);
+
   // Public RSVP flow
   const [rsvpStep, setRsvpStep] = useState<'search' | 'confirm' | 'done'>('search');
   const [rsvpName, setRsvpName] = useState('');
@@ -283,6 +289,20 @@ export default function EventDetailClient() {
     function onLangChange() { setLang(getLanguage()); }
     window.addEventListener('languagechange', onLangChange);
     return () => window.removeEventListener('languagechange', onLangChange);
+  }, []);
+
+  /* ── Fetch payment status ── */
+  useEffect(() => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    fetch(`${apiUrl}/api/public/payment-status`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.useCases?.tournament_fee?.enabled) {
+          setFeePaymentEnabled(true);
+          setFeeCurrency(data.useCases.tournament_fee.currency || 'CHF');
+        }
+      })
+      .catch(() => {});
   }, []);
 
   /* ── Decode token on mount ── */
@@ -306,7 +326,7 @@ export default function EventDetailClient() {
 
     if (authed === false) {
       // Public view — use public endpoint
-      apiFetch<{ id: number; type: string; title: string; description?: string; date: string; startTime?: string; attendanceTime?: string; deadline?: string; maxParticipants?: number; location?: string; categoryRequirement?: string; attachmentUrl?: string }>(
+      apiFetch<{ id: number; type: string; title: string; description?: string; date: string; startTime?: string; attendanceTime?: string; deadline?: string; maxParticipants?: number; location?: string; categoryRequirement?: string; attachmentUrl?: string; fee?: number }>(
         `/api/public/events/${id}`,
       )
         .then((data) => {
@@ -467,6 +487,32 @@ export default function EventDetailClient() {
     }
   }
 
+  /* ── Pay tournament fee ── */
+  async function handlePayFee() {
+    if (!event?.fee) return;
+    setPayingFee(true);
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const res = await fetch(`${apiUrl}/api/payments/checkout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          useCase: 'tournament_fee',
+          referenceId: String(event.id || id),
+          amount: event.fee,
+          currency: feeCurrency,
+          successUrl: `${window.location.origin}/events/${id}/?paid=1`,
+          cancelUrl: window.location.href,
+        }),
+      });
+      const data = await res.json();
+      if (data.redirectUrl) {
+        window.location.href = data.redirectUrl;
+      }
+    } catch { /* checkout failed */ }
+    finally { setPayingFee(false); }
+  }
+
   /* ── Public RSVP handlers ── */
   async function handlePublicRsvpSearch() {
     setRsvpSearching(true);
@@ -570,6 +616,12 @@ export default function EventDetailClient() {
               value={String(event.maxParticipants)}
             />
           )}
+          {event.fee != null && event.fee! > 0 && (
+            <InfoItem
+              label={t('event_fee')}
+              value={`${feeCurrency} ${(event.fee! / 100).toFixed(2)}`}
+            />
+          )}
         </section>
 
         {/* ── Description ── */}
@@ -627,6 +679,23 @@ export default function EventDetailClient() {
               </svg>
               {t('download_attachment')}
             </a>
+          </section>
+        )}
+
+        {/* ── Tournament fee payment ── */}
+        {feePaymentEnabled && event.fee != null && event.fee! > 0 && (
+          <section className="rounded-xl border border-amber-200 bg-amber-50 p-5">
+            <h2 className="mb-1 text-base font-semibold text-amber-800">{t('event_fee_title')}</h2>
+            <p className="mb-3 text-sm text-amber-700">
+              {t('event_fee_description')}
+            </p>
+            <button
+              onClick={handlePayFee}
+              disabled={payingFee}
+              className="rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:opacity-50"
+            >
+              {payingFee ? '...' : `${t('event_fee_pay')} ${feeCurrency} ${(event.fee! / 100).toFixed(2)}`}
+            </button>
           </section>
         )}
 
@@ -780,6 +849,12 @@ export default function EventDetailClient() {
             value={String(event.maxParticipants)}
           />
         )}
+        {event.fee != null && event.fee > 0 && (
+          <InfoItem
+            label={t('event_fee')}
+            value={`${feeCurrency} ${(event.fee / 100).toFixed(2)}`}
+          />
+        )}
       </section>
 
       {/* ── Description ── */}
@@ -916,6 +991,23 @@ export default function EventDetailClient() {
               </div>
             </div>
           )}
+        </section>
+      )}
+
+      {/* ── Tournament fee payment (authenticated) ── */}
+      {isParent && feePaymentEnabled && event.fee != null && event.fee > 0 && (
+        <section className="rounded-xl border border-amber-200 bg-amber-50 p-5">
+          <h2 className="mb-1 text-base font-semibold text-amber-800">{t('event_fee_title')}</h2>
+          <p className="mb-3 text-sm text-amber-700">
+            {t('event_fee_description')}
+          </p>
+          <button
+            onClick={handlePayFee}
+            disabled={payingFee}
+            className="rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:opacity-50"
+          >
+            {payingFee ? '...' : `${t('event_fee_pay')} ${feeCurrency} ${(event.fee / 100).toFixed(2)}`}
+          </button>
         </section>
       )}
 

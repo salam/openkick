@@ -775,6 +775,20 @@ const translations: Record<string, Record<string, string>> = {
     payments_help_datatrans_admin: 'Web Admin oeffnen (Sandbox)',
     payments_help_datatrans_keys: 'Merchant ID, API-Passwort und HMAC-Schluessel aus dem Web Admin kopieren',
     payments_help_datatrans_twint: 'Twint beim Account Manager aktivieren lassen',
+
+    // ── Payment triggers (public) ────────────────────────────────────────
+    donate_title: 'Spenden',
+    donate_description: 'Unterstuetzen Sie unseren Verein mit einer Spende.',
+    donate_custom_amount: 'Eigener Betrag',
+    donate_message_placeholder: 'Nachricht (optional)',
+    donate_button: 'Spenden',
+    event_fee: 'Teilnahmegebuehr',
+    event_fee_title: 'Teilnahmegebuehr',
+    event_fee_description: 'Fuer dieses Turnier wird eine Teilnahmegebuehr erhoben.',
+    event_fee_pay: 'Jetzt bezahlen',
+    survey_payment_title: 'Zahlung erforderlich',
+    survey_payment_description: 'Bitte schliessen Sie die Zahlung fuer Ihre Bestellung ab.',
+    survey_payment_pay: 'Jetzt bezahlen',
   },
   en: {
     dashboard: 'Dashboard',
@@ -1507,6 +1521,20 @@ const translations: Record<string, Record<string, string>> = {
     payments_help_datatrans_admin: 'Open Web Admin (Sandbox)',
     payments_help_datatrans_keys: 'Copy Merchant ID, API password and HMAC key from Web Admin',
     payments_help_datatrans_twint: 'Ask your account manager to enable Twint',
+
+    // ── Payment triggers (public) ────────────────────────────────────────
+    donate_title: 'Donate',
+    donate_description: 'Support our club with a donation.',
+    donate_custom_amount: 'Custom amount',
+    donate_message_placeholder: 'Message (optional)',
+    donate_button: 'Donate',
+    event_fee: 'Registration fee',
+    event_fee_title: 'Registration fee',
+    event_fee_description: 'A registration fee is required for this tournament.',
+    event_fee_pay: 'Pay now',
+    survey_payment_title: 'Payment required',
+    survey_payment_description: 'Please complete the payment for your order.',
+    survey_payment_pay: 'Pay now',
   },
   fr: {
     dashboard: 'Tableau de bord',
@@ -2239,6 +2267,20 @@ const translations: Record<string, Record<string, string>> = {
     payments_help_datatrans_admin: 'Ouvrir le Web Admin (Sandbox)',
     payments_help_datatrans_keys: 'Copier le Merchant ID, le mot de passe API et la cle HMAC depuis le Web Admin',
     payments_help_datatrans_twint: 'Demander a votre gestionnaire de compte d\'activer Twint',
+
+    // ── Payment triggers (public) ────────────────────────────────────────
+    donate_title: 'Faire un don',
+    donate_description: 'Soutenez notre club avec un don.',
+    donate_custom_amount: 'Montant personnalise',
+    donate_message_placeholder: 'Message (facultatif)',
+    donate_button: 'Faire un don',
+    event_fee: 'Frais d\'inscription',
+    event_fee_title: 'Frais d\'inscription',
+    event_fee_description: 'Des frais d\'inscription sont requis pour ce tournoi.',
+    event_fee_pay: 'Payer maintenant',
+    survey_payment_title: 'Paiement requis',
+    survey_payment_description: 'Veuillez completer le paiement pour votre commande.',
+    survey_payment_pay: 'Payer maintenant',
   },
 };
 

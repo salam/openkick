@@ -37,6 +37,7 @@ surveyRespondRouter.get("/surveys/:id", async (req, res) => {
       anonymous: survey.anonymous,
       status: survey.status,
       deadline: survey.deadline,
+      price_per_item: survey.price_per_item ?? null,
       questions,
     });
   } catch (err) {

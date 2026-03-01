@@ -13,6 +13,7 @@ interface PublicSurvey {
   title: string;
   anonymous: boolean;
   deadline: string | null;
+  price_per_item: number | null;
   questions: PublicQuestion[];
 }
 
@@ -36,6 +37,9 @@ export default function SurveyRespondClient() {
   const [nickname, setNickname] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [paymentRequired, setPaymentRequired] = useState(false);
+  const [payingOrder, setPayingOrder] = useState(false);
+  const [orderCurrency, setOrderCurrency] = useState('CHF');
 
   /* force re-render on language change */
   const [, setLang] = useState(getLanguage());
@@ -61,6 +65,15 @@ export default function SurveyRespondClient() {
         setLoading(false);
       }
     })();
+    // Fetch payment currency for survey_order use case
+    fetch(`${API_URL}/api/public/payment-status`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.useCases?.survey_order?.currency) {
+          setOrderCurrency(data.useCases.survey_order.currency);
+        }
+      })
+      .catch(() => {});
   }, [id]);
 
   /* ── Submit handler ───────────────────────────────────────────────── */
@@ -87,6 +100,10 @@ export default function SurveyRespondClient() {
       if (!res.ok) {
         const body = await res.json().catch(() => null);
         throw new Error(body?.error || 'Submit failed');
+      }
+      const result = await res.json().catch(() => ({}));
+      if (result.payment_required) {
+        setPaymentRequired(true);
       }
       setSubmitted(true);
     } catch (err) {
@@ -273,11 +290,55 @@ export default function SurveyRespondClient() {
   /* ── Success state ────────────────────────────────────────────────── */
 
   if (submitted) {
+    const totalAmount = paymentRequired && survey?.price_per_item
+      ? Math.round(survey.price_per_item * 100)
+      : 0;
+
+    async function handlePayOrder() {
+      if (!survey || !totalAmount) return;
+      setPayingOrder(true);
+      try {
+        const res = await fetch(`${API_URL}/api/payments/checkout`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            useCase: 'survey_order',
+            referenceId: String(survey.id),
+            nickname: nickname || undefined,
+            amount: totalAmount,
+            currency: orderCurrency,
+            successUrl: `${window.location.origin}/surveys/respond/${id}/?paid=1`,
+            cancelUrl: window.location.href,
+          }),
+        });
+        const data = await res.json();
+        if (data.redirectUrl) {
+          window.location.href = data.redirectUrl;
+        }
+      } catch { /* checkout failed */ }
+      finally { setPayingOrder(false); }
+    }
+
     return (
-      <div className="mx-auto max-w-2xl px-4 py-8">
+      <div className="mx-auto max-w-2xl px-4 py-8 space-y-4">
         <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-6 text-center">
           <p className="text-emerald-800 font-medium text-lg">{t('survey_thank_you')}</p>
         </div>
+
+        {paymentRequired && totalAmount > 0 && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-center">
+            <h3 className="mb-1 text-base font-semibold text-amber-800">{t('survey_payment_title')}</h3>
+            <p className="mb-4 text-sm text-amber-700">{t('survey_payment_description')}</p>
+            <button
+              onClick={handlePayOrder}
+              disabled={payingOrder}
+              className="rounded-lg bg-emerald-600 px-6 py-2.5 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:opacity-50"
+            >
+              {payingOrder ? '...' : `${t('survey_payment_pay')} ${orderCurrency} ${(totalAmount / 100).toFixed(2)}`}
+            </button>
+          </div>
+        )}
+
         <p className="mt-8 text-center text-xs text-gray-400">Powered by OpenKick</p>
       </div>
     );

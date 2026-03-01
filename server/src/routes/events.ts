@@ -2,7 +2,7 @@ import { Router, type Request, type Response } from "express";
 import { getDB, getLastInsertId } from "../database.js";
 import { expandSeries, type SeriesTemplate, type VacationPeriod, type MaterializedEvent } from "../services/event-series.js";
 import { getResults } from "../services/tournament-results.js";
-import { ensureTrainingChecklist, ensureTournamentChecklist } from "../services/checklist.service.js";
+import { ensureEventChecklist } from "../services/checklist.service.js";
 // tournament-import uses pdfjs-dist which requires DOM globals — lazy-import to
 // avoid breaking Node.js test environments that don't polyfill DOMMatrix.
 
@@ -74,6 +74,8 @@ eventsRouter.post("/events", (req: Request, res: Response) => {
   );
 
   const id = getLastInsertId();
+
+  ensureEventChecklist(id, type);
 
   const rows = rowsToObjects(db.exec("SELECT * FROM events WHERE id = ?", [id]));
   res.status(201).json(rows[0]);

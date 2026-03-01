@@ -100,7 +100,7 @@ export function listInstances(filters: {
     LEFT JOIN checklist_templates ct ON ci.template_id = ct.id
     WHERE 1=1
   `;
-  const params: unknown[] = [];
+  const params: (string | number | null)[] = [];
 
   if (filters.type) {
     sql += " AND ct.type = ?";
@@ -296,7 +296,7 @@ export function resetAdminChecklists(): Record<string, unknown> | null {
   for (const ci of customItems) {
     db.run(
       "INSERT OR IGNORE INTO checklist_items (instance_id, label, sort_order, is_custom) VALUES (?, ?, ?, 1)",
-      [newId, ci.label, nextSort++]
+      [newId, ci.label as string, nextSort++]
     );
   }
 
@@ -321,6 +321,27 @@ export function ensureTournamentChecklist(eventId: number): void {
   );
   if (existing.length > 0 && existing[0].values.length > 0) return;
   instantiateFromTemplate("tournament", eventId);
+}
+
+const EVENT_TYPE_TO_TEMPLATE: Record<string, "training" | "tournament"> = {
+  training: "training",
+  tournament: "tournament",
+  match: "training",
+  friendly: "training",
+  social: "training",
+  other: "training",
+};
+
+export function ensureEventChecklist(eventId: number, eventType: string): void {
+  const templateType = EVENT_TYPE_TO_TEMPLATE[eventType];
+  if (!templateType) return;
+  const db = getDB();
+  const existing = db.exec(
+    "SELECT id FROM checklist_instances WHERE event_id = ?",
+    [eventId]
+  );
+  if (existing.length > 0 && existing[0].values.length > 0) return;
+  instantiateFromTemplate(templateType, eventId);
 }
 
 export function refilterAdminChecklist(instanceId: number): void {

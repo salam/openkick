@@ -16,6 +16,7 @@ import {
   resetAdminChecklists,
   ensureTrainingChecklist,
   ensureTournamentChecklist,
+  ensureEventChecklist,
   refilterAdminChecklist,
 } from "../checklist.service.js";
 
@@ -70,25 +71,25 @@ describe("checklist service", () => {
     it("creates admin instance with universal template items", () => {
       const instance = instantiateFromTemplate("admin", null);
       expect(instance).toBeTruthy();
-      const full = getInstance(instance.id);
-      expect(full.items.length).toBe(7);
-      expect(full.items[0].label).toContain("Liability insurance");
+      const full = getInstance(instance.id as number);
+      expect((full.items as Record<string, unknown>[]).length).toBe(7);
+      expect((full.items as Record<string, unknown>[])[0].label).toBe("cl_admin_insurance");
     });
 
     it("creates training instance with training template items", () => {
       const eventId = createEvent("training");
       const instance = instantiateFromTemplate("training", eventId);
-      const full = getInstance(instance.id);
-      expect(full.items.length).toBe(5);
-      expect(full.items[0].label).toContain("Balls, cones");
+      const full = getInstance(instance.id as number);
+      expect((full.items as Record<string, unknown>[]).length).toBe(5);
+      expect((full.items as Record<string, unknown>[])[0].label).toBe("cl_training_equipment");
     });
 
     it("creates tournament instance with tournament template items", () => {
       const eventId = createEvent("tournament");
       const instance = instantiateFromTemplate("tournament", eventId);
-      const full = getInstance(instance.id);
-      expect(full.items.length).toBe(8);
-      expect(full.items[0].label).toContain("Registration submitted");
+      const full = getInstance(instance.id as number);
+      expect((full.items as Record<string, unknown>[]).length).toBe(8);
+      expect((full.items as Record<string, unknown>[])[0].label).toBe("cl_tournament_reg");
     });
   });
 
@@ -96,20 +97,20 @@ describe("checklist service", () => {
     it("includes classification-specific templates when classification is active", () => {
       setClassifications(1, ["sportamt_zurich"]);
       const instance = instantiateFromTemplate("admin", null);
-      const full = getInstance(instance.id);
-      expect(full.items.length).toBe(9);
-      const labels = full.items.map((i: { label: string }) => i.label);
-      expect(labels).toContain("Registration with Sportamt Zurich submitted");
+      const full = getInstance(instance.id as number);
+      expect((full.items as Record<string, unknown>[]).length).toBe(9);
+      const labels = (full.items as Record<string, unknown>[]).map((i) => i.label as string);
+      expect(labels).toContain("cl_admin_sportamt_reg");
     });
 
     it("excludes non-matching classification templates", () => {
       setClassifications(1, ["sfv"]);
       const instance = instantiateFromTemplate("admin", null);
-      const full = getInstance(instance.id);
-      expect(full.items.length).toBe(9);
-      const labels = full.items.map((i: { label: string }) => i.label);
-      expect(labels).not.toContain("Registration with Sportamt Zurich submitted");
-      expect(labels).toContain("SFV team registration and licence fees paid");
+      const full = getInstance(instance.id as number);
+      expect((full.items as Record<string, unknown>[]).length).toBe(9);
+      const labels = (full.items as Record<string, unknown>[]).map((i) => i.label as string);
+      expect(labels).not.toContain("cl_admin_sportamt_reg");
+      expect(labels).toContain("cl_admin_sfv_reg");
     });
 
     it("getActiveClassifications returns set classifications", () => {
@@ -128,9 +129,9 @@ describe("checklist service", () => {
         { label: "Custom task 2", sortOrder: 2 },
       ]);
       expect(instance.id).toBeGreaterThan(0);
-      const full = getInstance(instance.id);
-      expect(full.items.length).toBe(2);
-      expect(full.items[0].is_custom).toBe(1);
+      const full = getInstance(instance.id as number);
+      expect((full.items as Record<string, unknown>[]).length).toBe(2);
+      expect((full.items as Record<string, unknown>[])[0].is_custom).toBe(1);
     });
 
     it("listInstances returns filtered results", () => {
@@ -148,8 +149,8 @@ describe("checklist service", () => {
     it("toggleItem sets completed, completed_at, completed_by", () => {
       const userId = createGuardian();
       const instance = instantiateFromTemplate("admin", null);
-      const full = getInstance(instance.id);
-      const itemId = full.items[0].id;
+      const full = getInstance(instance.id as number);
+      const itemId = (full.items as Record<string, unknown>[])[0].id as number;
 
       const updated = toggleItem(itemId, true, userId);
       expect(updated.completed).toBe(1);
@@ -164,32 +165,32 @@ describe("checklist service", () => {
 
     it("addCustomItem creates item with is_custom = 1", () => {
       const instance = instantiateFromTemplate("admin", null);
-      const item = addCustomItem(instance.id, "My custom task", 99);
+      const item = addCustomItem(instance.id as number, "My custom task", 99);
       expect(item.is_custom).toBe(1);
       expect(item.label).toBe("My custom task");
     });
 
     it("removeItem only deletes custom items", () => {
       const instance = instantiateFromTemplate("admin", null);
-      const full = getInstance(instance.id);
-      const templateItem = full.items[0];
+      const full = getInstance(instance.id as number);
+      const templateItem = (full.items as Record<string, unknown>[])[0];
 
-      expect(() => removeItem(templateItem.id)).toThrow();
+      expect(() => removeItem(templateItem.id as number)).toThrow();
 
-      const custom = addCustomItem(instance.id, "Deletable", 99);
-      removeItem(custom.id);
-      const after = getInstance(instance.id);
-      const labels = after.items.map((i: { label: string }) => i.label);
+      const custom = addCustomItem(instance.id as number, "Deletable", 99);
+      removeItem(custom.id as number);
+      const after = getInstance(instance.id as number);
+      const labels = (after.items as Record<string, unknown>[]).map((i) => i.label as string);
       expect(labels).not.toContain("Deletable");
     });
 
     it("reorderItems updates sort_order for all items", () => {
       const instance = instantiateFromTemplate("training", createEvent());
-      const full = getInstance(instance.id);
-      const ids = full.items.map((i: { id: number }) => i.id);
+      const full = getInstance(instance.id as number);
+      const ids = (full.items as Record<string, unknown>[]).map((i) => i.id as number);
       const reversed = [...ids].reverse();
 
-      const reordered = reorderItems(instance.id, reversed);
+      const reordered = reorderItems(instance.id as number, reversed);
       expect(reordered[0].id).toBe(reversed[0]);
       expect(reordered[0].sort_order).toBe(1);
     });
@@ -198,28 +199,28 @@ describe("checklist service", () => {
   describe("resetAdminChecklists", () => {
     it("archives old instance and creates new one", () => {
       const old = instantiateFromTemplate("admin", null);
-      db.run("UPDATE checklist_instances SET semester = ? WHERE id = ?", ["2025-autumn", old.id]);
+      db.run("UPDATE checklist_instances SET semester = ? WHERE id = ?", ["2025-autumn", old.id as number]);
 
       const newInstance = resetAdminChecklists();
       expect(newInstance).toBeTruthy();
 
-      const oldFull = getInstance(old.id);
+      const oldFull = getInstance(old.id as number);
       expect(oldFull.status).toBe("archived");
     });
 
     it("preserves custom items across resets (unchecked)", () => {
       const userId = createGuardian();
       const old = instantiateFromTemplate("admin", null);
-      addCustomItem(old.id, "Preserved custom", 99);
-      const full = getInstance(old.id);
-      const customItem = full.items.find((i: { label: string }) => i.label === "Preserved custom");
-      toggleItem(customItem!.id, true, userId);
+      addCustomItem(old.id as number, "Preserved custom", 99);
+      const full = getInstance(old.id as number);
+      const customItem = (full.items as Record<string, unknown>[]).find((i) => i.label === "Preserved custom");
+      toggleItem(customItem!.id as number, true, userId);
 
-      db.run("UPDATE checklist_instances SET semester = ? WHERE id = ?", ["2025-autumn", old.id]);
+      db.run("UPDATE checklist_instances SET semester = ? WHERE id = ?", ["2025-autumn", old.id as number]);
 
       const newInstance = resetAdminChecklists();
-      const newFull = getInstance(newInstance!.id);
-      const preserved = newFull.items.find((i: { label: string }) => i.label === "Preserved custom");
+      const newFull = getInstance(newInstance!.id as number);
+      const preserved = (newFull.items as Record<string, unknown>[]).find((i) => i.label === "Preserved custom");
       expect(preserved).toBeTruthy();
       expect(preserved!.is_custom).toBe(1);
       expect(preserved!.completed).toBe(0);
@@ -250,28 +251,54 @@ describe("checklist service", () => {
     });
   });
 
+  describe("ensureEventChecklist", () => {
+    it("creates a training checklist for a match event", () => {
+      const eventId = createEvent("match");
+      ensureEventChecklist(eventId, "match");
+      const instances = listInstances({ eventId });
+      expect(instances.length).toBe(1);
+      const full = getInstance(instances[0].id as number);
+      expect((full.items as Record<string, unknown>[])[0].label).toBe("cl_training_equipment");
+    });
+
+    it("creates a training checklist for a friendly event", () => {
+      const eventId = createEvent("friendly");
+      ensureEventChecklist(eventId, "friendly");
+      const instances = listInstances({ eventId });
+      expect(instances.length).toBe(1);
+    });
+
+    it("is idempotent", () => {
+      const eventId = createEvent("match");
+      ensureEventChecklist(eventId, "match");
+      ensureEventChecklist(eventId, "match");
+      const instances = listInstances({ eventId });
+      expect(instances.length).toBe(1);
+    });
+  });
+
   describe("refilterAdminChecklist", () => {
     it("adds new items when classification is added mid-semester", () => {
       const instance = instantiateFromTemplate("admin", null);
-      const before = getInstance(instance.id);
-      expect(before.items.length).toBe(7);
+      const before = getInstance(instance.id as number);
+      expect((before.items as Record<string, unknown>[]).length).toBe(7);
 
       setClassifications(1, ["sfv"]);
-      refilterAdminChecklist(instance.id);
+      refilterAdminChecklist(instance.id as number);
 
-      const after = getInstance(instance.id);
-      expect(after.items.length).toBe(9);
+      const after = getInstance(instance.id as number);
+      expect((after.items as Record<string, unknown>[]).length).toBe(9);
     });
 
     it("does NOT remove items when classification is removed", () => {
       setClassifications(1, ["sfv"]);
       const instance = instantiateFromTemplate("admin", null);
-      expect(getInstance(instance.id).items.length).toBe(9);
+      expect((getInstance(instance.id as number).items as Record<string, unknown>[]).length).toBe(9);
 
       setClassifications(1, []);
-      refilterAdminChecklist(instance.id);
+      refilterAdminChecklist(instance.id as number);
 
-      expect(getInstance(instance.id).items.length).toBe(9);
+      expect((getInstance(instance.id as number).items as Record<string, unknown>[]).length).toBe(9);
     });
   });
 });

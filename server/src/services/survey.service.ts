@@ -109,6 +109,11 @@ export function archiveSurvey(id: number): void {
   db.run("UPDATE surveys SET status = 'archived' WHERE id = ?", [id]);
 }
 
+export function updateSurveyTitle(id: number, title: string): void {
+  const db = getDB();
+  db.run("UPDATE surveys SET title = ? WHERE id = ?", [title, id]);
+}
+
 export function listSurveys(teamId?: number): Survey[] {
   const db = getDB();
   let result;

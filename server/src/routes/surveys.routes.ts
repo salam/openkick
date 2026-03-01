@@ -6,6 +6,7 @@ import {
   getQuestions,
   closeSurvey,
   archiveSurvey,
+  updateSurveyTitle,
   listSurveys,
   getAggregatedResults,
   getRawResponses,
@@ -144,6 +145,30 @@ surveysRouter.get(
     } catch (err) {
       console.error("Failed to get survey responses:", err);
       res.status(500).json({ error: "Failed to get survey responses" });
+    }
+  },
+);
+
+// PUT /surveys/:id/title — Rename a survey (any status)
+surveysRouter.put(
+  "/surveys/:id/title",
+  authMiddleware,
+  async (req, res) => {
+    try {
+      const survey = getSurveyById(Number(req.params.id));
+      if (!survey) {
+        return res.status(404).json({ error: "Survey not found" });
+      }
+      const { title } = req.body;
+      if (!title || !title.trim()) {
+        return res.status(400).json({ error: "title is required" });
+      }
+      updateSurveyTitle(survey.id, title.trim());
+      const updated = getSurveyById(survey.id)!;
+      res.json(updated);
+    } catch (err) {
+      console.error("Failed to rename survey:", err);
+      res.status(500).json({ error: "Failed to rename survey" });
     }
   },
 );

@@ -87,6 +87,8 @@ export default function SurveyDetailClient() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [viewMode, setViewMode] = useState<'charts' | 'table'>('charts');
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState('');
 
   const fetchData = useCallback(async () => {
     try {
@@ -122,6 +124,20 @@ export default function SurveyDetailClient() {
   async function handleArchive() {
     try {
       await apiFetch(`/api/surveys/${id}/archive`, { method: 'PUT' });
+      await fetchData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('error'));
+    }
+  }
+
+  async function handleRename() {
+    if (!titleDraft.trim()) return;
+    try {
+      await apiFetch(`/api/surveys/${id}/title`, {
+        method: 'PUT',
+        body: JSON.stringify({ title: titleDraft.trim() }),
+      });
+      setEditingTitle(false);
       await fetchData();
     } catch (err) {
       setError(err instanceof Error ? err.message : t('error'));
@@ -345,7 +361,45 @@ export default function SurveyDetailClient() {
       {/* Header */}
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-gray-900">{survey.title}</h1>
+          {editingTitle ? (
+            <form
+              onSubmit={(e) => { e.preventDefault(); handleRename(); }}
+              className="flex items-center gap-2"
+            >
+              <input
+                autoFocus
+                type="text"
+                value={titleDraft}
+                onChange={(e) => setTitleDraft(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Escape') setEditingTitle(false); }}
+                className="rounded-lg border border-gray-300 px-3 py-1.5 text-lg font-bold text-gray-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              />
+              <button
+                type="submit"
+                className="rounded-lg bg-emerald-500 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-emerald-600"
+              >
+                {t('save')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditingTitle(false)}
+                className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
+              >
+                {t('cancel')}
+              </button>
+            </form>
+          ) : (
+            <div className="group flex items-center gap-2">
+              <h1 className="text-2xl font-bold text-gray-900">{survey.title}</h1>
+              <button
+                onClick={() => { setTitleDraft(survey.title); setEditingTitle(true); }}
+                className="text-sm text-gray-400 opacity-0 transition group-hover:opacity-100 hover:text-emerald-600"
+                title={t('survey_rename')}
+              >
+                &#9998;
+              </button>
+            </div>
+          )}
           <span
             className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_BADGE[survey.status]}`}
           >

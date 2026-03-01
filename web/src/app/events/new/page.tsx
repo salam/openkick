@@ -3,6 +3,7 @@
 import { useState, type FormEvent, type ChangeEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
+import AuthGuard from '@/components/AuthGuard';
 import { getToken } from '@/lib/auth';
 
 /* ── Constants ──────────────────────────────────────────────────────── */
@@ -313,6 +314,7 @@ export default function NewEventPage() {
   /* ── Render ────────────────────────────────────────────────────── */
 
   return (
+    <AuthGuard>
     <div className="mx-auto max-w-3xl">
       <h1 className="mb-6 text-2xl font-bold text-gray-900">
         {seriesMode ? 'Create Event Series' : 'Create Event'}
@@ -815,5 +817,6 @@ export default function NewEventPage() {
         </div>
       </form>
     </div>
+    </AuthGuard>
   );
 }

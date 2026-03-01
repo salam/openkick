@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
 import { t, getLanguage } from '@/lib/i18n';
 import EventCard from '@/components/EventCard';
+import AuthGuard from '@/components/AuthGuard';
 
 interface ApiEvent {
   id: string;
@@ -59,6 +60,7 @@ export default function EventsPage() {
     filter === 'all' ? events : events.filter((e) => e.type === filter);
 
   return (
+    <AuthGuard>
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">{t('events')}</h1>
@@ -135,5 +137,6 @@ export default function EventsPage() {
         </div>
       )}
     </div>
+    </AuthGuard>
   );
 }

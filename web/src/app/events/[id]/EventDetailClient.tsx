@@ -3,6 +3,7 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState, useCallback } from 'react';
 import { apiFetch } from '@/lib/api';
+import { isAuthenticated } from '@/lib/auth';
 import { t, getLanguage } from '@/lib/i18n';
 import AltchaWidget from '@/components/AltchaWidget';
 import TournamentResultsForm from '@/components/TournamentResultsForm';
@@ -239,6 +240,9 @@ export default function EventDetailClient() {
   const [error, setError] = useState<string | null>(null);
   const [seriesInfo, setSeriesInfo] = useState<SeriesInfo | null>(null);
 
+  // Auth state: null = loading, false = public, true = logged in
+  const [authed, setAuthed] = useState<boolean | null>(null);
+
   // Role
   const [role, setRole] = useState<string>('');
   const [playerId, setPlayerId] = useState<number | null>(null);
@@ -261,6 +265,18 @@ export default function EventDetailClient() {
   // Reminder
   const [reminderSent, setReminderSent] = useState(false);
 
+  // Public RSVP flow
+  const [rsvpStep, setRsvpStep] = useState<'search' | 'confirm' | 'done'>('search');
+  const [rsvpName, setRsvpName] = useState('');
+  const [rsvpCaptcha, setRsvpCaptcha] = useState('');
+  const [rsvpToken, setRsvpToken] = useState('');
+  const [rsvpPlayerInitials, setRsvpPlayerInitials] = useState('');
+  const [rsvpEventTitle, setRsvpEventTitle] = useState('');
+  const [rsvpSearching, setRsvpSearching] = useState(false);
+  const [rsvpConfirming, setRsvpConfirming] = useState(false);
+  const [rsvpResult, setRsvpResult] = useState<string | null>(null);
+  const [rsvpError, setRsvpError] = useState<string | null>(null);
+
   // Language reactivity
   const [, setLang] = useState(() => getLanguage());
   useEffect(() => {
@@ -271,18 +287,40 @@ export default function EventDetailClient() {
 
   /* ── Decode token on mount ── */
   useEffect(() => {
-    const payload = decodeToken();
-    if (payload) {
-      setRole(payload.role || '');
-      setPlayerId(payload.playerId ?? payload.sub ?? null);
+    const authenticated = isAuthenticated();
+    setAuthed(authenticated);
+    if (authenticated) {
+      const payload = decodeToken();
+      if (payload) {
+        setRole(payload.role || '');
+        setPlayerId(payload.playerId ?? payload.sub ?? null);
+      }
     }
   }, []);
 
   /* ── Fetch event (or build virtual instance from series template) ── */
   useEffect(() => {
-    if (!id) return;
+    if (!id || authed === null) return; // still determining auth
 
     setLoading(true);
+
+    if (authed === false) {
+      // Public view — use public endpoint
+      apiFetch<{ id: number; type: string; title: string; description?: string; date: string; startTime?: string; attendanceTime?: string; deadline?: string; maxParticipants?: number; location?: string; categoryRequirement?: string; attachmentUrl?: string }>(
+        `/api/public/events/${id}`,
+      )
+        .then((data) => {
+          const mapped: EventDetail = {
+            ...data,
+            attendanceSummary: { attending: 0, absent: 0, waitlist: 0, unknown: 0 },
+          };
+          setEvent(mapped);
+          setError(null);
+        })
+        .catch((err) => setError(err.message))
+        .finally(() => setLoading(false));
+      return;
+    }
 
     if (parsedSeriesId && parsedDate) {
       // Synthetic series ID — fetch the series template and build a virtual event
@@ -325,7 +363,7 @@ export default function EventDetailClient() {
         .catch((err) => setError(err.message))
         .finally(() => setLoading(false));
     }
-  }, [id, parsedSeriesId, parsedDate]);
+  }, [id, authed, parsedSeriesId, parsedDate]);
 
   /* ── Fetch attendance for coaches ── */
   const fetchAttendance = useCallback(() => {
@@ -338,10 +376,10 @@ export default function EventDetailClient() {
   }, [id]);
 
   useEffect(() => {
-    if (role === 'coach' || role === 'admin') {
+    if (authed === true && (role === 'coach' || role === 'admin')) {
       fetchAttendance();
     }
-  }, [role, fetchAttendance]);
+  }, [authed, role, fetchAttendance]);
 
   /* ── Fetch teams for coaches ── */
   const fetchTeams = useCallback(() => {
@@ -354,10 +392,10 @@ export default function EventDetailClient() {
   }, [id]);
 
   useEffect(() => {
-    if (role === 'coach' || role === 'admin') {
+    if (authed === true && (role === 'coach' || role === 'admin')) {
       fetchTeams();
     }
-  }, [role, fetchTeams]);
+  }, [authed, role, fetchTeams]);
 
   /* ── RSVP handler (parent) ── */
   async function handleRsvp(status: 'attending' | 'absent') {
@@ -429,6 +467,46 @@ export default function EventDetailClient() {
     }
   }
 
+  /* ── Public RSVP handlers ── */
+  async function handlePublicRsvpSearch() {
+    setRsvpSearching(true);
+    setRsvpError(null);
+    try {
+      const res = await apiFetch<{ token: string; playerInitials: string; eventTitle: string }>(
+        '/api/rsvp/search',
+        {
+          method: 'POST',
+          body: JSON.stringify({ name: rsvpName, eventId: id, captcha: rsvpCaptcha }),
+        },
+      );
+      setRsvpToken(res.token);
+      setRsvpPlayerInitials(res.playerInitials);
+      setRsvpEventTitle(res.eventTitle);
+      setRsvpStep('confirm');
+    } catch (err) {
+      setRsvpError(err instanceof Error ? err.message : t('rsvp_error'));
+    } finally {
+      setRsvpSearching(false);
+    }
+  }
+
+  async function handlePublicRsvpConfirm(status: 'attending' | 'absent') {
+    setRsvpConfirming(true);
+    setRsvpError(null);
+    try {
+      await apiFetch('/api/rsvp/confirm', {
+        method: 'POST',
+        body: JSON.stringify({ token: rsvpToken, status }),
+      });
+      setRsvpResult(status === 'attending' ? t('rsvp_registered') : t('rsvp_unregistered'));
+      setRsvpStep('done');
+    } catch (err) {
+      setRsvpError(err instanceof Error ? err.message : t('rsvp_error'));
+    } finally {
+      setRsvpConfirming(false);
+    }
+  }
+
   /* ── Render ── */
 
   if (loading) return <LoadingSkeleton />;
@@ -449,6 +527,206 @@ export default function EventDetailClient() {
   const categories = event.categoryRequirement
     ? event.categoryRequirement.split(',').map((c) => c.trim())
     : [];
+
+  /* ── Public (unauthenticated) view ── */
+  if (authed === false && event) {
+    return (
+      <main className="mx-auto max-w-3xl space-y-8 px-4 py-8 sm:px-6">
+        {/* ── Header ── */}
+        <div>
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <span className="inline-block rounded-full bg-emerald-100 px-3 py-0.5 text-xs font-semibold text-emerald-700">
+              {TYPE_I18N_KEYS[event.type] ? t(TYPE_I18N_KEYS[event.type]) : event.type}
+            </span>
+            {event.deadline && (
+              <span className="inline-block rounded-full bg-amber-100 px-3 py-0.5 text-xs font-semibold text-amber-800">
+                {deadlineCountdown(event.deadline)}
+              </span>
+            )}
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">
+            {event.title}
+          </h1>
+        </div>
+
+        {/* ── Info grid ── */}
+        <section className="grid gap-4 sm:grid-cols-2">
+          <InfoItem label={t('date')} value={formatDate(event.date)} />
+          {event.startTime && (
+            <InfoItem label={t('start_time')} value={event.startTime} />
+          )}
+          {event.attendanceTime && (
+            <InfoItem label={t('attendance_time')} value={event.attendanceTime} />
+          )}
+          {event.location && (
+            <InfoItem label={t('location')} value={event.location} />
+          )}
+          {event.deadline && (
+            <InfoItem label={t('deadline')} value={formatDate(event.deadline)} />
+          )}
+          {event.maxParticipants != null && (
+            <InfoItem
+              label={t('max_participants')}
+              value={String(event.maxParticipants)}
+            />
+          )}
+        </section>
+
+        {/* ── Description ── */}
+        {event.description && (
+          <section>
+            <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-gray-500">
+              {t('description')}
+            </h2>
+            <p className="whitespace-pre-line text-gray-700">
+              {event.description}
+            </p>
+          </section>
+        )}
+
+        {/* ── Category badges ── */}
+        {categories.length > 0 && (
+          <section>
+            <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">
+              {t('categories')}
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              {categories.map((cat) => (
+                <span
+                  key={cat}
+                  className="inline-block rounded-full border border-emerald-300 bg-emerald-50 px-3 py-0.5 text-xs font-medium text-emerald-600"
+                >
+                  {cat}
+                </span>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* ── Attachment ── */}
+        {event.attachmentUrl && (
+          <section>
+            <a
+              href={event.attachmentUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-emerald-600 transition hover:bg-emerald-50"
+            >
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"
+                />
+              </svg>
+              {t('download_attachment')}
+            </a>
+          </section>
+        )}
+
+        {/* ── Public RSVP ── */}
+        <section className="rounded-xl border-2 border-emerald-300 bg-emerald-50 p-6">
+          <h2 className="mb-1 text-lg font-semibold text-emerald-800">
+            {t('public_rsvp_title')}
+          </h2>
+          <p className="mb-4 text-sm text-emerald-700">{t('public_rsvp_desc')}</p>
+
+          {rsvpError && (
+            <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-2 text-sm text-red-700">
+              {rsvpError}
+            </div>
+          )}
+
+          {rsvpStep === 'search' && (
+            <div className="space-y-3">
+              <AltchaWidget onVerify={setRsvpCaptcha} />
+              <input
+                type="text"
+                value={rsvpName}
+                onChange={(e) => setRsvpName(e.target.value)}
+                placeholder={t('rsvp_child_name_placeholder')}
+                className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400"
+              />
+              <button
+                onClick={handlePublicRsvpSearch}
+                disabled={rsvpSearching || !rsvpCaptcha || !rsvpName.trim()}
+                className="w-full rounded-xl bg-emerald-500 px-6 py-3 text-sm font-bold text-white shadow transition hover:bg-emerald-600 disabled:opacity-50"
+              >
+                {rsvpSearching ? t('rsvp_searching') : t('rsvp_continue')}
+              </button>
+            </div>
+          )}
+
+          {rsvpStep === 'confirm' && (
+            <div className="space-y-4">
+              <p className="text-sm text-gray-700">
+                {t('rsvp_confirm_question')
+                  .replace('{name}', rsvpPlayerInitials)
+                  .replace('{event}', rsvpEventTitle)}
+              </p>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <button
+                  onClick={() => handlePublicRsvpConfirm('attending')}
+                  disabled={rsvpConfirming}
+                  className="flex-1 rounded-xl bg-emerald-500 px-6 py-4 text-lg font-bold text-white shadow transition hover:bg-emerald-600 disabled:opacity-50"
+                >
+                  {rsvpConfirming ? '...' : t('rsvp_attending')}
+                </button>
+                <button
+                  onClick={() => handlePublicRsvpConfirm('absent')}
+                  disabled={rsvpConfirming}
+                  className="flex-1 rounded-xl bg-red-500 px-6 py-4 text-lg font-bold text-white shadow transition hover:bg-red-600 disabled:opacity-50"
+                >
+                  {rsvpConfirming ? '...' : t('rsvp_absent')}
+                </button>
+              </div>
+              <button
+                onClick={() => { setRsvpStep('search'); setRsvpToken(''); setRsvpCaptcha(''); }}
+                className="text-sm text-emerald-600 underline hover:text-emerald-800"
+              >
+                {t('rsvp_select_other')}
+              </button>
+            </div>
+          )}
+
+          {rsvpStep === 'done' && (
+            <div className="space-y-3 text-center">
+              <p className="text-sm font-semibold text-emerald-800">{rsvpResult}</p>
+              <button
+                onClick={() => {
+                  setRsvpStep('search');
+                  setRsvpToken('');
+                  setRsvpCaptcha('');
+                  setRsvpName('');
+                  setRsvpResult(null);
+                }}
+                className="text-sm text-emerald-600 underline hover:text-emerald-800"
+              >
+                {t('rsvp_confirm_another')}
+              </button>
+            </div>
+          )}
+        </section>
+
+        {/* ── Login banner ── */}
+        <section className="rounded-xl border border-gray-200 bg-white p-6 text-center">
+          <p className="mb-3 text-sm text-gray-600">{t('login_for_details')}</p>
+          <a
+            href="/login"
+            className="inline-block rounded-xl bg-emerald-500 px-6 py-2 text-sm font-semibold text-white shadow transition hover:bg-emerald-600"
+          >
+            {t('login_button')}
+          </a>
+        </section>
+      </main>
+    );
+  }
 
   const isParent = role === 'parent';
   const isCoach = role === 'coach' || role === 'admin';

@@ -57,6 +57,7 @@
 - [x] Trophy cabinet API (public, paginated, chronological)
 - [x] Team name field on events for tournament registration identity
 - [x] Public tournament API with privacy-preserving initials (GET /api/public/tournaments/:id)
+- [x] Public event API with safe fields only (GET /api/public/events/:id, supports series IDs)
 - [x] Player initials service with first-name collision disambiguation
 - [x] Notification system (in-app + WhatsApp threshold alerts)
 - [x] Tournament threshold alert service with deduplication
@@ -68,6 +69,7 @@
 - [x] Login page with JWT auth
 - [x] Coach dashboard with event cards and attendance overview
 - [x] Event detail page with one-click RSVP for parents
+- [x] Public event detail page — unauthenticated visitors see event info and inline RSVP
 - [x] Public RSVP page (/rsvp) with personalized deep links and anonymous name-search mode
 - [x] Player management with SFV category badges
 - [x] Calendar page (yearly/monthly/list views)

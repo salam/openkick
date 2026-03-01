@@ -1,5 +1,20 @@
 # OpenKick Release Notes
 
+## Version 1.15 (Sat, Mar 1 2026)
+
+* Public event pages — share event links with anyone; visitors can view event details and RSVP without logging in
+* Inline RSVP on public event page: captcha-protected player search and attendance confirmation
+* Login prompt banner on public view to access full event details
+
+## Version 1.14 (Sat, Mar 1 2026)
+
+* Homepage customization: logged-in coaches see a settings button to customize the homepage
+* Background image upload for homepage hero area (with semi-transparent overlay for readability)
+* Primary tint color picker — changes the main brand color
+* Footer smart button: shows "Dashboard" when logged in, "Coach Login" when not
+* Homepage fetches club name, description, and logo from API settings (no more hardcoded defaults)
+* Trophy widget redesigned: prominent placement badge with trophy icon on the left, event title as subtitle
+
 ## Version 1.13 (Sat, Mar 1 2026)
 
 * Survey builder UI: create custom surveys with 5 question types (single choice, multi choice, star rating, free text, size picker)

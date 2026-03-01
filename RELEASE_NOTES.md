@@ -1,5 +1,15 @@
 # OpenKick Release Notes
 
+## Version 1.13 (Sat, Mar 1 2026)
+
+* Survey builder UI: create custom surveys with 5 question types (single choice, multi choice, star rating, free text, size picker)
+* Survey list with status filtering (open/closed/archived) and template shortcuts
+* Results dashboard with star rating averages, distribution charts, and text response lists
+* Public survey response form with mobile-friendly question rendering
+* One-click template creation for Trikot orders and semester feedback
+* QR code display and shareable link with copy-to-clipboard
+* Surveys accessible from top-level navigation
+
 ## Version 1.12 (Sat, Mar 1 2026)
 
 * Checklists dashboard page with Admin/Training/Tournament tabs

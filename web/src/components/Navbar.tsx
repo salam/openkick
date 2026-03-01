@@ -12,6 +12,8 @@ const navLinks = [
   { href: '/players/', label: 'players' },
   { href: '/calendar/', label: 'calendar' },
   { href: '/surveys/', label: 'surveys' },
+  { href: '/dashboard/checklists/', label: 'checklists' },
+  { href: '/dashboard/payments/', label: 'payments_title' },
   { href: '/settings/', label: 'settings' },
 ];
 

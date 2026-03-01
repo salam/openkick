@@ -31,16 +31,25 @@ function placementLabel(placement: number, totalTeams: number | null): string {
   return totalTeams ? `${base} ${t('out_of')} ${totalTeams}` : base;
 }
 
+function placementIcon(placement: number): string {
+  switch (placement) {
+    case 1: return '\u{1F947}';
+    case 2: return '\u{1F948}';
+    case 3: return '\u{1F949}';
+    default: return '\u{1F3C6}';
+  }
+}
+
 function placementBadgeClass(placement: number): string {
   switch (placement) {
     case 1:
-      return 'bg-amber-100 text-amber-800 border-amber-300';
+      return 'bg-gradient-to-r from-amber-50 to-yellow-100 text-amber-900 border-amber-300 shadow-sm';
     case 2:
-      return 'bg-gray-100 text-gray-700 border-gray-300';
+      return 'bg-gradient-to-r from-slate-50 to-slate-100 text-slate-800 border-slate-300 shadow-sm';
     case 3:
-      return 'bg-orange-100 text-orange-800 border-orange-300';
+      return 'bg-gradient-to-r from-orange-50 to-amber-100 text-orange-900 border-orange-300 shadow-sm';
     default:
-      return 'bg-gray-50 text-gray-600 border-gray-200';
+      return 'bg-gradient-to-r from-emerald-50 to-teal-50 text-emerald-800 border-emerald-200 shadow-sm';
   }
 }
 
@@ -134,8 +143,9 @@ export default function TrophyCabinetPage() {
               <div className="flex flex-wrap items-center gap-2">
                 {entry.placement != null && (
                   <span
-                    className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${placementBadgeClass(entry.placement)}`}
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-semibold ${placementBadgeClass(entry.placement)}`}
                   >
+                    <span className="text-base">{placementIcon(entry.placement)}</span>
                     {placementLabel(entry.placement, entry.totalTeams)}
                   </span>
                 )}

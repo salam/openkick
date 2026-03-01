@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
+import { t } from '@/lib/i18n';
 
 interface TrophyCabinetEntry {
   id: number;
@@ -22,16 +23,25 @@ function ordinal(n: number): string {
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }
 
+function placementIcon(placement: number): string {
+  switch (placement) {
+    case 1: return '\u{1F947}';
+    case 2: return '\u{1F948}';
+    case 3: return '\u{1F949}';
+    default: return '\u{1F3C6}';
+  }
+}
+
 function placementColor(placement: number): string {
   switch (placement) {
     case 1:
-      return 'bg-amber-100 text-amber-800';
+      return 'bg-gradient-to-r from-amber-50 to-yellow-100 text-amber-900';
     case 2:
-      return 'bg-gray-100 text-gray-700';
+      return 'bg-gradient-to-r from-slate-50 to-slate-100 text-slate-800';
     case 3:
-      return 'bg-orange-100 text-orange-800';
+      return 'bg-gradient-to-r from-orange-50 to-amber-100 text-orange-900';
     default:
-      return 'bg-gray-50 text-gray-600';
+      return 'bg-gradient-to-r from-emerald-50 to-teal-50 text-emerald-800';
   }
 }
 
@@ -94,13 +104,13 @@ export default function RecentTrophies() {
     <div className="mb-8 rounded-lg border border-gray-200 bg-white p-5">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
-          Recent Trophies
+          {t('recent_trophies')}
         </h2>
         <a
           href="/trophies"
           className="text-xs text-emerald-600 hover:text-emerald-800"
         >
-          View all
+          {t('view_all')}
         </a>
       </div>
       <div className="space-y-3">
@@ -118,16 +128,15 @@ export default function RecentTrophies() {
               </p>
             </div>
             <div className="flex items-center gap-1.5">
-              {entry.placement && (
+              {entry.placement != null && (
                 <span
-                  className={`rounded-full px-2 py-0.5 text-xs font-bold ${placementColor(entry.placement)}`}
+                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-sm font-semibold ${placementColor(entry.placement)}`}
                 >
+                  <span className="text-base leading-none">{placementIcon(entry.placement)}</span>
                   {ordinal(entry.placement)}
-                </span>
-              )}
-              {entry.achievements.length > 0 && (
-                <span className="text-xs font-medium text-amber-600">
-                  T {entry.achievements.length}
+                  {entry.totalTeams != null && (
+                    <span className="text-xs font-normal opacity-70">/{entry.totalTeams}</span>
+                  )}
                 </span>
               )}
             </div>

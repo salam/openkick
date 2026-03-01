@@ -716,13 +716,9 @@ export default function EventDetailClient() {
 
         {/* ── Login banner ── */}
         <section className="rounded-xl border border-gray-200 bg-white p-6 text-center">
-          <p className="mb-3 text-sm text-gray-600">{t('login_for_details')}</p>
-          <a
-            href="/login"
-            className="inline-block rounded-xl bg-emerald-500 px-6 py-2 text-sm font-semibold text-white shadow transition hover:bg-emerald-600"
-          >
-            {t('login_button')}
-          </a>
+          <p className="text-sm text-gray-600">
+            {t('login_for_details_pre')}<a href="/login" className="font-semibold text-emerald-600 underline hover:text-emerald-800">{t('login_for_details_link')}</a>{t('login_for_details_post')}
+          </p>
         </section>
       </main>
     );

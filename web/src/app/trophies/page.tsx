@@ -183,7 +183,7 @@ export default function TrophyCabinetPage() {
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 text-sm text-emerald-600 hover:text-emerald-800"
                   >
-                    {t('view_results')} &rarr;
+                    {t('view_results')}
                   </a>
                 </div>
               )}

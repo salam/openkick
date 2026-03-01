@@ -94,14 +94,14 @@ export default function SurveysPage() {
             disabled={creatingTemplate !== null}
             className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
           >
-            {creatingTemplate === 'trikot-order' ? t('loading') : t('survey_template_trikot')}
+            {creatingTemplate === 'trikot-order' ? t('loading') : t('survey_new_template_trikot')}
           </button>
           <button
             onClick={() => handleTemplate('feedback')}
             disabled={creatingTemplate !== null}
             className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
           >
-            {creatingTemplate === 'feedback' ? t('loading') : t('survey_template_feedback')}
+            {creatingTemplate === 'feedback' ? t('loading') : t('survey_new_template_feedback')}
           </button>
           <button
             onClick={() => router.push('/surveys/new/')}

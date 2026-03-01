@@ -41,6 +41,20 @@ export default function NewSurveyPage() {
   const [questions, setQuestions] = useState<QuestionForm[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [creatingTemplate, setCreatingTemplate] = useState<string | null>(null);
+
+  async function handleTemplate(template: string) {
+    setCreatingTemplate(template);
+    try {
+      const result = await apiFetch<{ id: number }>(`/api/surveys/templates/${template}`, {
+        method: 'POST',
+      });
+      router.push(`/surveys/${result.id}/`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('error'));
+      setCreatingTemplate(null);
+    }
+  }
 
   /* ── Question helpers ─────────────────────────────────────────── */
 
@@ -154,6 +168,29 @@ export default function NewSurveyPage() {
       </a>
 
       <h1 className="mb-6 text-2xl font-bold text-gray-900">{t('new_survey')}</h1>
+
+      {/* Quick templates */}
+      <div className="mb-6 rounded-xl bg-white p-4 shadow-sm">
+        <p className="mb-3 text-sm font-medium text-gray-500">{t('survey_or_use_template')}</p>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => handleTemplate('trikot-order')}
+            disabled={creatingTemplate !== null}
+            className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
+          >
+            {creatingTemplate === 'trikot-order' ? t('loading') : t('survey_new_template_trikot')}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleTemplate('feedback')}
+            disabled={creatingTemplate !== null}
+            className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
+          >
+            {creatingTemplate === 'feedback' ? t('loading') : t('survey_new_template_feedback')}
+          </button>
+        </div>
+      </div>
 
       {/* Error */}
       {error && (

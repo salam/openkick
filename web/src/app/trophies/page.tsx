@@ -127,57 +127,65 @@ export default function TrophyCabinetPage() {
       {!loading && !error && entries.length > 0 && (
         <div className="space-y-4">
           {entries.map((entry) => (
-            <div key={entry.id} className="rounded-lg border border-gray-200 p-5 space-y-3">
-              {/* Row 1: title + date */}
-              <div className="flex items-start justify-between">
-                <a
-                  href={`/events/${entry.eventId}`}
-                  className="text-lg font-semibold text-emerald-600 hover:text-emerald-800"
-                >
-                  {entry.eventTitle}
-                </a>
-                <span className="text-sm text-gray-500">{formatDate(entry.eventDate)}</span>
-              </div>
+            <div key={entry.id} className={`rounded-lg border p-5 space-y-3 ${entry.placement != null ? placementBadgeClass(entry.placement).replace('shadow-sm', 'shadow') : 'border-gray-200'}`}>
+              {/* Row 1: trophy icon (prominent) */}
+              {entry.placement != null && (
+                <div className="text-center">
+                  <span className="text-5xl leading-none">{placementIcon(entry.placement)}</span>
+                </div>
+              )}
 
-              {/* Row 2: placement badge + achievement badges */}
-              <div className="flex flex-wrap items-center gap-2">
-                {entry.placement != null && (
-                  <span
-                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-semibold ${placementBadgeClass(entry.placement)}`}
-                  >
-                    <span className="text-base">{placementIcon(entry.placement)}</span>
-                    {placementLabel(entry.placement, entry.totalTeams)}
-                  </span>
-                )}
-                {entry.achievements.map((a, idx) => (
-                  <span
-                    key={idx}
-                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${achievementPillClass(a.type)}`}
-                  >
-                    {a.label}
-                  </span>
-                ))}
-              </div>
-
-              {/* Row 3: summary */}
-              {entry.summary && (
-                <p className="text-sm text-gray-600">
-                  {entry.summary.length > 150
-                    ? `${entry.summary.slice(0, 150)}...`
-                    : entry.summary}
+              {/* Row 2: placement label (large) */}
+              {entry.placement != null && (
+                <p className="text-center text-xl font-bold text-gray-900">
+                  {placementLabel(entry.placement, entry.totalTeams)}
                 </p>
               )}
 
-              {/* Row 4: results URL */}
-              {entry.resultsUrl && (
+              {/* Row 3: event title + date */}
+              <div className="text-center">
                 <a
-                  href={entry.resultsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center text-sm text-emerald-600 hover:text-emerald-800"
+                  href={`/events/${entry.eventId}`}
+                  className="text-base font-medium text-emerald-600 hover:text-emerald-800"
                 >
-                  {t('view_results')}
+                  {entry.eventTitle}
                 </a>
+                <p className="text-sm text-gray-500">{formatDate(entry.eventDate)}</p>
+              </div>
+
+              {/* Row 4: achievement badges */}
+              {entry.achievements.length > 0 && (
+                <div className="flex flex-wrap justify-center gap-2">
+                  {entry.achievements.map((a, idx) => (
+                    <span
+                      key={idx}
+                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${achievementPillClass(a.type)}`}
+                    >
+                      {a.label}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Row 5: full summary (no truncation) */}
+              {entry.summary && (
+                <p className="text-sm text-gray-600">
+                  {entry.summary}
+                </p>
+              )}
+
+              {/* Row 6: results URL */}
+              {entry.resultsUrl && (
+                <div className="text-center">
+                  <a
+                    href={entry.resultsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-sm text-emerald-600 hover:text-emerald-800"
+                  >
+                    {t('view_results')} &rarr;
+                  </a>
+                </div>
               )}
             </div>
           ))}

@@ -72,9 +72,9 @@ export default function SurveyRespondClient() {
     try {
       const payload = {
         player_nickname: survey.anonymous ? undefined : nickname || undefined,
-        answers: Object.entries(answers).map(([qid, value]) => ({
-          question_id: Number(qid),
-          value,
+        answers: survey.questions.map((q) => ({
+          question_id: q.id,
+          value: answers[q.id] || '',
         })),
       };
       const res = await fetch(`${API_URL}/api/public/surveys/${id}/respond`, {
@@ -84,10 +84,13 @@ export default function SurveyRespondClient() {
       });
       if (res.status === 409) { setError('already_submitted'); return; }
       if (res.status === 410) { setError('closed'); return; }
-      if (!res.ok) throw new Error('Submit failed');
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error || 'Submit failed');
+      }
       setSubmitted(true);
-    } catch {
-      setError('not_found');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('survey_not_found'));
     } finally {
       setSubmitting(false);
     }
@@ -232,6 +235,23 @@ export default function SurveyRespondClient() {
       <div className="mx-auto max-w-2xl px-4 py-8">
         <div className="rounded-xl bg-red-50 border border-red-200 p-6 text-center">
           <p className="text-red-800 font-medium">{t('survey_not_found')}</p>
+        </div>
+        <p className="mt-8 text-center text-xs text-gray-400">Powered by OpenKick</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-8">
+        <div className="rounded-xl bg-red-50 border border-red-200 p-6 text-center">
+          <p className="text-red-800 font-medium">{error}</p>
+          <button
+            onClick={() => setError(null)}
+            className="mt-3 text-sm text-red-600 underline hover:text-red-700"
+          >
+            {t('dismiss')}
+          </button>
         </div>
         <p className="mt-8 text-center text-xs text-gray-400">Powered by OpenKick</p>
       </div>

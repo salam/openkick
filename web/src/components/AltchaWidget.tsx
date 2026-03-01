@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import 'altcha';
 
 interface AltchaWidgetProps {
   onVerify: (payload: string) => void;
@@ -18,6 +17,11 @@ export default function AltchaWidget({
 
   const [challengeJson, setChallengeJson] = useState<string | null>(null);
   const [error, setError] = useState(false);
+
+  useEffect(() => {
+    import('altcha');
+  }, []);
+
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
   const url = challengeUrl || `${apiUrl}/api/captcha/challenge`;
 
@@ -62,13 +66,13 @@ export default function AltchaWidget({
       setError(true);
     };
 
-    widget.addEventListener('verification', handleVerify);
+    widget.addEventListener('verified', handleVerify);
     widget.addEventListener('error', handleError);
 
     container.appendChild(widget);
 
     return () => {
-      widget.removeEventListener('verification', handleVerify);
+      widget.removeEventListener('verified', handleVerify);
       widget.removeEventListener('error', handleError);
     };
   }, [challengeJson]);

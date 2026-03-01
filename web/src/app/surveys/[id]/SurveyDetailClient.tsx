@@ -41,6 +41,18 @@ interface AggregatedResults {
   questions: AggregatedQuestion[];
 }
 
+interface RawResponse {
+  response_id: number;
+  player_nickname: string | null;
+  submitted_at: string;
+  answers: Record<number, string>;
+}
+
+interface RawResponsesData {
+  questions: QuestionParsed[];
+  responses: RawResponse[];
+}
+
 /* ── Helpers ───────────────────────────────────────────────────────── */
 
 const STATUS_BADGE: Record<SurveyDetail['status'], string> = {
@@ -70,19 +82,23 @@ export default function SurveyDetailClient() {
 
   const [survey, setSurvey] = useState<SurveyDetail | null>(null);
   const [results, setResults] = useState<AggregatedResults | null>(null);
+  const [rawData, setRawData] = useState<RawResponsesData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [viewMode, setViewMode] = useState<'charts' | 'table'>('charts');
 
   const fetchData = useCallback(async () => {
     try {
       setError(null);
-      const [s, r] = await Promise.all([
+      const [s, r, raw] = await Promise.all([
         apiFetch<SurveyDetail>(`/api/surveys/${id}`),
         apiFetch<AggregatedResults>(`/api/surveys/${id}/results`),
+        apiFetch<RawResponsesData>(`/api/surveys/${id}/responses`),
       ]);
       setSurvey(s);
       setResults(r);
+      setRawData(raw);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('error'));
     } finally {
@@ -221,6 +237,89 @@ export default function SurveyDetailClient() {
     return null;
   }
 
+  /* ── CSV export ─────────────────────────────────────────────── */
+
+  function downloadCSV() {
+    if (!rawData || !survey) return;
+    const sortedQuestions = [...rawData.questions].sort((a, b) => a.sort_order - b.sort_order);
+
+    const escape = (v: string) => {
+      if (v.includes(',') || v.includes('"') || v.includes('\n')) {
+        return '"' + v.replace(/"/g, '""') + '"';
+      }
+      return v;
+    };
+
+    const headers = [
+      ...(survey.anonymous ? [] : [t('survey_respondent')]),
+      t('survey_submitted_at'),
+      ...sortedQuestions.map((q) => q.label),
+    ];
+
+    const rows = rawData.responses.map((r) => [
+      ...(survey.anonymous ? [] : [r.player_nickname || '']),
+      r.submitted_at,
+      ...sortedQuestions.map((q) => r.answers[q.id] || ''),
+    ]);
+
+    const csv = [headers, ...rows].map((row) => row.map(escape).join(',')).join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${survey.title.replace(/[^a-zA-Z0-9]/g, '_')}_responses.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  /* ── Table view ────────────────────────────────────────────── */
+
+  function renderTable() {
+    if (!rawData || !survey) return null;
+    const sortedQuestions = [...rawData.questions].sort((a, b) => a.sort_order - b.sort_order);
+
+    if (rawData.responses.length === 0) {
+      return <p className="text-sm text-gray-400">{t('survey_no_responses')}</p>;
+    }
+
+    return (
+      <div className="overflow-x-auto">
+        <table className="min-w-full text-sm">
+          <thead>
+            <tr className="border-b border-gray-200">
+              <th className="px-3 py-2 text-left font-medium text-gray-500">#</th>
+              {!survey.anonymous && (
+                <th className="px-3 py-2 text-left font-medium text-gray-500">{t('survey_respondent')}</th>
+              )}
+              <th className="px-3 py-2 text-left font-medium text-gray-500">{t('survey_submitted_at')}</th>
+              {sortedQuestions.map((q) => (
+                <th key={q.id} className="px-3 py-2 text-left font-medium text-gray-500">{q.label}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rawData.responses.map((r, idx) => (
+              <tr key={r.response_id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                <td className="px-3 py-2 text-gray-400">{idx + 1}</td>
+                {!survey.anonymous && (
+                  <td className="px-3 py-2 text-gray-700">{r.player_nickname || '—'}</td>
+                )}
+                <td className="px-3 py-2 text-gray-500 whitespace-nowrap">
+                  {new Date(r.submitted_at).toLocaleString()}
+                </td>
+                {sortedQuestions.map((q) => (
+                  <td key={q.id} className="px-3 py-2 text-gray-700 max-w-xs truncate">
+                    {r.answers[q.id] || '—'}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
   /* ── Main render ──────────────────────────────────────────────── */
 
   return (
@@ -313,18 +412,51 @@ export default function SurveyDetailClient() {
 
       {/* Results card */}
       <div className="rounded-xl bg-white p-6 shadow-sm">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">{t('survey_results')}</h2>
-          {results && (
-            <span className="text-sm text-gray-500">
-              {t('survey_total_responses')}: {results.total_responses}
-            </span>
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-semibold text-gray-900">{t('survey_results')}</h2>
+            {results && (
+              <span className="text-sm text-gray-500">
+                ({results.total_responses})
+              </span>
+            )}
+          </div>
+
+          {results && results.total_responses > 0 && (
+            <div className="flex gap-2">
+              <button
+                onClick={() => setViewMode('charts')}
+                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                  viewMode === 'charts'
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {t('survey_view_charts')}
+              </button>
+              <button
+                onClick={() => setViewMode('table')}
+                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                  viewMode === 'table'
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {t('survey_view_table')}
+              </button>
+              <button
+                onClick={downloadCSV}
+                className="rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-gray-200"
+              >
+                {t('survey_download_csv')}
+              </button>
+            </div>
           )}
         </div>
 
         {!results || results.total_responses === 0 ? (
           <p className="text-sm text-gray-400">{t('survey_no_responses')}</p>
-        ) : (
+        ) : viewMode === 'charts' ? (
           <div className="divide-y divide-gray-100">
             {results.questions.map((aq) => (
               <div key={aq.question.id} className="py-3">
@@ -332,6 +464,8 @@ export default function SurveyDetailClient() {
               </div>
             ))}
           </div>
+        ) : (
+          renderTable()
         )}
       </div>
     </div>

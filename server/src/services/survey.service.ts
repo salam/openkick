@@ -240,6 +240,49 @@ export function submitResponse(
 }
 
 // ---------------------------------------------------------------------------
+// Raw responses (for table view / CSV export)
+// ---------------------------------------------------------------------------
+
+export interface RawResponse {
+  response_id: number;
+  player_nickname: string | null;
+  submitted_at: string;
+  answers: Record<number, string>;
+}
+
+export function getRawResponses(surveyId: number): RawResponse[] {
+  const db = getDB();
+
+  const survey = getSurveyById(surveyId);
+  if (!survey) throw new Error("Survey not found");
+
+  const respResult = db.exec(
+    "SELECT id, player_nickname, submitted_at FROM survey_responses WHERE survey_id = ? ORDER BY id",
+    [surveyId],
+  );
+  const respRows = rowsToObjects(respResult);
+
+  return respRows.map((row) => {
+    const responseId = row.id as number;
+    const ansResult = db.exec(
+      "SELECT question_id, value FROM survey_answers WHERE response_id = ?",
+      [responseId],
+    );
+    const ansRows = rowsToObjects(ansResult);
+    const answers: Record<number, string> = {};
+    for (const a of ansRows) {
+      answers[a.question_id as number] = a.value as string;
+    }
+    return {
+      response_id: responseId,
+      player_nickname: row.player_nickname as string | null,
+      submitted_at: row.submitted_at as string,
+      answers,
+    };
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Aggregation
 // ---------------------------------------------------------------------------
 

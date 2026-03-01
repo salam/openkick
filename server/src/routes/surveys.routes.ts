@@ -8,6 +8,7 @@ import {
   archiveSurvey,
   listSurveys,
   getAggregatedResults,
+  getRawResponses,
   createTrikotOrderTemplate,
   createFeedbackTemplate,
 } from "../services/survey.service.js";
@@ -123,6 +124,26 @@ surveysRouter.get(
     } catch (err) {
       console.error("Failed to get survey results:", err);
       res.status(500).json({ error: "Failed to get survey results" });
+    }
+  },
+);
+
+// GET /surveys/:id/responses — Raw per-response data (for table view / CSV)
+surveysRouter.get(
+  "/surveys/:id/responses",
+  authMiddleware,
+  async (req, res) => {
+    try {
+      const survey = getSurveyById(Number(req.params.id));
+      if (!survey) {
+        return res.status(404).json({ error: "Survey not found" });
+      }
+      const questions = getQuestions(survey.id);
+      const responses = getRawResponses(survey.id);
+      res.json({ questions, responses });
+    } catch (err) {
+      console.error("Failed to get survey responses:", err);
+      res.status(500).json({ error: "Failed to get survey responses" });
     }
   },
 );

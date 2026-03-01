@@ -40,13 +40,27 @@ import { checklistsRouter } from "./routes/checklists.routes.js";
 import { resetAdminChecklists } from "./services/checklist.service.js";
 import { surveysRouter } from "./routes/surveys.routes.js";
 import { surveyRespondRouter } from "./routes/public/survey-respond.routes.js";
+import { createStripeWebhookRouter } from "./routes/webhooks/stripe.webhook.js";
+import { createDatatransWebhookRouter } from "./routes/webhooks/datatrans.webhook.js";
+import { PaymentService } from "./services/payment.service.js";
+import { StripeProvider } from "./services/stripe.service.js";
+import { DatatransProvider } from "./services/datatrans.service.js";
+import { createPaymentsRouter } from "./routes/payments.js";
 
 const app = express();
 
 const CORS_ORIGIN = process.env.CORS_ORIGIN || "http://localhost:3000";
 app.use(cors({ origin: CORS_ORIGIN.split(",") }));
+
+// Payment webhook routes MUST come before express.json() for raw body access
+const paymentService = new PaymentService();
+app.use("/api/webhooks/stripe", createStripeWebhookRouter(paymentService));
+app.use("/api/webhooks/datatrans", createDatatransWebhookRouter(paymentService));
+
 app.use(express.json());
 app.use(express.raw({ type: "application/pdf", limit: "10mb" }));
+
+app.use("/api", createPaymentsRouter(paymentService));
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 app.use(securityTxtRouter);
@@ -93,6 +107,42 @@ async function main() {
   await initDB(DB_PATH);
 
   const db = getDB();
+
+  // Initialize payment providers from DB config
+  function initPaymentProviders() {
+    const db = getDB();
+    const providers = db.exec("SELECT id, enabled, config, testMode FROM payment_providers");
+    if (providers.length === 0) return;
+
+    for (const row of providers[0].values) {
+      const [id, enabled, configJson, testMode] = row as [string, number, string, number];
+      if (!enabled) continue;
+
+      try {
+        const config = JSON.parse(configJson);
+        if (id === "stripe") {
+          const secretKey = testMode ? (config.testSecretKey || process.env.STRIPE_SECRET_KEY) : (config.liveSecretKey || process.env.STRIPE_SECRET_KEY);
+          const webhookSecret = testMode ? (config.testWebhookSecret || process.env.STRIPE_WEBHOOK_SECRET) : (config.liveWebhookSecret || process.env.STRIPE_WEBHOOK_SECRET);
+          if (secretKey && webhookSecret) {
+            paymentService.register(new StripeProvider({ secretKey, webhookSecret }));
+          }
+        } else if (id === "datatrans") {
+          const merchantId = config.merchantId || process.env.DATATRANS_MERCHANT_ID;
+          const apiPassword = testMode ? (config.testApiPassword || process.env.DATATRANS_API_PASSWORD) : (config.liveApiPassword || process.env.DATATRANS_API_PASSWORD);
+          const hmacKey = config.hmacKey || process.env.DATATRANS_HMAC_KEY;
+          const baseUrl = testMode ? "https://api.sandbox.datatrans.com" : "https://api.datatrans.com";
+          if (merchantId && apiPassword && hmacKey) {
+            paymentService.register(new DatatransProvider({ merchantId, apiPassword, hmacKey, baseUrl }));
+          }
+        }
+      } catch (err) {
+        console.error(`Failed to initialize payment provider ${id}:`, err);
+      }
+    }
+  }
+
+  initPaymentProviders();
+
   const hmacKeyResult = db.exec("SELECT value FROM settings WHERE key = 'captcha_hmac_secret'");
   let hmacKey: string;
   if (hmacKeyResult.length === 0 || hmacKeyResult[0].values.length === 0) {

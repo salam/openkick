@@ -345,10 +345,10 @@ describe("survey service — templates", () => {
     );
   }
 
-  it("createTrikotOrderTemplate creates identified survey with 4 questions", () => {
+  it("createTrikotOrderTemplate creates identified survey with 3 questions", () => {
     insertGuardian(42);
     const survey = createTrikotOrderTemplate(null, 42);
-    expect(survey.title).toBe("Trikot & Cap Order");
+    expect(survey.title).toContain("Trikot & Cap Order");
     expect(survey.anonymous).toBe(false);
     expect(survey.created_by).toBe(42);
 
@@ -362,7 +362,7 @@ describe("survey service — templates", () => {
   it("createFeedbackTemplate creates anonymous survey with 5 questions", () => {
     insertGuardian(99);
     const survey = createFeedbackTemplate(null, 99);
-    expect(survey.title).toBe("End-of-Semester Feedback");
+    expect(survey.title).toContain("End-of-Semester Feedback");
     expect(survey.anonymous).toBe(true);
     expect(survey.created_by).toBe(99);
 
@@ -373,5 +373,13 @@ describe("survey service — templates", () => {
     expect(questions[2].type).toBe("star_rating");
     expect(questions[3].type).toBe("free_text");
     expect(questions[4].type).toBe("free_text");
+  });
+
+  it("template names get counter suffix when duplicated", () => {
+    insertGuardian(50);
+    const s1 = createTrikotOrderTemplate(null, 50);
+    const s2 = createTrikotOrderTemplate(null, 50);
+    expect(s1.title).not.toContain("#");
+    expect(s2.title).toMatch(/#2$/);
   });
 });

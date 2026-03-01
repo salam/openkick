@@ -379,12 +379,30 @@ export function getAggregatedResults(surveyId: number): AggregatedResults {
 // Templates
 // ---------------------------------------------------------------------------
 
+function makeTemplateName(baseName: string): string {
+  const db = getDB();
+  const now = new Date();
+  const month = now.toLocaleString("en", { month: "long" });
+  const day = now.getDate();
+  const dateSuffix = `${month} ${day}`;
+  const base = `${baseName} ${dateSuffix}`;
+
+  // Check how many surveys already start with this base name today
+  const existing = db.exec(
+    "SELECT title FROM surveys WHERE title LIKE ?",
+    [`${base}%`],
+  );
+  const count = existing.length > 0 ? existing[0].values.length : 0;
+  if (count === 0) return base;
+  return `${base} #${count + 1}`;
+}
+
 export function createTrikotOrderTemplate(
   teamId: number | null,
   createdBy: number | null,
 ): Survey {
   return createSurvey(
-    "Trikot & Cap Order",
+    makeTemplateName("Trikot & Cap Order"),
     teamId,
     false,
     null,
@@ -420,7 +438,7 @@ export function createFeedbackTemplate(
   createdBy: number | null,
 ): Survey {
   return createSurvey(
-    "End-of-Semester Feedback",
+    makeTemplateName("End-of-Semester Feedback"),
     teamId,
     true,
     null,

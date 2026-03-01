@@ -1,5 +1,18 @@
 # OpenKick Release Notes
 
+## Version 1.16 (Sat, Mar 1 2026)
+
+* Statistics & Reporting: semester-based stats dashboard for coaches and admins
+* Training hours and person-hours charts — see total training volume per player at a glance
+* Coach hours tracking — overview of sessions and hours coached per semester
+* No-show detection — identify players with unexplained absences, sorted by rate
+* Attendance rate chart — color-coded breakdown per player (green/yellow/red)
+* Tournament participation stats — how many tournaments each player attended
+* CSV and PDF export — download any stat for board meetings or club reports
+* Public homepage stats bar — show club-wide totals (players, events, trophies) to visitors
+* Admin-configurable homepage stats visibility — toggle which stats appear publicly
+* Semester picker — switch between Spring, Autumn, and School Year periods
+
 ## Version 1.15 (Sat, Mar 1 2026)
 
 * Public event pages — share event links with anyone; visitors can view event details and RSVP without logging in

@@ -62,6 +62,10 @@
 - [x] Notification system (in-app + WhatsApp threshold alerts)
 - [x] Tournament threshold alert service with deduplication
 - [x] Upcoming tournaments filter (?upcoming=true)
+- [x] Statistics service (semester-based training hours, person-hours, coach hours, no-shows, attendance rate, tournament participation)
+- [x] Homepage stats API (public, cached 1h, admin-configurable visibility)
+- [x] CSV/PDF export service (semicolon CSV with BOM, pdfmake PDF)
+- [x] Admin statistics endpoints (6 stat types + export, auth + role-gated)
 
 ## Frontend (Web)
 
@@ -99,6 +103,16 @@
 - [x] Team name field on event creation form (tournament type)
 - [x] Open call toggle on event creation (no participant limit mode)
 - [x] Last name initial field on player add/edit (for disambiguation)
+- [x] Statistics dashboard page (/dashboard/stats) with semester picker, charts, and export
+- [x] Training hours bar chart (chart.js)
+- [x] Person-hours bar chart
+- [x] Attendance rate horizontal bar chart (color-coded)
+- [x] Coach hours card table
+- [x] No-shows table (sorted by rate)
+- [x] Tournament participation card
+- [x] CSV/PDF export button with format picker
+- [x] Homepage stats bar (public, pill badges)
+- [x] Statistics link card on coach dashboard
 
 ## Infrastructure
 
@@ -157,17 +171,17 @@
 
 - [ ] GitHub private vulnerability reporting configuration
 
-## Remaining — Statistics & Reporting (PRD 4.5.9, blueprint: STATISTICS.md)
+## Completed — Statistics & Reporting (PRD 4.5.9, blueprint: STATISTICS.md)
 
-- [ ] Semester-based period grouping (Spring: Feb–Jul, Autumn: Aug–Jan)
-- [ ] Training hours and person-hours statistics
-- [ ] Coach hours tracking
-- [ ] No-show detection and statistics
-- [ ] Attendance rate metrics per player/event
-- [ ] Tournament participation stats
-- [ ] Dashboard widgets (charts and cards)
-- [ ] Public homepage club statistics (cached)
-- [ ] CSV/PDF export for club board reporting
+- [x] Semester-based period grouping (Spring: Feb–Jul, Autumn: Aug–Jan)
+- [x] Training hours and person-hours statistics
+- [x] Coach hours tracking
+- [x] No-show detection and statistics
+- [x] Attendance rate metrics per player/event
+- [x] Tournament participation stats
+- [x] Dashboard widgets (charts and cards)
+- [x] Public homepage club statistics (cached)
+- [x] CSV/PDF export for club board reporting
 
 ## Administrative Checklists (PRD 4.5.10, blueprint: CHECKLISTS.md)
 

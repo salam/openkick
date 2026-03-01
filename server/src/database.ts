@@ -431,6 +431,14 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   // Homepage customization
   tint_color: "#10b981",
   homepage_bg_image: "",
+  homepage_stats_settings: JSON.stringify({
+    lifetimeAthletes: true,
+    activeAthletes: true,
+    tournamentsPlayed: true,
+    trophiesWon: true,
+    trainingSessionsThisSeason: true,
+    activeCoaches: true,
+  }),
 };
 
 export async function initDB(dbPath?: string): Promise<Database> {

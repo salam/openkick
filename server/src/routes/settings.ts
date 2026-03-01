@@ -5,6 +5,8 @@ import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 import pngToIco from "png-to-ico";
 import { getDB } from "../database.js";
+import { authMiddleware, requireRole } from "../auth.js";
+import { invalidateHomepageStatsCache } from "../services/statistics.service.js";
 import { sendEmail, buildTestEmail } from "../services/email.js";
 import { chatCompletion } from "../services/llm.js";
 
@@ -131,7 +133,10 @@ settingsRouter.post("/settings/upload-logo", async (req: Request, res: Response)
 // DELETE /api/settings/remove-logo — delete the uploaded club logo
 settingsRouter.delete("/settings/remove-logo", (_req: Request, res: Response) => {
   const db = getDB();
-  const row = db.prepare("SELECT value FROM settings WHERE key = ?").get("club_logo") as { value: string } | undefined;
+  const result = db.exec("SELECT value FROM settings WHERE key = ?", ["club_logo"]);
+  const row = result.length > 0 && result[0].values.length > 0
+    ? { value: result[0].values[0][0] as string }
+    : undefined;
 
   if (row?.value) {
     const filePath = path.resolve(__dirname, "../../../public", row.value.replace(/^\//, ""));
@@ -152,6 +157,49 @@ settingsRouter.delete("/settings/remove-logo", (_req: Request, res: Response) =>
 
   db.run("DELETE FROM settings WHERE key = ?", ["club_logo"]);
   res.json({ key: "club_logo", value: "" });
+});
+
+// POST /api/settings/upload-bg — accept base64-encoded background image
+settingsRouter.post("/settings/upload-bg", async (req: Request, res: Response) => {
+  const { data, filename } = req.body;
+  if (!data || !filename) {
+    res.status(400).json({ error: "data and filename are required" });
+    return;
+  }
+  const ext = path.extname(filename).toLowerCase();
+  const allowedExts = [".png", ".jpg", ".jpeg", ".webp"];
+  if (!allowedExts.includes(ext)) {
+    res.status(400).json({ error: "Invalid file type. Allowed: png, jpg, jpeg, webp" });
+    return;
+  }
+  const buffer = Buffer.from(data, "base64");
+  if (buffer.length > 10 * 1024 * 1024) {
+    res.status(400).json({ error: "File too large. Maximum 10MB." });
+    return;
+  }
+  const uploadDir = path.resolve(__dirname, "../../../public/uploads");
+  if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+  const savedName = `hero-bg${ext}`;
+  fs.writeFileSync(path.join(uploadDir, savedName), buffer);
+  const publicPath = `/uploads/${savedName}`;
+  const db = getDB();
+  db.run("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", ["homepage_bg_image", publicPath]);
+  res.json({ key: "homepage_bg_image", value: publicPath });
+});
+
+// DELETE /api/settings/remove-bg — delete the uploaded background image
+settingsRouter.delete("/settings/remove-bg", (_req: Request, res: Response) => {
+  const db = getDB();
+  const bgResult = db.exec("SELECT value FROM settings WHERE key = ?", ["homepage_bg_image"]);
+  const row = bgResult.length > 0 && bgResult[0].values.length > 0
+    ? { value: bgResult[0].values[0][0] as string }
+    : undefined;
+  if (row?.value) {
+    const filePath = path.resolve(__dirname, "../../../public", row.value.replace(/^\//, ""));
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  }
+  db.run("DELETE FROM settings WHERE key = ?", ["homepage_bg_image"]);
+  res.json({ key: "homepage_bg_image", value: "" });
 });
 
 // POST /api/settings/test-llm — verify LLM API key and model work
@@ -189,3 +237,43 @@ settingsRouter.post("/settings/test-smtp", async (req: Request, res: Response) =
     res.status(500).json({ success: false, message });
   }
 });
+
+// GET /api/admin/settings/homepage-stats
+settingsRouter.get(
+  "/admin/settings/homepage-stats",
+  authMiddleware,
+  requireRole("admin"),
+  (_req: Request, res: Response) => {
+    const db = getDB();
+    const defaults = { lifetimeAthletes: true, activeAthletes: true, tournamentsPlayed: true, trophiesWon: true, trainingSessionsThisSeason: true, activeCoaches: true };
+    const row = db.exec("SELECT value FROM settings WHERE key = 'homepage_stats_settings'");
+    const settings = row.length > 0 && row[0].values.length > 0
+      ? JSON.parse(row[0].values[0][0] as string)
+      : defaults;
+    res.json(settings);
+  },
+);
+
+// PUT /api/admin/settings/homepage-stats
+settingsRouter.put(
+  "/admin/settings/homepage-stats",
+  authMiddleware,
+  requireRole("admin"),
+  (req: Request, res: Response) => {
+    const db = getDB();
+    const defaults = { lifetimeAthletes: true, activeAthletes: true, tournamentsPlayed: true, trophiesWon: true, trainingSessionsThisSeason: true, activeCoaches: true };
+    const row = db.exec("SELECT value FROM settings WHERE key = 'homepage_stats_settings'");
+    const current = row.length > 0 && row[0].values.length > 0
+      ? JSON.parse(row[0].values[0][0] as string)
+      : defaults;
+
+    const merged = { ...current, ...req.body };
+    db.run("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", [
+      "homepage_stats_settings",
+      JSON.stringify(merged),
+    ]);
+
+    invalidateHomepageStatsCache();
+    res.json(merged);
+  },
+);

@@ -47,6 +47,8 @@ import { PaymentService } from "./services/payment.service.js";
 import { StripeProvider } from "./services/stripe.service.js";
 import { DatatransProvider } from "./services/datatrans.service.js";
 import { createPaymentsRouter } from "./routes/payments.js";
+import { statisticsRouter } from "./routes/statistics.js";
+import { homepageStatsRouter } from "./routes/public/homepage-stats.js";
 
 const app = express();
 
@@ -100,6 +102,8 @@ app.use("/api", gameHistoryRouter);
 app.use("/api", checklistsRouter);
 app.use("/api", surveysRouter);
 app.use("/api/public", surveyRespondRouter);
+app.use("/api", statisticsRouter);
+app.use("/api", homepageStatsRouter);
 app.use("/mcp", mcpRouter);
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;

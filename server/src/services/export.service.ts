@@ -1,5 +1,8 @@
-import PdfPrinter from "pdfmake/js/Printer";
+import PdfPrinterModule from "pdfmake/js/Printer.js";
 import type { TDocumentDefinitions } from "pdfmake/interfaces.js";
+
+// pdfmake uses CJS exports.default — ESM import wraps it in { default: ... }
+const PdfPrinter = (PdfPrinterModule as { default?: typeof PdfPrinterModule }).default ?? PdfPrinterModule;
 
 export function generateCSV(
   headers: string[],

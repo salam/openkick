@@ -32,6 +32,7 @@ import { startCrawlScheduler } from "./services/crawl-scheduler.js";
 import { liveTickerRouter } from "./routes/live-ticker.routes.js";
 import { notificationsRouter } from "./routes/notifications.js";
 import { publicTournamentsRouter } from "./routes/public-tournaments.js";
+import { publicEventsRouter } from "./routes/public-events.js";
 import { gameHistoryRouter } from "./routes/game-history.routes.js";
 import { createRsvpRouter } from "./routes/rsvp.js";
 import { securityTxtRouter } from "./routes/security-txt.js";
@@ -74,6 +75,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.use("/api", publicTournamentsRouter);
+app.use("/api", publicEventsRouter);
 app.use("/api", authRouter);
 app.use("/api", playersRouter);
 app.use("/api", eventsRouter);

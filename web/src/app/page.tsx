@@ -10,6 +10,7 @@ import DonateCard from '@/components/DonateCard';
 import { getLanguage } from '@/lib/i18n';
 import { isAuthenticated } from '@/lib/auth';
 import LanguageToggle from '@/components/LanguageToggle';
+import HomepageStatsBar from '@/components/HomepageStatsBar';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -90,6 +91,8 @@ export default function Home() {
         ) : null}
         <h1 className="text-4xl font-bold">{s.club_name}</h1>
         <p className="text-lg text-gray-600">{s.club_description}</p>
+
+        <HomepageStatsBar />
 
         <div className="w-full max-w-md">
           <RecentTrophies />

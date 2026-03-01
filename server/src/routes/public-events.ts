@@ -64,7 +64,7 @@ publicEventsRouter.get(
     const eventRows = db.exec(
       `SELECT id, title, type, date, startTime, attendanceTime, location,
               description, categoryRequirement, deadline, maxParticipants,
-              attachmentPath, seriesId
+              attachmentPath, seriesId, fee
        FROM events WHERE id = ?`,
       [id],
     );
@@ -91,6 +91,7 @@ publicEventsRouter.get(
       maxParticipants: (row[10] as number) ?? null,
       attachmentUrl: attachmentPath ? "/uploads/" + attachmentPath : null,
       seriesId: (row[12] as number) ?? null,
+      fee: (row[13] as number) ?? null,
     });
   },
 );

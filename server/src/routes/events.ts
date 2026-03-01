@@ -43,6 +43,7 @@ eventsRouter.post("/events", (req: Request, res: Response) => {
     recurring,
     recurrenceRule,
     teamName,
+    fee,
   } = req.body;
 
   if (!type || !title || !date) {
@@ -53,8 +54,8 @@ eventsRouter.post("/events", (req: Request, res: Response) => {
   const db = getDB();
   db.run(
     `INSERT INTO events (type, title, description, date, startTime, attendanceTime, deadline,
-      maxParticipants, minParticipants, location, categoryRequirement, recurring, recurrenceRule, teamName)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      maxParticipants, minParticipants, location, categoryRequirement, recurring, recurrenceRule, teamName, fee)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       type,
       title,
@@ -70,6 +71,7 @@ eventsRouter.post("/events", (req: Request, res: Response) => {
       recurring ?? 0,
       recurrenceRule ?? null,
       teamName ?? null,
+      fee ?? null,
     ],
   );
 
@@ -229,16 +231,17 @@ eventsRouter.put("/events/:id", (req: Request, res: Response) => {
   const recurring = req.body.recurring ?? current.recurring;
   const recurrenceRule = req.body.recurrenceRule ?? current.recurrenceRule;
   const teamName = req.body.teamName ?? current.teamName;
+  const fee = req.body.fee !== undefined ? req.body.fee : current.fee;
 
   db.run(
     `UPDATE events SET type = ?, title = ?, description = ?, date = ?, startTime = ?,
       attendanceTime = ?, deadline = ?, maxParticipants = ?, minParticipants = ?,
-      location = ?, categoryRequirement = ?, recurring = ?, recurrenceRule = ?, teamName = ?
+      location = ?, categoryRequirement = ?, recurring = ?, recurrenceRule = ?, teamName = ?, fee = ?
      WHERE id = ?`,
     [
       type, title, description, date, startTime, attendanceTime, deadline,
       maxParticipants, minParticipants, location, categoryRequirement,
-      recurring, recurrenceRule, teamName, id,
+      recurring, recurrenceRule, teamName, fee ?? null, id,
     ],
   );
 

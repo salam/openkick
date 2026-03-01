@@ -7,6 +7,21 @@ import { generateReceipt } from "../services/receipt.service.js";
 export function createPaymentsRouter(paymentService: PaymentService) {
   const router = Router();
 
+  // --- Public: Payment status (which use cases are enabled) ---
+  router.get("/public/payment-status", (_req: Request, res: Response) => {
+    const db = getDB();
+    const rows = db.exec("SELECT id, enabled, currency FROM payment_use_cases");
+    if (rows.length === 0) {
+      res.json({ useCases: {} });
+      return;
+    }
+    const useCases: Record<string, { enabled: boolean; currency: string }> = {};
+    for (const row of rows[0].values) {
+      useCases[row[0] as string] = { enabled: !!(row[1] as number), currency: (row[2] as string) || "CHF" };
+    }
+    res.json({ useCases });
+  });
+
   // --- Public: Checkout ---
   router.post("/payments/checkout", async (req: Request, res: Response) => {
     const { useCase, referenceId, nickname, amount, currency, paymentMethods, donorMessage, successUrl, cancelUrl } = req.body;

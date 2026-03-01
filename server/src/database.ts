@@ -79,6 +79,7 @@ CREATE TABLE IF NOT EXISTS events (
   recurring INTEGER NOT NULL DEFAULT 0,
   recurrenceRule TEXT,
   seriesId INTEGER REFERENCES event_series(id),
+  fee INTEGER,
   createdBy INTEGER REFERENCES guardians(id),
   createdAt TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -417,6 +418,19 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   security_acknowledgments_url: "",
   security_preferred_languages: "en, de",
   security_canonical_url: "",
+  // Legal & Privacy
+  legal_org_name: "",
+  legal_address: "",
+  legal_email: "",
+  legal_phone: "",
+  legal_responsible: "",
+  dpo_name: "",
+  dpo_email: "",
+  imprint_extra: "",
+  privacy_extra: "",
+  // Homepage customization
+  tint_color: "#10b981",
+  homepage_bg_image: "",
 };
 
 export async function initDB(dbPath?: string): Promise<Database> {
@@ -461,6 +475,11 @@ export async function initDB(dbPath?: string): Promise<Database> {
   // Migrate: add teamName to events if absent
   if (!eventCols.includes('teamName')) {
     db.run("ALTER TABLE events ADD COLUMN teamName TEXT");
+  }
+
+  // Migrate: add fee to events if absent (centimes, e.g. 2500 = CHF 25.00)
+  if (!eventCols.includes('fee')) {
+    try { db.run('ALTER TABLE events ADD COLUMN fee INTEGER'); } catch {}
   }
 
   // Migrate: add lastNameInitial to players if absent

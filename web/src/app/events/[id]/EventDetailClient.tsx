@@ -6,6 +6,7 @@ import { apiFetch } from '@/lib/api';
 import { t, getLanguage } from '@/lib/i18n';
 import AltchaWidget from '@/components/AltchaWidget';
 import TournamentResultsForm from '@/components/TournamentResultsForm';
+import EventChecklist from '@/components/EventChecklist';
 
 /* ── Types ──────────────────────────────────────────────────────────── */
 
@@ -660,6 +661,11 @@ export default function EventDetailClient() {
           </div>
           <AttendanceTable records={attendance} loading={attendanceLoading} />
         </section>
+      )}
+
+      {/* ── Coach: Event checklist ── */}
+      {isCoach && ['training', 'tournament'].includes(event.type) && (
+        <EventChecklist eventId={event.id} />
       )}
 
       {/* ── Coach: Team assignment ── */}

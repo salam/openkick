@@ -191,7 +191,7 @@ whatsappRouter.post(
     try {
       // 7. Handle audio transcription
       let messageText: string;
-      if (body.payload.hasMedia && body.payload.media) {
+      if (body.payload.hasMedia && body.payload.media?.data) {
         const audioBuffer = Buffer.from(body.payload.media.data, "base64");
         const filename = body.payload.media.filename || "audio.ogg";
         messageText = await transcribeAudio(audioBuffer, filename);

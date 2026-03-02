@@ -25,7 +25,7 @@ export async function sendMessage(
     headers: wahaFetchHeaders(),
     body: JSON.stringify({
       chatId: `${phone}@c.us`,
-      text,
+      text: `${text} (by OpenKick)`,
       session: "default",
     }),
   });

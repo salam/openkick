@@ -39,7 +39,7 @@ describe("whatsapp service", () => {
 
       const body = JSON.parse(options.body);
       expect(body.chatId).toBe("41791234567@c.us");
-      expect(body.text).toBe("Hello there");
+      expect(body.text).toBe("Hello there (by OpenKick)");
       expect(body.session).toBe("default");
     });
 

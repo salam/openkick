@@ -164,6 +164,12 @@ whatsappRouter.post(
       return;
     }
 
+    // 1b. Ignore WhatsApp Status broadcasts (stories)
+    if (body.payload.from === "status@broadcast") {
+      res.status(200).json({ status: "ignored" });
+      return;
+    }
+
     // 2. Extract phone, messageId, body text
     const messageId = body.payload.id;
 

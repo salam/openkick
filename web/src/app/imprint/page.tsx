@@ -16,7 +16,10 @@ interface LegalSettings {
   contact_info: string;
   club_name: string;
   imprint_extra: string;
+  dpo_email: string;
 }
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function ImprintPage() {
   const [s, setS] = useState<LegalSettings | null>(null);
@@ -38,7 +41,7 @@ export default function ImprintPage() {
         setS({
           legal_org_name: '', legal_address: '', legal_email: '',
           legal_phone: '', legal_responsible: '', contact_info: '',
-          club_name: '', imprint_extra: '',
+          club_name: '', imprint_extra: '', dpo_email: '',
         });
       }
     }
@@ -61,13 +64,14 @@ export default function ImprintPage() {
   // Data cascade — resolve effective values
   const placeholder = t('imprint_to_be_completed');
   const orgName = s.legal_org_name || s.club_name || placeholder;
-  const email = s.legal_email || (s.contact_info && s.contact_info.includes('@') ? s.contact_info : '');
+  const contactIsEmail = s.contact_info && EMAIL_RE.test(s.contact_info);
+  const email = s.legal_email || (contactIsEmail ? s.contact_info : '') || s.dpo_email || '';
   const address = s.legal_address || placeholder;
   const responsible = s.legal_responsible || placeholder;
   const phone = s.legal_phone || '';
 
   // Determine if contact_info was consumed as email fallback
-  const contactInfoUsedAsEmail = !s.legal_email && s.contact_info && s.contact_info.includes('@');
+  const contactInfoUsedAsEmail = !s.legal_email && contactIsEmail;
 
   // Determine incompleteness
   const isIncomplete =
@@ -121,7 +125,7 @@ export default function ImprintPage() {
           {phone && <p>{t('legal_phone')}: {phone}</p>}
           {s.contact_info && !contactInfoUsedAsEmail && (
             <p>
-              {s.contact_info.startsWith('http') ? (
+              {s.contact_info.startsWith('https://') || s.contact_info.startsWith('http://') ? (
                 <a href={s.contact_info} className="text-emerald-600 hover:underline" target="_blank" rel="noopener noreferrer">
                   {s.contact_info}
                 </a>

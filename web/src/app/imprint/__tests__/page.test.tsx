@@ -177,6 +177,40 @@ describe('ImprintPage', () => {
     ).toBeInTheDocument();
   });
 
+  it('uses dpo_email as email fallback when no legal_email or contact_info email', async () => {
+    mockFetch({
+      legal_org_name: 'FC Test', legal_address: '123 Main St', legal_email: '',
+      legal_phone: '', legal_responsible: 'John Doe',
+      contact_info: 'https://fctest.com',
+      club_name: '', imprint_extra: '', dpo_email: 'dpo@fctest.com',
+    });
+    render(<ImprintPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('dpo@fctest.com')).toBeInTheDocument();
+    });
+
+    // dpo_email resolved as email fallback, all required fields set → no incomplete notice
+    expect(screen.queryByText('This imprint is being completed.', { exact: false })).not.toBeInTheDocument();
+  });
+
+  it('does NOT use contact_info with @ in non-email context as email fallback', async () => {
+    mockFetch({
+      legal_org_name: 'FC Test', legal_address: '123 Main St', legal_email: '',
+      legal_phone: '', legal_responsible: 'John Doe',
+      contact_info: 'Call us @ 123-456',
+      club_name: '', imprint_extra: '',
+    });
+    render(<ImprintPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('FC Test')).toBeInTheDocument();
+    });
+
+    // contact_info contains @ but is not a valid email → not used as fallback
+    expect(screen.getByText('This imprint is being completed.')).toBeInTheDocument();
+  });
+
   it('shows imprint_extra when set, hides when empty', async () => {
     // With imprint_extra
     mockFetch({ ...fullSettings(), imprint_extra: 'Extra legal text' });

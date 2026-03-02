@@ -447,7 +447,7 @@ export default function WahaConfigForm({
               <img
                 src={qrUrl}
                 alt="WhatsApp QR Code"
-                className="h-48 w-48 rounded-lg border border-gray-200"
+                className="max-w-xs rounded-lg border border-gray-200"
               />
             ) : (
               <div className="flex h-48 w-48 items-center justify-center rounded-lg border border-gray-200 bg-gray-50">

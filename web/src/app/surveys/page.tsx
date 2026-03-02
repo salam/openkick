@@ -64,10 +64,10 @@ export default function SurveysPage() {
   async function handleTemplate(template: string) {
     setCreatingTemplate(template);
     try {
-      const result = await apiFetch<{ id: number }>(`/api/surveys/templates/${template}`, {
+      const result = await apiFetch<{ survey: { id: number } }>(`/api/surveys/templates/${template}`, {
         method: 'POST',
       });
-      router.push(`/surveys/${result.id}/`);
+      router.push(`/surveys/${result.survey.id}/`);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('error'));
       setCreatingTemplate(null);

@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { Suspense, useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import CalendarView, {
   type CalendarEvent,
   type CalendarVacation,
@@ -29,6 +30,15 @@ interface ApiEventSeries {
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
+type FilterType = 'all' | 'training' | 'tournament' | 'match';
+
+const filterKeys: { value: FilterType; key: string }[] = [
+  { value: 'all', key: 'filter_all' },
+  { value: 'training', key: 'type_training' },
+  { value: 'tournament', key: 'type_tournament' },
+  { value: 'match', key: 'type_match' },
+];
+
 const VIEW_MODE_KEYS: Record<ViewMode, string> = {
   yearly: 'yearly',
   monthly: 'monthly',
@@ -54,8 +64,15 @@ function CalendarPageContent() {
     return () => window.removeEventListener('languagechange', onLangChange);
   }, []);
 
+  const searchParams = useSearchParams();
+
   const now = new Date();
-  const [viewMode, setViewMode] = useState<ViewMode>('monthly');
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    const v = searchParams.get('view');
+    if (v === 'list' || v === 'monthly' || v === 'yearly') return v;
+    return 'monthly';
+  });
+  const [filter, setFilter] = useState<FilterType>('all');
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -211,6 +228,25 @@ function CalendarPageContent() {
               </button>
             </div>
           )}
+
+          {/* Type filter pills (list mode only) */}
+          {viewMode === 'list' && (
+            <div className="flex flex-wrap gap-2">
+              {filterKeys.map((btn) => (
+                <button
+                  key={btn.value}
+                  onClick={() => setFilter(btn.value)}
+                  className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                    filter === btn.value
+                      ? 'bg-primary-500 text-white'
+                      : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  {t(btn.key)}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -311,5 +347,9 @@ function CalendarPageContent() {
 }
 
 export default function CalendarPage() {
-  return <CalendarPageContent />;
+  return (
+    <Suspense fallback={null}>
+      <CalendarPageContent />
+    </Suspense>
+  );
 }

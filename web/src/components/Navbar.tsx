@@ -4,30 +4,51 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { t, getLanguage } from '@/lib/i18n';
+import { apiFetch } from '@/lib/api';
 import LanguageToggle from '@/components/LanguageToggle';
+import { useClubSettings } from '@/hooks/useClubSettings';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+interface WeatherData {
+  temperature: number;
+  icon: string;
+  description: string;
+}
 
 const navLinks = [
   { href: '/dashboard/', label: 'dashboard' },
-  { href: '/events/', label: 'events' },
-  { href: '/players/', label: 'players' },
   { href: '/calendar/', label: 'calendar' },
+  { href: '/players/', label: 'players' },
   { href: '/surveys/', label: 'surveys' },
   { href: '/dashboard/checklists/', label: 'checklists' },
   { href: '/dashboard/payments/', label: 'payments_title' },
   { href: '/settings/', label: 'settings' },
 ];
 
+const SERVER_LANG = 'de';
+
 export default function Navbar() {
+  const { club_name, club_logo } = useClubSettings();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [, setLang] = useState(() => getLanguage());
+  const [lang, setLang] = useState(SERVER_LANG);
+  const [weather, setWeather] = useState<WeatherData | null>(null);
   const pathname = usePathname();
   const router = useRouter();
 
-  // Re-render when language changes so nav labels update
+  // After mount, switch to the user's real language (avoids hydration mismatch)
   useEffect(() => {
+    setLang(getLanguage());
     function onLangChange() { setLang(getLanguage()); }
     window.addEventListener('languagechange', onLangChange);
     return () => window.removeEventListener('languagechange', onLangChange);
+  }, []);
+
+  // Fetch current weather for the navbar pill
+  useEffect(() => {
+    apiFetch<WeatherData>('/api/weather/current')
+      .then(setWeather)
+      .catch(() => {}); // silently fail — weather is non-critical
   }, []);
 
   function handleLogout() {
@@ -41,10 +62,18 @@ export default function Navbar() {
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
           <Link href="/dashboard/" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500 text-sm font-bold text-white">
-              OK
-            </div>
-            <span className="text-lg font-semibold text-gray-900">OpenKick</span>
+            {club_logo ? (
+              <img
+                src={`${API_URL}${club_logo}`}
+                alt={club_name}
+                className="h-8 w-8 rounded-lg object-cover"
+              />
+            ) : (
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-500 text-sm font-bold text-white">
+                {(club_name || 'OK').slice(0, 2).toUpperCase()}
+              </div>
+            )}
+            <span className="text-lg font-semibold text-gray-900">{club_name || 'OpenKick'}</span>
           </Link>
 
           {/* Desktop links */}
@@ -57,24 +86,32 @@ export default function Navbar() {
                   href={link.href}
                   className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
                     active
-                      ? 'bg-emerald-50 text-emerald-700'
+                      ? 'bg-primary-50 text-primary-700'
                       : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                   }`}
                 >
-                  {t(link.label)}
+                  {t(link.label, lang)}
                 </Link>
               );
             })}
           </div>
 
           {/* Desktop actions */}
-          <div className="hidden items-center gap-1 md:flex">
+          <div className="hidden items-center gap-2 md:flex">
+            {weather && (
+              <span
+                className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600"
+                title={weather.description}
+              >
+                {weather.icon} {Math.round(weather.temperature)}&deg;
+              </span>
+            )}
             <LanguageToggle />
             <button
               onClick={handleLogout}
               className="rounded-md px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
             >
-              {t('logout')}
+              {t('logout', lang)}
             </button>
           </div>
 
@@ -108,22 +145,27 @@ export default function Navbar() {
                   onClick={() => setMenuOpen(false)}
                   className={`block rounded-md px-3 py-2 text-sm font-medium ${
                     active
-                      ? 'bg-emerald-50 text-emerald-700'
+                      ? 'bg-primary-50 text-primary-700'
                       : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                   }`}
                 >
-                  {t(link.label)}
+                  {t(link.label, lang)}
                 </Link>
               );
             })}
-            <div className="border-t border-gray-200 pt-2 mt-2">
+            <div className="border-t border-gray-200 pt-2 mt-2 flex items-center gap-2">
+              {weather && (
+                <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600">
+                  {weather.icon} {Math.round(weather.temperature)}&deg; &middot; {weather.description}
+                </span>
+              )}
               <LanguageToggle />
             </div>
             <button
               onClick={handleLogout}
               className="block w-full rounded-md px-3 py-2 text-left text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900"
             >
-              {t('logout')}
+              {t('logout', lang)}
             </button>
           </div>
         </div>

@@ -11,6 +11,8 @@ const inputClass =
   'w-full rounded-xl border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500';
 
 type ConnectionStatus = 'connected' | 'qr_pending' | 'disconnected' | 'checking';
+type DockerStatus = 'checking' | 'available' | 'unavailable';
+type WahaContainerStatus = 'checking' | 'running' | 'stopped' | 'not_found';
 
 interface WahaGroup {
   id: string;
@@ -28,10 +30,85 @@ export default function WahaConfigForm({
   const [groups, setGroups] = useState<WahaGroup[]>([]);
   const [inviteLink, setInviteLink] = useState('');
   const [joining, setJoining] = useState(false);
+
+  // Docker + WAHA container state
+  const [dockerStatus, setDockerStatus] = useState<DockerStatus>('checking');
+  const [containerStatus, setContainerStatus] = useState<WahaContainerStatus>('checking');
+  const [installing, setInstalling] = useState(false);
+  const [installLog, setInstallLog] = useState<string[]>([]);
+  const [installError, setInstallError] = useState<string | null>(null);
+  const [containerAction, setContainerAction] = useState(false);
   const [groupMsg, setGroupMsg] = useState('');
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const wahaUrl = settings.waha_url || '';
+
+  // ── Check Docker + WAHA container ─────────────────────────────
+  const checkInfra = useCallback(async () => {
+    try {
+      const dockerRes = await apiFetch<{ available: boolean }>('/api/setup-waha/docker/status');
+      setDockerStatus(dockerRes.available ? 'available' : 'unavailable');
+      if (!dockerRes.available) { setContainerStatus('not_found'); return; }
+
+      const wahaRes = await apiFetch<{ status: string; port?: number }>('/api/setup-waha/waha/status');
+      setContainerStatus(wahaRes.status as WahaContainerStatus);
+    } catch {
+      setDockerStatus('unavailable');
+      setContainerStatus('not_found');
+    }
+  }, []);
+
+  useEffect(() => { checkInfra(); }, [checkInfra]);
+
+  const handleInstallWaha = async () => {
+    setInstalling(true);
+    setInstallLog([]);
+    setInstallError(null);
+    const token = getToken();
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
+    try {
+      const res = await fetch(`${API_URL}/api/setup-waha/waha/install`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ port: 3008, engine: 'WEBJS' }),
+      });
+      const reader = res.body?.getReader();
+      const decoder = new TextDecoder();
+      if (!reader) return;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const text = decoder.decode(value);
+        for (const line of text.split('\n').filter(l => l.startsWith('data: '))) {
+          try {
+            const json = JSON.parse(line.slice(6));
+            if (json.type === 'progress') setInstallLog(prev => [...prev, json.text]);
+            if (json.type === 'done') { setContainerStatus('running'); if (json.wahaUrl) onUpdate('waha_url', json.wahaUrl); }
+            if (json.type === 'error') setInstallError(json.text);
+          } catch { /* ignore parse errors */ }
+        }
+      }
+    } catch (err) {
+      setInstallError(err instanceof Error ? err.message : 'Install failed');
+    } finally {
+      setInstalling(false);
+      checkInfra();
+    }
+  };
+
+  const handleStartWaha = async () => {
+    setContainerAction(true);
+    try { await apiFetch('/api/setup-waha/waha/start', { method: 'POST' }); } catch { /* ignore */ }
+    await checkInfra();
+    setContainerAction(false);
+  };
+
+  const handleStopWaha = async () => {
+    setContainerAction(true);
+    try { await apiFetch('/api/setup-waha/waha/stop', { method: 'POST' }); } catch { /* ignore */ }
+    await checkInfra();
+    setContainerAction(false);
+  };
 
   // ── Poll session status ─────────────────────────────────────────
   const pollSession = useCallback(async () => {
@@ -51,7 +128,7 @@ export default function WahaConfigForm({
         try {
           const token = getToken();
           const API_URL =
-            process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+            process.env.NEXT_PUBLIC_API_URL || '';
           const res = await fetch(`${API_URL}/api/setup-waha/waha/qr`, {
             headers: token ? { Authorization: `Bearer ${token}` } : {},
           });
@@ -187,6 +264,59 @@ export default function WahaConfigForm({
           OpenKick to WhatsApp. It runs as a Docker container on your server
           and provides the bridge so the bot can receive and send messages.
         </p>
+      </div>
+
+      {/* Docker + Container status */}
+      <div className="mb-4 space-y-3">
+        <div className="flex items-center gap-2 text-sm">
+          <span className={`h-2 w-2 rounded-full ${dockerStatus === 'available' ? 'bg-emerald-500' : dockerStatus === 'unavailable' ? 'bg-red-500' : 'bg-gray-400 animate-pulse'}`} />
+          <span className="text-gray-700">
+            Docker: {dockerStatus === 'available' ? 'Available' : dockerStatus === 'unavailable' ? 'Not found' : 'Checking...'}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 text-sm">
+          <span className={`h-2 w-2 rounded-full ${containerStatus === 'running' ? 'bg-emerald-500' : containerStatus === 'stopped' ? 'bg-amber-500' : containerStatus === 'not_found' ? 'bg-red-500' : 'bg-gray-400 animate-pulse'}`} />
+          <span className="text-gray-700">
+            WAHA Container: {containerStatus === 'running' ? 'Running' : containerStatus === 'stopped' ? 'Stopped' : containerStatus === 'not_found' ? 'Not installed' : 'Checking...'}
+          </span>
+          {containerStatus === 'running' && (
+            <button onClick={handleStopWaha} disabled={containerAction} className="ml-2 rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-50">
+              Stop
+            </button>
+          )}
+          {containerStatus === 'stopped' && (
+            <button onClick={handleStartWaha} disabled={containerAction} className="ml-2 rounded border border-emerald-300 px-2 py-0.5 text-xs text-emerald-700 hover:bg-emerald-50 disabled:opacity-50">
+              Start
+            </button>
+          )}
+        </div>
+
+        {containerStatus === 'not_found' && dockerStatus === 'available' && !installing && (
+          <button
+            onClick={handleInstallWaha}
+            className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700"
+          >
+            Install & Start WAHA
+          </button>
+        )}
+
+        {installing && (
+          <div className="space-y-2">
+            <p className="text-xs text-emerald-600 font-medium">Installing WAHA...</p>
+            <pre className="max-h-32 overflow-y-auto rounded-lg bg-gray-900 p-3 text-xs text-green-400">
+              {installLog.join('\n') || 'Starting...'}
+            </pre>
+          </div>
+        )}
+
+        {installError && (
+          <div className="space-y-2">
+            <p className="text-xs text-red-600">Error: {installError}</p>
+            <button onClick={handleInstallWaha} className="rounded-xl border border-gray-300 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50">
+              Retry
+            </button>
+          </div>
+        )}
       </div>
 
       {/* WAHA URL */}

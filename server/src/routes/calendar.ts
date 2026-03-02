@@ -267,13 +267,27 @@ calendarRouter.get("/calendar", (req: Request, res: Response) => {
 
   const db = getDB();
 
-  // 1. Standalone events in the date range (exclude materialized series events)
+  // 1. Standalone events in the date range with attendance counts
   const events: Record<string, unknown>[] = rowsToObjects(
     db.exec(
-      "SELECT * FROM events WHERE seriesId IS NULL AND date >= ? AND date <= ? ORDER BY date ASC",
+      `SELECT e.*,
+        COALESCE(SUM(CASE WHEN a.status = 'yes' THEN 1 ELSE 0 END), 0) AS attendingCount,
+        COALESCE(SUM(CASE WHEN a.status = 'no' THEN 1 ELSE 0 END), 0) AS absentCount
+      FROM events e
+      LEFT JOIN attendance a ON a.eventId = e.id
+      WHERE e.seriesId IS NULL AND e.date >= ? AND e.date <= ?
+      GROUP BY e.id
+      ORDER BY e.date ASC`,
       [startDate, endDate],
     ),
   );
+
+  // Get total player count for attendance context
+  const totalPlayersResult = db.exec("SELECT COUNT(*) as cnt FROM players");
+  const totalPlayers = totalPlayersResult.length > 0 ? (totalPlayersResult[0].values[0][0] as number) : 0;
+  for (const ev of events) {
+    ev.totalPlayers = totalPlayers;
+  }
 
   // 2. Vacation periods overlapping with the date range
   const vacations = rowsToObjects(
@@ -319,6 +333,9 @@ calendarRouter.get("/calendar", (req: Request, res: Response) => {
         location: schedule.location,
         categoryFilter: schedule.categoryFilter,
         cancelled,
+        attendingCount: null,
+        absentCount: null,
+        totalPlayers: null,
       });
     }
   }
@@ -340,7 +357,39 @@ calendarRouter.get("/calendar", (req: Request, res: Response) => {
       materializedEvents,
     );
     for (const inst of instances) {
-      events.push(inst as unknown as Record<string, unknown>);
+      const rec = inst as unknown as Record<string, unknown>;
+      rec.attendingCount = null;
+      rec.absentCount = null;
+      rec.totalPlayers = null;
+      events.push(rec);
+    }
+  }
+
+  // Merge attendance counts for materialized series events (those with real numeric IDs)
+  const seriesEventIds = events
+    .filter((e) => e.seriesId != null && typeof e.id === "number")
+    .map((e) => e.id as number);
+  if (seriesEventIds.length > 0) {
+    const placeholders = seriesEventIds.map(() => "?").join(",");
+    const attRows = rowsToObjects(
+      db.exec(
+        `SELECT eventId,
+          COALESCE(SUM(CASE WHEN status = 'yes' THEN 1 ELSE 0 END), 0) AS attendingCount,
+          COALESCE(SUM(CASE WHEN status = 'no' THEN 1 ELSE 0 END), 0) AS absentCount
+        FROM attendance
+        WHERE eventId IN (${placeholders})
+        GROUP BY eventId`,
+        seriesEventIds,
+      ),
+    );
+    const attMap = new Map(attRows.map((r) => [r.eventId as number, r]));
+    for (const ev of events) {
+      if (ev.seriesId != null && typeof ev.id === "number") {
+        const att = attMap.get(ev.id as number);
+        ev.attendingCount = att ? (att.attendingCount as number) : 0;
+        ev.absentCount = att ? (att.absentCount as number) : 0;
+        ev.totalPlayers = totalPlayers;
+      }
     }
   }
 

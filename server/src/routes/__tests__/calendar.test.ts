@@ -459,6 +459,72 @@ describe("Calendar endpoint", () => {
     expect(march2.cancelled).toBe(false);
   });
 
+  it("GET /api/calendar — returns attendance counts per event", async () => {
+    // Create an event in March 2026
+    db.run(
+      "INSERT INTO events (type, title, date, startTime) VALUES (?, ?, ?, ?)",
+      ["tournament", "Attendance Cup", "2026-03-15", "10:00"],
+    );
+    const eventId = (db.exec("SELECT last_insert_rowid() as id")[0].values[0][0] as number);
+
+    // Create 3 players
+    db.run("INSERT INTO players (name) VALUES (?)", ["Alice"]);
+    const player1 = db.exec("SELECT last_insert_rowid() as id")[0].values[0][0] as number;
+    db.run("INSERT INTO players (name) VALUES (?)", ["Bob"]);
+    const player2 = db.exec("SELECT last_insert_rowid() as id")[0].values[0][0] as number;
+    db.run("INSERT INTO players (name) VALUES (?)", ["Charlie"]);
+    const player3 = db.exec("SELECT last_insert_rowid() as id")[0].values[0][0] as number;
+
+    // Add attendance records: 1 yes, 1 no, 1 unknown
+    db.run(
+      "INSERT INTO attendance (eventId, playerId, status) VALUES (?, ?, ?)",
+      [eventId, player1, "yes"],
+    );
+    db.run(
+      "INSERT INTO attendance (eventId, playerId, status) VALUES (?, ?, ?)",
+      [eventId, player2, "no"],
+    );
+    db.run(
+      "INSERT INTO attendance (eventId, playerId, status) VALUES (?, ?, ?)",
+      [eventId, player3, "unknown"],
+    );
+
+    const res = await fetch(`${baseUrl}/api/calendar?month=2026-03`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+
+    const event = body.events.find((e: any) => e.title === "Attendance Cup");
+    expect(event).toBeDefined();
+    expect(event.attendingCount).toBe(1);
+    expect(event.absentCount).toBe(1);
+    expect(event.totalPlayers).toBe(3);
+  });
+
+  it("GET /api/calendar — training instances have null attendance counts", async () => {
+    await fetch(`${baseUrl}/api/training-schedule`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        dayOfWeek: 3,
+        startTime: "17:30",
+        endTime: "19:00",
+        validFrom: "2026-03-01",
+        validTo: "2026-03-31",
+      }),
+    });
+
+    const res = await fetch(`${baseUrl}/api/calendar?month=2026-03`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+
+    expect(body.trainings.length).toBeGreaterThan(0);
+    for (const t of body.trainings) {
+      expect(t.attendingCount).toBeNull();
+      expect(t.absentCount).toBeNull();
+      expect(t.totalPlayers).toBeNull();
+    }
+  });
+
   it("GET /api/calendar — returns 400 if no year or month parameter", async () => {
     const res = await fetch(`${baseUrl}/api/calendar`);
     expect(res.status).toBe(400);

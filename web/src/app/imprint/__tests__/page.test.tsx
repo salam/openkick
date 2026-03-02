@@ -211,6 +211,30 @@ describe('ImprintPage', () => {
     expect(screen.getByText('This imprint is being completed.')).toBeInTheDocument();
   });
 
+  it('uses admin name/email as last-resort fallback when no other data available', async () => {
+    mockFetch({
+      legal_org_name: '', legal_address: '', legal_email: '',
+      legal_phone: '', legal_responsible: '', contact_info: '',
+      club_name: '', imprint_extra: '', dpo_email: '',
+      _admin_name: 'Admin User', _admin_email: 'admin@club.ch',
+    });
+    render(<ImprintPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Admin User')).toBeInTheDocument();
+    });
+
+    // admin_email used as email fallback
+    expect(screen.getByText('admin@club.ch')).toBeInTheDocument();
+
+    // responsible resolved from _admin_name (not placeholder)
+    // orgName still placeholder, address still placeholder → incomplete
+    // But email is present, so notice uses the email variant
+    expect(
+      screen.getByText('This imprint is being completed. For inquiries please contact admin@club.ch.')
+    ).toBeInTheDocument();
+  });
+
   it('shows imprint_extra when set, hides when empty', async () => {
     // With imprint_extra
     mockFetch({ ...fullSettings(), imprint_extra: 'Extra legal text' });

@@ -17,6 +17,8 @@ interface LegalSettings {
   club_name: string;
   imprint_extra: string;
   dpo_email: string;
+  _admin_name: string;
+  _admin_email: string;
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -42,6 +44,7 @@ export default function ImprintPage() {
           legal_org_name: '', legal_address: '', legal_email: '',
           legal_phone: '', legal_responsible: '', contact_info: '',
           club_name: '', imprint_extra: '', dpo_email: '',
+          _admin_name: '', _admin_email: '',
         });
       }
     }
@@ -65,9 +68,9 @@ export default function ImprintPage() {
   const placeholder = t('imprint_to_be_completed');
   const orgName = s.legal_org_name || s.club_name || placeholder;
   const contactIsEmail = s.contact_info && EMAIL_RE.test(s.contact_info);
-  const email = s.legal_email || (contactIsEmail ? s.contact_info : '') || s.dpo_email || '';
+  const email = s.legal_email || (contactIsEmail ? s.contact_info : '') || s.dpo_email || s._admin_email || '';
   const address = s.legal_address || placeholder;
-  const responsible = s.legal_responsible || placeholder;
+  const responsible = s.legal_responsible || s._admin_name || placeholder;
   const phone = s.legal_phone || '';
 
   // Determine if contact_info was consumed as email fallback

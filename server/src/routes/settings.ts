@@ -27,6 +27,16 @@ settingsRouter.get("/settings", (_req: Request, res: Response) => {
     }
   }
 
+  // Include first admin's name/email as fallback for imprint
+  const adminResult = db.exec(
+    "SELECT name, email FROM guardians WHERE role = 'admin' ORDER BY createdAt ASC LIMIT 1",
+  );
+  if (adminResult.length > 0 && adminResult[0].values.length > 0) {
+    const [name, email] = adminResult[0].values[0];
+    settings._admin_name = (name as string) || "";
+    settings._admin_email = (email as string) || "";
+  }
+
   res.json(settings);
 });
 

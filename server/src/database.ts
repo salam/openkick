@@ -367,6 +367,13 @@ CREATE TABLE IF NOT EXISTS payment_use_cases (
   updatedAt     TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS geocoding_cache (
+  location_text TEXT PRIMARY KEY,
+  latitude REAL NOT NULL,
+  longitude REAL NOT NULL,
+  cached_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS transactions (
   id              INTEGER PRIMARY KEY AUTOINCREMENT,
   externalId      TEXT,
@@ -536,6 +543,9 @@ export async function initDB(dbPath?: string): Promise<Database> {
   }
   if (!mlCols.includes('outboundBody')) {
     try { db.run('ALTER TABLE message_log ADD COLUMN outboundBody TEXT'); } catch {}
+  }
+  if (!mlCols.includes('outcomes')) {
+    try { db.run('ALTER TABLE message_log ADD COLUMN outcomes TEXT'); } catch {}
   }
 
   // Seed default settings (INSERT OR IGNORE to avoid duplicates)

@@ -18,7 +18,7 @@ interface Survey {
 type StatusFilter = 'all' | 'open' | 'closed' | 'archived';
 
 const STATUS_BADGE: Record<Survey['status'], string> = {
-  open: 'bg-emerald-100 text-emerald-700',
+  open: 'bg-primary-100 text-primary-700',
   closed: 'bg-gray-100 text-gray-600',
   archived: 'bg-gray-50 text-gray-400',
 };
@@ -105,7 +105,7 @@ export default function SurveysPage() {
           </button>
           <button
             onClick={() => router.push('/surveys/new/')}
-            className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-600"
+            className="rounded-xl bg-primary-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-600"
           >
             {t('new_survey')}
           </button>
@@ -130,7 +130,7 @@ export default function SurveysPage() {
             onClick={() => setFilter(f.key)}
             className={`rounded-full px-3 py-1 text-sm font-medium transition ${
               filter === f.key
-                ? 'bg-emerald-500 text-white'
+                ? 'bg-primary-500 text-white'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
@@ -150,7 +150,7 @@ export default function SurveysPage() {
           <p className="text-sm text-gray-400">{t('survey_empty_hint')}</p>
           <button
             onClick={() => router.push('/surveys/new/')}
-            className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-600"
+            className="rounded-xl bg-primary-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-600"
           >
             {t('survey_create')}
           </button>

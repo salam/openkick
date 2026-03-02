@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { t, getLanguage } from '@/lib/i18n';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 /* ── Types ──────────────────────────────────────────────────────────── */
 
@@ -146,7 +146,7 @@ export default function SurveyRespondClient() {
                   value={opt}
                   checked={answers[q.id] === opt}
                   onChange={() => setAnswer(q.id, opt)}
-                  className="accent-emerald-500"
+                  className="accent-primary-500"
                 />
                 <span className="text-sm text-gray-700">{opt}</span>
               </label>
@@ -166,7 +166,7 @@ export default function SurveyRespondClient() {
                   type="checkbox"
                   checked={selected.includes(opt)}
                   onChange={() => toggleMultiChoice(q.id, opt)}
-                  className="accent-emerald-500"
+                  className="accent-primary-500"
                 />
                 <span className="text-sm text-gray-700">{opt}</span>
               </label>
@@ -198,7 +198,7 @@ export default function SurveyRespondClient() {
             rows={3}
             value={answers[q.id] || ''}
             onChange={(e) => setAnswer(q.id, e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
           />
         );
 
@@ -207,7 +207,7 @@ export default function SurveyRespondClient() {
           <select
             value={answers[q.id] || ''}
             onChange={(e) => setAnswer(q.id, e.target.value)}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
           >
             <option value="">—</option>
             {(q.options ?? []).map((opt) => (
@@ -321,8 +321,8 @@ export default function SurveyRespondClient() {
 
     return (
       <div className="mx-auto max-w-2xl px-4 py-8 space-y-4">
-        <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-6 text-center">
-          <p className="text-emerald-800 font-medium text-lg">{t('survey_thank_you')}</p>
+        <div className="rounded-xl bg-primary-50 border border-primary-200 p-6 text-center">
+          <p className="text-primary-800 font-medium text-lg">{t('survey_thank_you')}</p>
         </div>
 
         {paymentRequired && totalAmount > 0 && (
@@ -332,7 +332,7 @@ export default function SurveyRespondClient() {
             <button
               onClick={handlePayOrder}
               disabled={payingOrder}
-              className="rounded-lg bg-emerald-600 px-6 py-2.5 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:opacity-50"
+              className="rounded-lg bg-primary-600 px-6 py-2.5 text-sm font-medium text-white transition hover:bg-primary-700 disabled:opacity-50"
             >
               {payingOrder ? '...' : `${t('survey_payment_pay')} ${orderCurrency} ${(totalAmount / 100).toFixed(2)}`}
             </button>
@@ -367,7 +367,7 @@ export default function SurveyRespondClient() {
               type="text"
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
             />
             <p className="text-xs text-gray-400">{t('survey_nickname_hint')}</p>
           </div>
@@ -387,7 +387,7 @@ export default function SurveyRespondClient() {
         <button
           type="submit"
           disabled={submitting}
-          className="rounded-xl bg-emerald-500 px-6 py-3 text-sm font-medium text-white hover:bg-emerald-600 disabled:opacity-50 transition-colors"
+          className="rounded-xl bg-primary-500 px-6 py-3 text-sm font-medium text-white hover:bg-primary-600 disabled:opacity-50 transition-colors"
         >
           {submitting ? t('loading') : t('survey_submit')}
         </button>

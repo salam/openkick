@@ -45,7 +45,7 @@ function CalendarInstructions({ url }: { url: string }) {
             onClick={() => setTab(key)}
             className={`px-3 py-1.5 text-xs font-medium transition ${
               tab === key
-                ? 'border-b-2 border-emerald-500 text-emerald-700'
+                ? 'border-b-2 border-primary-500 text-primary-700'
                 : 'text-gray-400 hover:text-gray-600'
             }`}
           >
@@ -80,19 +80,23 @@ function CalendarInstructions({ url }: { url: string }) {
   );
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 export default function SubscribeCard() {
   const [open, setOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const base = API_URL;
   const allEventsUrl = `${base}/api/feeds/calendar.ics`;
-  const [, setLang] = useState(() => getLanguage());
+  const [lang, setLang] = useState('de'); // SSR-safe default
+  const [hostname, setHostname] = useState('your-domain');
   useEffect(() => {
+    setLang(getLanguage());
+    setHostname(window.location.hostname);
     function onLangChange() { setLang(getLanguage()); }
     window.addEventListener('languagechange', onLangChange);
     return () => window.removeEventListener('languagechange', onLangChange);
   }, []);
+  const lt = (key: string) => t(key, lang);
 
   return (
     <div className="w-full max-w-md rounded-lg border border-gray-200 bg-white shadow-sm">
@@ -101,10 +105,10 @@ export default function SubscribeCard() {
         className="flex w-full items-center justify-between px-5 py-4 text-left"
       >
         <span className="flex items-center gap-2 text-sm font-semibold text-gray-900">
-          <svg className="h-4 w-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg className="h-4 w-4 text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
           </svg>
-          {t('subscribe_updates')}
+          {lt('subscribe_updates')}
         </span>
         <svg
           className={`h-4 w-4 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`}
@@ -117,7 +121,7 @@ export default function SubscribeCard() {
       {open && (
         <div className="border-t border-gray-100 px-5 pb-5 pt-4">
           {/* Primary: All events calendar */}
-          <FeedUrl label={t('all_events')} url={allEventsUrl} />
+          <FeedUrl label={lt('all_events')} url={allEventsUrl} />
           <CalendarInstructions url={allEventsUrl} />
 
           {/* More feeds — collapsed for users, open for bots via noscript */}
@@ -132,7 +136,7 @@ export default function SubscribeCard() {
               >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
-              {t('more_feeds')}
+              {lt('more_feeds')}
             </button>
 
             {/* Always render for bots/crawlers but visually hidden until toggled */}
@@ -140,12 +144,12 @@ export default function SubscribeCard() {
               {/* Per-type calendars */}
               <div>
                 <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  {t('calendar_by_type')}
+                  {lt('calendar_by_type')}
                 </h3>
                 <div className="space-y-2">
-                  <FeedUrl label={t('tournaments_feed')} url={`${base}/api/feeds/calendar/tournaments.ics`} />
-                  <FeedUrl label={t('matches_feed')} url={`${base}/api/feeds/calendar/matches.ics`} />
-                  <FeedUrl label={t('trainings_feed')} url={`${base}/api/feeds/calendar/trainings.ics`} />
+                  <FeedUrl label={lt('tournaments_feed')} url={`${base}/api/feeds/calendar/tournaments.ics`} />
+                  <FeedUrl label={lt('matches_feed')} url={`${base}/api/feeds/calendar/matches.ics`} />
+                  <FeedUrl label={lt('trainings_feed')} url={`${base}/api/feeds/calendar/trainings.ics`} />
                 </div>
               </div>
 
@@ -159,26 +163,26 @@ export default function SubscribeCard() {
                   <FeedUrl label="Atom" url={`${base}/api/feeds/atom`} />
                 </div>
                 <p className="mt-2 text-xs text-gray-400">
-                  {t('rss_hint')}
+                  {lt('rss_hint')}
                 </p>
               </div>
 
               {/* Social */}
               <div>
                 <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  {t('social')}
+                  {lt('social')}
                 </h3>
                 <div className="space-y-2">
                   <div className="rounded border border-gray-200 px-3 py-2">
-                    <span className="text-sm font-medium text-gray-700">{t('mastodon_fediverse')}</span>
+                    <span className="text-sm font-medium text-gray-700">{lt('mastodon_fediverse')}</span>
                     <span className="ml-2 text-xs text-gray-400">
-                      {t('search_at_club')}{typeof window !== 'undefined' ? window.location.hostname : 'your-domain'}
+                      {lt('search_at_club')}{hostname}
                     </span>
                   </div>
                   <div className="rounded border border-gray-200 px-3 py-2">
-                    <span className="text-sm font-medium text-gray-700">{t('bluesky')}</span>
+                    <span className="text-sm font-medium text-gray-700">{lt('bluesky')}</span>
                     <span className="ml-2 text-xs text-gray-400">
-                      {t('feed_at_protocol')}
+                      {lt('feed_at_protocol')}
                     </span>
                   </div>
                 </div>

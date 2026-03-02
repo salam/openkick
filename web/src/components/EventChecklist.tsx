@@ -158,7 +158,7 @@ export default function EventChecklist({ eventId, defaultOpen = false }: Props) 
                     className="flex-shrink-0"
                   >
                     {item.completed ? (
-                      <svg className="h-5 w-5 text-emerald-500" viewBox="0 0 24 24" fill="currentColor">
+                      <svg className="h-5 w-5 text-primary-500" viewBox="0 0 24 24" fill="currentColor">
                         <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clipRule="evenodd" />
                       </svg>
                     ) : (
@@ -198,12 +198,12 @@ export default function EventChecklist({ eventId, defaultOpen = false }: Props) 
               onChange={(e) => setNewItemLabel(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && addItem()}
               placeholder={t('checklist_add_item')}
-              className="flex-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-700 placeholder-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="flex-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-700 placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
             />
             <button
               onClick={addItem}
               disabled={!newItemLabel.trim()}
-              className="rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-600 disabled:opacity-40"
+              className="rounded-lg bg-primary-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-600 disabled:opacity-40"
             >
               {t('checklist_add')}
             </button>

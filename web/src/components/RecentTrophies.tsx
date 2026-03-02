@@ -41,7 +41,7 @@ function placementColor(placement: number): string {
     case 3:
       return 'bg-gradient-to-r from-orange-50 to-amber-100 text-orange-900';
     default:
-      return 'bg-gradient-to-r from-emerald-50 to-teal-50 text-emerald-800';
+      return 'bg-gradient-to-r from-primary-50 to-primary-100 text-primary-800';
   }
 }
 
@@ -108,39 +108,38 @@ export default function RecentTrophies() {
         </h2>
         <a
           href="/trophies"
-          className="text-xs text-emerald-600 hover:text-emerald-800"
+          className="text-xs text-primary-600 hover:text-primary-800"
         >
           {t('view_all')}
         </a>
       </div>
       <div className="space-y-3">
         {entries.map((entry) => (
-          <div key={entry.id} className="flex items-center justify-between">
-            <div>
-              <a
-                href={`/events/${entry.eventId}`}
-                className="text-sm font-medium text-gray-900 hover:text-emerald-600"
+          <a
+            key={entry.id}
+            href={`/events/${entry.eventId}`}
+            className="flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-gray-50"
+          >
+            {entry.placement != null && (
+              <span
+                className={`flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl text-center ${placementColor(entry.placement)}`}
               >
+                <span className="text-xl leading-none">{placementIcon(entry.placement)}</span>
+                <span className="mt-0.5 text-xs font-bold">
+                  {ordinal(entry.placement)}
+                  {entry.totalTeams != null && <span className="font-normal opacity-70">/{entry.totalTeams}</span>}
+                </span>
+              </span>
+            )}
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-gray-900">
                 {entry.eventTitle}
-              </a>
+              </p>
               <p className="text-xs text-gray-500">
                 {formatDate(entry.eventDate)}
               </p>
             </div>
-            <div className="flex items-center gap-1.5">
-              {entry.placement != null && (
-                <span
-                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-sm font-semibold ${placementColor(entry.placement)}`}
-                >
-                  <span className="text-base leading-none">{placementIcon(entry.placement)}</span>
-                  {ordinal(entry.placement)}
-                  {entry.totalTeams != null && (
-                    <span className="text-xs font-normal opacity-70">/{entry.totalTeams}</span>
-                  )}
-                </span>
-              )}
-            </div>
-          </div>
+          </a>
         ))}
       </div>
     </div>

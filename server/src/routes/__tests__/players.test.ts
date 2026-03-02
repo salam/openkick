@@ -322,6 +322,160 @@ describe("Guardians routes", () => {
     expect(body.players[0].name).toBe("Child A");
   });
 
+  it("PUT /api/guardians/:id — updates guardian name, phone, email", async () => {
+    const createRes = await fetch(`${baseUrl}/api/guardians`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone: "+41791000000", name: "Old Name", role: "parent" }),
+    });
+    const { id } = await createRes.json();
+
+    const res = await fetch(`${baseUrl}/api/guardians/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "New Name", email: "new@test.com" }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.name).toBe("New Name");
+    expect(body.email).toBe("new@test.com");
+    expect(body.phone).toBe("+41791000000");
+  });
+
+  it("PUT /api/guardians/:id — returns 404 for nonexistent guardian", async () => {
+    const res = await fetch(`${baseUrl}/api/guardians/9999`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "Nobody" }),
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it("DELETE /api/guardians/:guardianId/players/:playerId — unlinks guardian from player", async () => {
+    const playerRes = await fetch(`${baseUrl}/api/players`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "Unlink Kid", yearOfBirth: 2015 }),
+    });
+    const { id: playerId } = await playerRes.json();
+
+    const guardianRes = await fetch(`${baseUrl}/api/guardians`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone: "+41792000000", name: "Unlinker", role: "parent" }),
+    });
+    const { id: guardianId } = await guardianRes.json();
+
+    await fetch(`${baseUrl}/api/guardians/${guardianId}/players`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ playerId }),
+    });
+
+    // Unlink
+    const res = await fetch(`${baseUrl}/api/guardians/${guardianId}/players/${playerId}`, {
+      method: "DELETE",
+    });
+    expect(res.status).toBe(204);
+
+    // Guardian still exists
+    const gRes = await fetch(`${baseUrl}/api/guardians/${guardianId}`);
+    expect(gRes.status).toBe(200);
+
+    // Player has no guardians
+    const pRes = await fetch(`${baseUrl}/api/players/${playerId}`);
+    const player = await pRes.json();
+    expect(player.guardians).toHaveLength(0);
+  });
+
+  it("POST /api/guardians — returns existing guardian when phone already exists (BUG-GUARDIAN-DUP)", async () => {
+    // Create first guardian
+    const res1 = await fetch(`${baseUrl}/api/guardians`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone: "+41791234567", name: "Mama Test", role: "parent" }),
+    });
+    expect(res1.status).toBe(201);
+    const guardian1 = await res1.json();
+
+    // Create second guardian with same phone — should return existing, not crash
+    const res2 = await fetch(`${baseUrl}/api/guardians`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone: "+41791234567", name: "Mama Test", role: "parent" }),
+    });
+    expect(res2.status).toBe(200);
+    const guardian2 = await res2.json();
+
+    // Same guardian returned
+    expect(guardian2.id).toBe(guardian1.id);
+    expect(guardian2.phone).toBe("+41791234567");
+  });
+
+  it("DELETE /api/guardians/:guardianId/players/:playerId — returns 404 for nonexistent link", async () => {
+    const res = await fetch(`${baseUrl}/api/guardians/9999/players/9999`, {
+      method: "DELETE",
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it("DELETE /api/guardians/:id — deletes guardian and all links", async () => {
+    const playerRes = await fetch(`${baseUrl}/api/players`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "Orphan Kid", yearOfBirth: 2016 }),
+    });
+    const { id: playerId } = await playerRes.json();
+
+    const guardianRes = await fetch(`${baseUrl}/api/guardians`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone: "+41793000000", name: "Deletable", role: "parent" }),
+    });
+    const { id: guardianId } = await guardianRes.json();
+
+    await fetch(`${baseUrl}/api/guardians/${guardianId}/players`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ playerId }),
+    });
+
+    // Delete guardian
+    const res = await fetch(`${baseUrl}/api/guardians/${guardianId}`, { method: "DELETE" });
+    expect(res.status).toBe(204);
+
+    // Guardian gone
+    const gRes = await fetch(`${baseUrl}/api/guardians/${guardianId}`);
+    expect(gRes.status).toBe(404);
+
+    // Player has no guardians
+    const pRes = await fetch(`${baseUrl}/api/players/${playerId}`);
+    const player = await pRes.json();
+    expect(player.guardians).toHaveLength(0);
+  });
+
+  it("DELETE /api/guardians/:id — rejects deletion of coach/admin role", async () => {
+    const guardianRes = await fetch(`${baseUrl}/api/guardians`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        phone: "+41794000000",
+        name: "Coach Protected",
+        email: "coach@prot.com",
+        password: "pass123",
+        role: "coach",
+      }),
+    });
+    const { id: guardianId } = await guardianRes.json();
+
+    const res = await fetch(`${baseUrl}/api/guardians/${guardianId}`, { method: "DELETE" });
+    expect(res.status).toBe(403);
+
+    // Guardian still exists
+    const gRes = await fetch(`${baseUrl}/api/guardians/${guardianId}`);
+    expect(gRes.status).toBe(200);
+  });
+
   it("POST /api/guardians/login — email+password login returns JWT", async () => {
     // Create a coach with email and password
     await fetch(`${baseUrl}/api/guardians`, {

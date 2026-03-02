@@ -139,16 +139,23 @@ async function handleConsent(
     const playerId = context.playerId as number;
     const childName = context.childName as string;
 
-    db.run(
-      `INSERT INTO guardians (name, phone, role, accessToken, consentGiven, language)
-       VALUES (?, ?, 'parent', ?, 1, ?)`,
-      [guardianName, phone, accessToken, lang],
-    );
+    // Reuse existing guardian if phone already registered
+    const existingResult = db.exec("SELECT id FROM guardians WHERE phone = ?", [phone]);
+    let guardianId: number;
 
-    const guardianId = getLastInsertId();
+    if (existingResult.length > 0 && existingResult[0].values.length > 0) {
+      guardianId = existingResult[0].values[0][0] as number;
+    } else {
+      db.run(
+        `INSERT INTO guardians (name, phone, role, accessToken, consentGiven, language)
+         VALUES (?, ?, 'parent', ?, 1, ?)`,
+        [guardianName, phone, accessToken, lang],
+      );
+      guardianId = getLastInsertId();
+    }
 
     db.run(
-      "INSERT INTO guardian_players (guardianId, playerId) VALUES (?, ?)",
+      "INSERT OR IGNORE INTO guardian_players (guardianId, playerId) VALUES (?, ?)",
       [guardianId, playerId],
     );
 

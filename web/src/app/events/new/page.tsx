@@ -3,7 +3,6 @@
 import { useState, type FormEvent, type ChangeEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
-import AuthGuard from '@/components/AuthGuard';
 import { getToken } from '@/lib/auth';
 
 /* ── Constants ──────────────────────────────────────────────────────── */
@@ -163,7 +162,7 @@ export default function NewEventPage() {
     setImportSuccess(null);
     try {
       const buffer = await file.arrayBuffer();
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
       const token = getToken();
       const res = await fetch(`${API_URL}/api/events/import-pdf`, {
         method: 'POST',
@@ -280,7 +279,7 @@ export default function NewEventPage() {
         // Upload attachment if present
         if (attachment && created.id) {
           try {
-            const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+            const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
             const token = getToken();
             const formData = new FormData();
             formData.append('file', attachment);
@@ -314,7 +313,6 @@ export default function NewEventPage() {
   /* ── Render ────────────────────────────────────────────────────── */
 
   return (
-    <AuthGuard>
     <div className="mx-auto max-w-3xl">
       <h1 className="mb-6 text-2xl font-bold text-gray-900">
         {seriesMode ? 'Create Event Series' : 'Create Event'}
@@ -322,8 +320,8 @@ export default function NewEventPage() {
 
       {/* ── Import section (hidden in series mode) ── */}
       {!seriesMode && (
-        <div className="mb-8 rounded-xl border-2 border-dashed border-emerald-300 bg-emerald-50/50 p-6">
-          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-emerald-700">
+        <div className="mb-8 rounded-xl border-2 border-dashed border-primary-300 bg-primary-50/50 p-6">
+          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-primary-700">
             Import from Tournament
           </h2>
 
@@ -338,13 +336,13 @@ export default function NewEventPage() {
                 value={importUrl}
                 onChange={(e) => setImportUrl(e.target.value)}
                 placeholder="https://example.com/tournament"
-                className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
               />
               <button
                 type="button"
                 onClick={handleImportUrl}
                 disabled={importingUrl || !importUrl.trim()}
-                className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-600 disabled:opacity-50"
+                className="rounded-xl bg-primary-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-600 disabled:opacity-50"
               >
                 {importingUrl ? 'Importing...' : 'Import'}
               </button>
@@ -380,7 +378,7 @@ export default function NewEventPage() {
 
           {/* Import feedback */}
           {importSuccess && (
-            <div className="mt-3 rounded-lg bg-emerald-100 p-3 text-sm text-emerald-700">
+            <div className="mt-3 rounded-lg bg-primary-100 p-3 text-sm text-primary-700">
               {importSuccess}
             </div>
           )}
@@ -408,7 +406,7 @@ export default function NewEventPage() {
               aria-checked={seriesMode}
               onClick={handleToggleSeriesMode}
               className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors ${
-                seriesMode ? 'bg-emerald-500' : 'bg-gray-200'
+                seriesMode ? 'bg-primary-500' : 'bg-gray-200'
               }`}
             >
               <span
@@ -432,7 +430,7 @@ export default function NewEventPage() {
           <select
             value={form.type}
             onChange={(e) => setForm({ ...form, type: e.target.value })}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
           >
             {EVENT_TYPES.map((t) => (
               <option key={t} value={t}>
@@ -450,7 +448,7 @@ export default function NewEventPage() {
             value={form.title}
             onChange={(e) => setForm({ ...form, title: e.target.value })}
             required
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
           />
         </div>
 
@@ -461,7 +459,7 @@ export default function NewEventPage() {
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
             rows={3}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
           />
         </div>
 
@@ -482,7 +480,7 @@ export default function NewEventPage() {
                       onClick={() => setForm({ ...form, recurrenceDay: isoDay })}
                       className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
                         selected
-                          ? 'bg-emerald-500 text-white'
+                          ? 'bg-primary-500 text-white'
                           : 'border border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
                       }`}
                     >
@@ -502,7 +500,7 @@ export default function NewEventPage() {
                   value={form.seriesStartDate}
                   onChange={(e) => setForm({ ...form, seriesStartDate: e.target.value })}
                   required
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
                 />
               </div>
               <div>
@@ -512,7 +510,7 @@ export default function NewEventPage() {
                   value={form.seriesEndDate}
                   onChange={(e) => setForm({ ...form, seriesEndDate: e.target.value })}
                   required
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
                 />
               </div>
             </div>
@@ -525,7 +523,7 @@ export default function NewEventPage() {
                   type="time"
                   value={form.startTime}
                   onChange={(e) => setForm({ ...form, startTime: e.target.value })}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
                 />
               </div>
               <div>
@@ -536,7 +534,7 @@ export default function NewEventPage() {
                   type="time"
                   value={form.attendanceTime}
                   onChange={(e) => setForm({ ...form, attendanceTime: e.target.value })}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
                 />
               </div>
             </div>
@@ -554,7 +552,7 @@ export default function NewEventPage() {
                     deadlineOffsetHours: e.target.value === '' ? null : Number(e.target.value),
                   })
                 }
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 sm:max-w-xs"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 sm:max-w-xs"
               >
                 {DEADLINE_OFFSET_OPTIONS.map((opt) => (
                   <option key={opt.label} value={opt.value ?? ''}>
@@ -575,7 +573,7 @@ export default function NewEventPage() {
                   value={form.date}
                   onChange={(e) => setForm({ ...form, date: e.target.value })}
                   required
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
                 />
               </div>
               <div>
@@ -584,7 +582,7 @@ export default function NewEventPage() {
                   type="time"
                   value={form.startTime}
                   onChange={(e) => setForm({ ...form, startTime: e.target.value })}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
                 />
               </div>
               <div>
@@ -595,7 +593,7 @@ export default function NewEventPage() {
                   type="time"
                   value={form.attendanceTime}
                   onChange={(e) => setForm({ ...form, attendanceTime: e.target.value })}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
                 />
               </div>
             </div>
@@ -607,7 +605,7 @@ export default function NewEventPage() {
                 type="datetime-local"
                 value={form.deadline}
                 onChange={(e) => setForm({ ...form, deadline: e.target.value })}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 sm:max-w-xs"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 sm:max-w-xs"
               />
             </div>
           </>
@@ -622,7 +620,7 @@ export default function NewEventPage() {
               value={form.teamName}
               onChange={(e) => setForm({ ...form, teamName: e.target.value })}
               placeholder="e.g., FC Example E1"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
             />
             <p className="mt-1 text-xs text-gray-500">
               Official name as registered with the tournament organiser
@@ -644,7 +642,7 @@ export default function NewEventPage() {
                     maxParticipants: e.target.checked ? '' : prev.maxParticipants,
                   }))
                 }
-                className="h-4 w-4 rounded border-gray-300 text-emerald-500 focus:ring-emerald-500"
+                className="h-4 w-4 rounded border-gray-300 text-primary-500 focus:ring-primary-500"
               />
               <span className="text-sm font-medium text-gray-700">
                 Open call (no participant limit)
@@ -665,7 +663,7 @@ export default function NewEventPage() {
                 min={1}
                 value={form.maxParticipants}
                 onChange={(e) => setForm({ ...form, maxParticipants: e.target.value })}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
               />
             </div>
           )}
@@ -678,7 +676,7 @@ export default function NewEventPage() {
               min={1}
               value={form.minParticipants}
               onChange={(e) => setForm({ ...form, minParticipants: e.target.value })}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
             />
           </div>
         </div>
@@ -690,7 +688,7 @@ export default function NewEventPage() {
             type="text"
             value={form.location}
             onChange={(e) => setForm({ ...form, location: e.target.value })}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
           />
         </div>
 
@@ -729,7 +727,7 @@ export default function NewEventPage() {
                 aria-checked={form.recurring}
                 onClick={() => setForm({ ...form, recurring: !form.recurring, recurrenceDays: [] })}
                 className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors ${
-                  form.recurring ? 'bg-emerald-500' : 'bg-gray-200'
+                  form.recurring ? 'bg-primary-500' : 'bg-gray-200'
                 }`}
               >
                 <span
@@ -753,7 +751,7 @@ export default function NewEventPage() {
                       onClick={() => toggleRecurrenceDay(day)}
                       className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
                         selected
-                          ? 'bg-emerald-500 text-white'
+                          ? 'bg-primary-500 text-white'
                           : 'border border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
                       }`}
                     >
@@ -804,7 +802,7 @@ export default function NewEventPage() {
           <button
             type="submit"
             disabled={submitting || !canSubmit}
-            className="rounded-xl bg-emerald-500 px-6 py-3 text-sm font-medium text-white transition hover:bg-emerald-600 disabled:opacity-50"
+            className="rounded-xl bg-primary-500 px-6 py-3 text-sm font-medium text-white transition hover:bg-primary-600 disabled:opacity-50"
           >
             {submitting ? 'Creating...' : seriesMode ? 'Create Series' : 'Create Event'}
           </button>
@@ -817,6 +815,5 @@ export default function NewEventPage() {
         </div>
       </form>
     </div>
-    </AuthGuard>
   );
 }

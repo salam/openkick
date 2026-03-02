@@ -224,12 +224,12 @@ export default function BroadcastComposer() {
                   onClick={() => setSelectedTemplate(tpl.key)}
                   className={`rounded-lg border-2 p-4 text-left transition-colors ${
                     active
-                      ? 'border-emerald-600 bg-emerald-50'
+                      ? 'border-primary-600 bg-primary-50'
                       : 'border-gray-200 bg-white hover:border-gray-300'
                   }`}
                 >
                   <span
-                    className={`block text-sm font-semibold ${active ? 'text-emerald-700' : 'text-gray-900'}`}
+                    className={`block text-sm font-semibold ${active ? 'text-primary-700' : 'text-gray-900'}`}
                   >
                     {t(tpl.labelKey)}
                   </span>
@@ -249,7 +249,7 @@ export default function BroadcastComposer() {
             <select
               value={selectedEventId}
               onChange={(e) => setSelectedEventId(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
             >
               <option value="">{t('none')}</option>
               {events.map((ev) => (
@@ -266,7 +266,7 @@ export default function BroadcastComposer() {
           <button
             onClick={handleGenerate}
             disabled={generating}
-            className="mb-5 rounded-xl bg-emerald-500 px-6 py-3 text-sm font-medium text-white transition hover:bg-emerald-600 disabled:opacity-50"
+            className="mb-5 rounded-xl bg-primary-500 px-6 py-3 text-sm font-medium text-white transition hover:bg-primary-600 disabled:opacity-50"
           >
             {generating ? t('generating') : selectedTemplate === 'custom' ? t('start_writing') : t('generate_message')}
           </button>
@@ -296,7 +296,7 @@ export default function BroadcastComposer() {
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
               >
                 <option value="">{t('all_categories')}</option>
                 {SFV_CATEGORIES.map((cat) => (
@@ -308,7 +308,7 @@ export default function BroadcastComposer() {
             </div>
             <div className="shrink-0 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-sm text-gray-700">
               {t('recipients')}:{' '}
-              <span className="font-semibold text-emerald-700">
+              <span className="font-semibold text-primary-700">
                 {recipientCount !== null ? recipientCount : '--'}
               </span>
             </div>
@@ -320,7 +320,7 @@ export default function BroadcastComposer() {
           <button
             onClick={() => setConfirmOpen(true)}
             disabled={sending}
-            className="rounded-xl bg-emerald-500 px-6 py-3 text-sm font-medium text-white transition hover:bg-emerald-600 disabled:opacity-50"
+            className="rounded-xl bg-primary-500 px-6 py-3 text-sm font-medium text-white transition hover:bg-primary-600 disabled:opacity-50"
           >
             {t('send_broadcast')}
           </button>
@@ -351,7 +351,7 @@ export default function BroadcastComposer() {
               <button
                 onClick={handleSend}
                 disabled={sending}
-                className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-600 disabled:opacity-50"
+                className="rounded-xl bg-primary-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-600 disabled:opacity-50"
               >
                 {sending ? t('sending') : t('confirm_and_send')}
               </button>
@@ -366,7 +366,7 @@ export default function BroadcastComposer() {
 
         {loadingHistory ? (
           <div className="flex justify-center py-8">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-600 border-t-transparent" />
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent" />
           </div>
         ) : broadcasts.length === 0 ? (
           <p className="py-6 text-center text-sm text-gray-400">{t('no_broadcasts')}</p>

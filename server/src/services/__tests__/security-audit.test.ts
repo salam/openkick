@@ -45,7 +45,7 @@ describe("security audit service", () => {
         expect(typeof check.category).toBe("string");
 
         expect(check).toHaveProperty("status");
-        expect(["pass", "warn", "fail"]).toContain(check.status);
+        expect(["pass", "warn", "fail", "info"]).toContain(check.status);
 
         expect(check).toHaveProperty("message");
         expect(typeof check.message).toBe("string");
@@ -61,12 +61,12 @@ describe("security audit service", () => {
   });
 
   describe("summary counts match checks", () => {
-    it("summary.pass + summary.warn + summary.fail equals checks.length", async () => {
+    it("summary.pass + summary.warn + summary.fail + summary.info equals checks.length", async () => {
       const { runSecurityAudit } = await import("../security-audit.js");
       const result = await runSecurityAudit();
 
-      const { pass, warn, fail } = result.summary;
-      expect(pass + warn + fail).toBe(result.checks.length);
+      const { pass, warn, fail, info } = result.summary;
+      expect(pass + warn + fail + info).toBe(result.checks.length);
     });
 
     it("summary counts match actual check statuses", async () => {
@@ -76,15 +76,17 @@ describe("security audit service", () => {
       const passCount = result.checks.filter((c) => c.status === "pass").length;
       const warnCount = result.checks.filter((c) => c.status === "warn").length;
       const failCount = result.checks.filter((c) => c.status === "fail").length;
+      const infoCount = result.checks.filter((c) => c.status === "info").length;
 
       expect(result.summary.pass).toBe(passCount);
       expect(result.summary.warn).toBe(warnCount);
       expect(result.summary.fail).toBe(failCount);
+      expect(result.summary.info).toBe(infoCount);
     });
   });
 
   describe("expected check IDs", () => {
-    it("includes all 8 expected check IDs", async () => {
+    it("includes all 10 expected check IDs", async () => {
       const { runSecurityAudit } = await import("../security-audit.js");
       const result = await runSecurityAudit();
       const ids = result.checks.map((c) => c.id);
@@ -95,6 +97,8 @@ describe("security audit service", () => {
         "env-permissions",
         "cors-config",
         "admin-passwords",
+        "password-policy",
+        "pii-gating",
         "security-txt",
         "https-production",
         "gitignore-coverage",

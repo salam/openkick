@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { t, getLanguage } from '@/lib/i18n';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 interface WahaWizardProps {
   authToken: string;
@@ -28,23 +28,23 @@ function StepIndicator({ current, completed }: { current: number; completed: num
           <div key={step} className="flex items-center gap-2">
             {i > 0 && (
               <div
-                className={`h-px w-6 ${isDone || isCurrent ? 'bg-emerald-400' : 'bg-gray-300'}`}
+                className={`h-px w-6 ${isDone || isCurrent ? 'bg-primary-400' : 'bg-gray-300'}`}
               />
             )}
             <div className="flex flex-col items-center">
               <div
                 className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold ${
                   isDone
-                    ? 'bg-emerald-500 text-white'
+                    ? 'bg-primary-500 text-white'
                     : isCurrent
-                      ? 'border-2 border-emerald-500 text-emerald-600'
+                      ? 'border-2 border-primary-500 text-primary-600'
                       : 'border-2 border-gray-300 text-gray-400'
                 }`}
               >
                 {isDone ? '✓' : step}
               </div>
               <span
-                className={`mt-1 text-[10px] ${isCurrent ? 'font-medium text-emerald-600' : 'text-gray-400'}`}
+                className={`mt-1 text-[10px] ${isCurrent ? 'font-medium text-primary-600' : 'text-gray-400'}`}
               >
                 {t(key)}
               </span>
@@ -214,7 +214,7 @@ function StepDocker({
 
       {status === 'checking' && (
         <div className="flex items-center gap-2 text-sm text-gray-500">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-500 border-t-transparent" />
           {t('checking_docker')}
         </div>
       )}
@@ -231,7 +231,7 @@ function StepDocker({
           )}
           <button
             onClick={() => sse.start(`${API_URL}/api/setup-waha/docker/install`)}
-            className="rounded-xl bg-emerald-500 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-emerald-600 disabled:opacity-50"
+            className="rounded-xl bg-primary-500 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-primary-600 disabled:opacity-50"
           >
             {t('install_docker')}
           </button>
@@ -294,7 +294,7 @@ function StepConfigure({
         max={65535}
         value={port}
         onChange={(e) => setPort(Number(e.target.value))}
-        className="mb-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+        className="mb-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
       />
       {portError && <p className="mb-3 text-xs text-red-600">{portError}</p>}
       <p className="mb-4 text-xs text-gray-400">{t('port_hint')}</p>
@@ -303,7 +303,7 @@ function StepConfigure({
       <select
         value={engine}
         onChange={(e) => setEngine(e.target.value)}
-        className="mb-6 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+        className="mb-6 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
       >
         <option value="WEBJS">{t('webjs_recommended')}</option>
         <option value="NOWEB">{t('noweb_experimental')}</option>
@@ -311,7 +311,7 @@ function StepConfigure({
 
       <button
         onClick={handleNext}
-        className="rounded-xl bg-emerald-500 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-emerald-600"
+        className="rounded-xl bg-primary-500 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-primary-600"
       >
         {t('next')}
       </button>
@@ -365,7 +365,7 @@ function StepInstall({
           onClick={() =>
             sse.start(`${API_URL}/api/setup-waha/waha/install`, { port, engine })
           }
-          className="rounded-xl bg-emerald-500 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-emerald-600"
+          className="rounded-xl bg-primary-500 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-primary-600"
         >
           {sse.error ? t('retry_install') : t('install_waha_btn')}
         </button>
@@ -464,12 +464,12 @@ function StepConnect({
     return (
       <div>
         <h3 className="mb-2 text-lg font-semibold text-gray-800">{t('whatsapp_connected')}</h3>
-        <div className="mb-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+        <div className="mb-4 rounded-lg bg-primary-50 px-4 py-3 text-sm text-primary-700">
           {t('connected_as')}{sessionInfo ? ` ${sessionInfo}` : ''}!
         </div>
         <button
           onClick={onComplete}
-          className="rounded-xl bg-emerald-500 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-emerald-600"
+          className="rounded-xl bg-primary-500 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-primary-600"
         >
           {t('continue_dashboard')}
         </button>
@@ -493,7 +493,7 @@ function StepConnect({
           />
         ) : (
           <div className="flex h-56 w-56 items-center justify-center rounded-lg border border-gray-200 bg-gray-50">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary-500 border-t-transparent" />
           </div>
         )}
       </div>
@@ -544,7 +544,7 @@ export default function WahaWizard({ authToken, onComplete, onSkip }: WahaWizard
     <div className="w-full max-w-md">
       {/* Branding */}
       <div className="mb-6 text-center">
-        <h1 className="text-3xl font-bold text-emerald-600">OpenKick</h1>
+        <h1 className="text-3xl font-bold text-primary-600">OpenKick</h1>
         <p className="mt-1 text-sm text-gray-500">{t('whatsapp_setup')}</p>
       </div>
 

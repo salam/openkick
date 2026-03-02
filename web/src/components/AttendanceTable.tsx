@@ -17,7 +17,7 @@ interface AttendanceTableProps {
 }
 
 const statusStyles: Record<string, string> = {
-  attending: 'bg-emerald-100 text-emerald-700',
+  attending: 'bg-primary-100 text-primary-700',
   absent: 'bg-red-100 text-red-700',
   waitlist: 'bg-yellow-100 text-yellow-700',
   unknown: 'bg-gray-100 text-gray-600',

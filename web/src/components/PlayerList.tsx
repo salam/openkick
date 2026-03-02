@@ -86,7 +86,7 @@ export default function PlayerList({ players, onEdit, onDelete }: PlayerListProp
           placeholder={t('search_players')}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 sm:max-w-xs"
+          className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 sm:max-w-xs"
         />
       </div>
 
@@ -139,7 +139,7 @@ export default function PlayerList({ players, onEdit, onDelete }: PlayerListProp
                       <div className="flex gap-2">
                         <button
                           onClick={() => onEdit(player)}
-                          className="rounded-lg px-2 py-1 text-xs font-medium text-emerald-600 hover:bg-emerald-50"
+                          className="rounded-lg px-2 py-1 text-xs font-medium text-primary-600 hover:bg-primary-50"
                         >
                           {t('edit')}
                         </button>
@@ -185,7 +185,7 @@ export default function PlayerList({ players, onEdit, onDelete }: PlayerListProp
                 <div className="flex gap-2">
                   <button
                     onClick={() => onEdit(player)}
-                    className="rounded-lg bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-600 hover:bg-emerald-100"
+                    className="rounded-lg bg-primary-50 px-3 py-1 text-xs font-medium text-primary-600 hover:bg-primary-100"
                   >
                     {t('edit')}
                   </button>

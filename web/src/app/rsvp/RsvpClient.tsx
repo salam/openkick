@@ -36,7 +36,7 @@ interface ConfirmResponse {
 
 type PageState = "loading" | "name_search" | "select_player" | "confirm" | "done" | "error";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
 /* ── Helpers ─────────────────────────────────────────────────────────── */
 
@@ -258,7 +258,7 @@ function RsvpInner() {
                 onChange={(e) => setChildName(e.target.value)}
                 placeholder={t("rsvp_child_name_placeholder")}
                 required
-                className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
               />
             </div>
 
@@ -267,7 +267,7 @@ function RsvpInner() {
             <button
               type="submit"
               disabled={searchLoading || !captchaPayload || !childName.trim()}
-              className="w-full rounded-xl bg-emerald-500 px-6 py-3 text-sm font-bold text-white shadow transition hover:bg-emerald-600 disabled:opacity-50"
+              className="w-full rounded-xl bg-primary-500 px-6 py-3 text-sm font-bold text-white shadow transition hover:bg-primary-600 disabled:opacity-50"
             >
               {searchLoading ? t("rsvp_searching") : t("rsvp_continue")}
             </button>
@@ -296,7 +296,7 @@ function RsvpInner() {
                   setSelectedPlayer(player);
                   setState("confirm");
                 }}
-                className="w-full rounded-lg border border-gray-200 px-4 py-3 text-left text-sm font-medium text-gray-900 transition hover:border-emerald-300 hover:bg-emerald-50"
+                className="w-full rounded-lg border border-gray-200 px-4 py-3 text-left text-sm font-medium text-gray-900 transition hover:border-primary-300 hover:bg-primary-50"
               >
                 {player.firstName}
               </button>
@@ -324,7 +324,7 @@ function RsvpInner() {
             <button
               onClick={() => handleConfirm("attending")}
               disabled={confirmLoading}
-              className="flex-1 rounded-xl bg-emerald-500 px-6 py-4 text-lg font-bold text-white shadow transition hover:bg-emerald-600 disabled:opacity-50"
+              className="flex-1 rounded-xl bg-primary-500 px-6 py-4 text-lg font-bold text-white shadow transition hover:bg-primary-600 disabled:opacity-50"
             >
               {confirmLoading ? "..." : t("rsvp_attending")}
             </button>
@@ -341,7 +341,7 @@ function RsvpInner() {
           {token && players.length > 1 && (
             <button
               onClick={() => setState("select_player")}
-              className="mt-4 text-sm text-emerald-600 underline hover:text-emerald-800"
+              className="mt-4 text-sm text-primary-600 underline hover:text-primary-800"
             >
               {t("rsvp_select_other")}
             </button>
@@ -358,7 +358,7 @@ function RsvpInner() {
         <div className="w-full max-w-md rounded-xl border border-gray-200 bg-white p-8 shadow-sm text-center">
           <div
             className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full ${
-              isAttending ? "bg-emerald-100" : "bg-red-100"
+              isAttending ? "bg-primary-100" : "bg-red-100"
             }`}
           >
             <span className="text-3xl">{isAttending ? "\u2713" : "\u2717"}</span>
@@ -377,7 +377,7 @@ function RsvpInner() {
           {token && players.length > 1 && (
             <button
               onClick={() => setState("select_player")}
-              className="mt-6 rounded-lg border border-emerald-300 px-4 py-2 text-sm font-medium text-emerald-600 transition hover:bg-emerald-50"
+              className="mt-6 rounded-lg border border-primary-300 px-4 py-2 text-sm font-medium text-primary-600 transition hover:bg-primary-50"
             >
               {t("rsvp_confirm_another")}
             </button>

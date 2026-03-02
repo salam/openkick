@@ -1,1 +1,15 @@
 @import "tailwindcss";
+
+@theme {
+  --color-primary-50: color-mix(in oklch, var(--tint, #10b981), white 92%);
+  --color-primary-100: color-mix(in oklch, var(--tint, #10b981), white 82%);
+  --color-primary-200: color-mix(in oklch, var(--tint, #10b981), white 64%);
+  --color-primary-300: color-mix(in oklch, var(--tint, #10b981), white 42%);
+  --color-primary-400: color-mix(in oklch, var(--tint, #10b981), white 18%);
+  --color-primary-500: var(--tint, #10b981);
+  --color-primary-600: color-mix(in oklch, var(--tint, #10b981), black 12%);
+  --color-primary-700: color-mix(in oklch, var(--tint, #10b981), black 30%);
+  --color-primary-800: color-mix(in oklch, var(--tint, #10b981), black 48%);
+  --color-primary-900: color-mix(in oklch, var(--tint, #10b981), black 64%);
+  --color-primary-950: color-mix(in oklch, var(--tint, #10b981), black 80%);
+}

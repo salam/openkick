@@ -8,6 +8,7 @@ import {
   generateAccessToken,
 } from "../auth.js";
 import { authLimiter } from "../middleware/rateLimiter.js";
+import { checkAdminPassword } from "../services/password-check.service.js";
 
 export const playersRouter = Router();
 
@@ -75,7 +76,7 @@ playersRouter.get("/players", (_req: Request, res: Response) => {
          FROM guardians g
          JOIN guardian_players gp ON g.id = gp.guardianId
          WHERE gp.playerId = ?`,
-        [player.id],
+        [player.id as number],
       ),
     );
     return { ...player, guardians };
@@ -183,6 +184,19 @@ playersRouter.post("/guardians", async (req: Request, res: Response) => {
   }
 
   const db = getDB();
+
+  // Return existing guardian if phone already registered
+  const existing = rowsToObjects(
+    db.exec(
+      "SELECT id, phone, name, email, role, language, consentGiven, accessToken, createdAt FROM guardians WHERE phone = ?",
+      [phone],
+    ),
+  );
+  if (existing.length > 0) {
+    res.status(200).json(existing[0]);
+    return;
+  }
+
   db.run(
     `INSERT INTO guardians (phone, name, email, passwordHash, role, language, consentGiven, accessToken)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -286,6 +300,100 @@ playersRouter.post("/guardians/:id/players", (req: Request, res: Response) => {
   res.status(201).json({ guardianId, playerId });
 });
 
+// PUT /api/guardians/:id — update guardian details
+playersRouter.put("/guardians/:id", (req: Request, res: Response) => {
+  const db = getDB();
+  const id = Number(req.params.id);
+
+  const existing = rowsToObjects(
+    db.exec(
+      "SELECT id, phone, name, email, role, language, consentGiven, accessToken, createdAt FROM guardians WHERE id = ?",
+      [id],
+    ),
+  );
+  if (existing.length === 0) {
+    res.status(404).json({ error: "Guardian not found" });
+    return;
+  }
+
+  const current = existing[0];
+  const name = "name" in req.body ? req.body.name : current.name;
+  const phone = req.body.phone ?? current.phone;
+  const email = "email" in req.body ? req.body.email : current.email;
+
+  try {
+    db.run("UPDATE guardians SET name = ?, phone = ?, email = ? WHERE id = ?", [
+      name,
+      phone,
+      email,
+      id,
+    ]);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("UNIQUE")) {
+      res.status(409).json({ error: "Phone number already in use" });
+      return;
+    }
+    throw err;
+  }
+
+  const rows = rowsToObjects(
+    db.exec(
+      "SELECT id, phone, name, email, role, language, consentGiven, accessToken, createdAt FROM guardians WHERE id = ?",
+      [id],
+    ),
+  );
+  res.json(rows[0]);
+});
+
+// DELETE /api/guardians/:guardianId/players/:playerId — unlink guardian from player
+playersRouter.delete("/guardians/:guardianId/players/:playerId", (req: Request, res: Response) => {
+  const db = getDB();
+  const guardianId = Number(req.params.guardianId);
+  const playerId = Number(req.params.playerId);
+
+  const link = rowsToObjects(
+    db.exec(
+      "SELECT * FROM guardian_players WHERE guardianId = ? AND playerId = ?",
+      [guardianId, playerId],
+    ),
+  );
+  if (link.length === 0) {
+    res.status(404).json({ error: "Link not found" });
+    return;
+  }
+
+  db.run("DELETE FROM guardian_players WHERE guardianId = ? AND playerId = ?", [
+    guardianId,
+    playerId,
+  ]);
+  res.status(204).end();
+});
+
+// DELETE /api/guardians/:id — delete guardian entirely
+playersRouter.delete("/guardians/:id", (req: Request, res: Response) => {
+  const db = getDB();
+  const id = Number(req.params.id);
+
+  const existing = rowsToObjects(
+    db.exec("SELECT id, role FROM guardians WHERE id = ?", [id]),
+  );
+  if (existing.length === 0) {
+    res.status(404).json({ error: "Guardian not found" });
+    return;
+  }
+
+  const guardian = existing[0];
+  if (guardian.role === "coach" || guardian.role === "admin") {
+    res.status(403).json({ error: "Cannot delete guardians with coach or admin role" });
+    return;
+  }
+
+  db.run("DELETE FROM guardian_players WHERE guardianId = ?", [id]);
+  db.run("DELETE FROM guardians WHERE id = ?", [id]);
+  res.status(204).end();
+});
+
 // POST /api/guardians/login — email + password login
 playersRouter.post("/guardians/login", authLimiter, async (req: Request, res: Response) => {
   const { email, password } = req.body;
@@ -316,6 +424,27 @@ playersRouter.post("/guardians/login", authLimiter, async (req: Request, res: Re
     return;
   }
 
-  const token = generateJWT({ id: guardian.id as number, role: guardian.role as string });
-  res.json({ token });
+  let piiAccessLevel: 'full' | 'restricted' = 'restricted';
+  let passwordWarnings: string[] = [];
+
+  if (guardian.role === 'admin') {
+    const check = await checkAdminPassword(password);
+    if (check.acceptable) {
+      piiAccessLevel = 'full';
+    } else {
+      passwordWarnings = check.reasons;
+    }
+  } else {
+    // Coaches get full PII access without password check
+    if (guardian.role === 'coach') {
+      piiAccessLevel = 'full';
+    }
+  }
+
+  const token = generateJWT({
+    id: guardian.id as number,
+    role: guardian.role as string,
+    piiAccessLevel,
+  });
+  res.json({ token, piiAccessLevel, passwordWarnings });
 });

@@ -1,7 +1,7 @@
 import ResetPasswordClient from './ResetPasswordClient';
 
 export async function generateStaticParams() {
-  return [{ token: '_placeholder' }];
+  return [{ token: '_' }];
 }
 
 export default function ResetPasswordPage() {

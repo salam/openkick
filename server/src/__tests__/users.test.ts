@@ -7,6 +7,8 @@ import { generateJWT } from "../auth.js";
 vi.mock("../services/email.js", () => ({
   sendEmail: vi.fn(),
   getSmtpConfig: vi.fn(),
+  buildResetEmail: vi.fn().mockReturnValue({ subject: "Password Reset", html: "<p>reset</p>" }),
+  buildInviteEmail: vi.fn().mockReturnValue({ subject: "Invite", html: "<p>invite</p>" }),
 }));
 
 const { default: app } = await import("../index.js");
@@ -169,7 +171,7 @@ describe("POST /api/users/:id/reset-password", () => {
     expect(sendEmail).toHaveBeenCalledWith(
       "coach@test.com",
       "Password Reset",
-      expect.stringContaining("reset-password"),
+      "<p>reset</p>",
     );
 
     const row = db.exec("SELECT resetToken FROM guardians WHERE id = ?", [coachId]);

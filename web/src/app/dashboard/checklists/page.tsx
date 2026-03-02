@@ -176,7 +176,7 @@ export default function ChecklistsPage() {
             onClick={() => setTab(tb.key)}
             className={`px-4 py-2.5 text-sm font-medium transition ${
               tab === tb.key
-                ? 'border-b-2 border-emerald-500 text-emerald-600'
+                ? 'border-b-2 border-primary-500 text-primary-600'
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -188,7 +188,7 @@ export default function ChecklistsPage() {
       {/* Content */}
       {loading ? (
         <div className="flex justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-600 border-t-transparent" />
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent" />
         </div>
       ) : instances.length === 0 ? (
         <div className={`${cardClass} text-center`}>
@@ -255,7 +255,7 @@ function ChecklistCard({
       {/* Progress bar */}
       <div className="mb-4 h-1.5 w-full rounded-full bg-gray-100">
         <div
-          className="h-1.5 rounded-full bg-emerald-500 transition-all"
+          className="h-1.5 rounded-full bg-primary-500 transition-all"
           style={{
             width: instance.items.length > 0
               ? `${(completedCount / instance.items.length) * 100}%`
@@ -273,7 +273,7 @@ function ChecklistCard({
             <li key={item.id} className="flex items-center gap-3 py-1.5">
               <button onClick={() => onToggle(item)} className="flex-shrink-0">
                 {item.completed ? (
-                  <svg className="h-5 w-5 text-emerald-500" viewBox="0 0 24 24" fill="currentColor">
+                  <svg className="h-5 w-5 text-primary-500" viewBox="0 0 24 24" fill="currentColor">
                     <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clipRule="evenodd" />
                   </svg>
                 ) : (
@@ -318,12 +318,12 @@ function ChecklistCard({
           onChange={(e) => setNewLabel(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
           placeholder={t('checklist_add_item')}
-          className="flex-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-700 placeholder-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+          className="flex-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-700 placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
         />
         <button
           onClick={handleAdd}
           disabled={!newLabel.trim()}
-          className="rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-600 disabled:opacity-40"
+          className="rounded-lg bg-primary-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-600 disabled:opacity-40"
         >
           {t('checklist_add')}
         </button>

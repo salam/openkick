@@ -105,7 +105,7 @@ export default function OnboardingChecklist() {
                   <div className="flex items-center gap-3">
                     {done ? (
                       <svg
-                        className="h-5 w-5 text-emerald-500"
+                        className="h-5 w-5 text-primary-500"
                         fill="none"
                         viewBox="0 0 24 24"
                         strokeWidth={2}
@@ -129,7 +129,7 @@ export default function OnboardingChecklist() {
                     ) : (
                       <Link
                         href={item.href}
-                        className="text-sm font-medium text-gray-700 hover:text-emerald-600"
+                        className="text-sm font-medium text-gray-700 hover:text-primary-600"
                       >
                         {item.label}
                       </Link>
@@ -138,7 +138,7 @@ export default function OnboardingChecklist() {
                   {!done && (
                     <Link
                       href={item.href}
-                      className="text-gray-400 hover:text-emerald-500"
+                      className="text-gray-400 hover:text-primary-500"
                       aria-label={`Go to ${item.label}`}
                     >
                       <svg
@@ -173,7 +173,7 @@ export default function OnboardingChecklist() {
                   </span>
                   <Link
                     href={tip.href}
-                    className="text-sm text-gray-500 hover:text-emerald-600"
+                    className="text-sm text-gray-500 hover:text-primary-600"
                   >
                     {tip.label}
                   </Link>

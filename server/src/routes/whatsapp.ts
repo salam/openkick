@@ -6,6 +6,7 @@ import {
   reactToMessage,
 } from "../services/whatsapp.js";
 import { setAttendance } from "../services/attendance.js";
+import { findNextUpcomingEventAny, findEventByDate } from "../services/next-event.js";
 import { transcribeAudio } from "../services/whisper.js";
 import {
   getOrCreateSession,
@@ -14,11 +15,14 @@ import {
   isDuplicate,
   logMessage,
   updateMessageLog,
+  obfuscatePhone,
+  type MessageOutcome,
 } from "../services/whatsapp-session.js";
 import { handleOnboarding } from "../services/whatsapp-onboarding.js";
 import { getBotTemplate } from "../services/whatsapp-templates.js";
 import { authMiddleware, requireRole } from "../auth.js";
 import { randomUUID } from "node:crypto";
+import { normalizePhone } from "../utils/phone.js";
 
 export const whatsappRouter = Router();
 
@@ -72,21 +76,8 @@ function findPlayersForGuardian(guardianId: number) {
   }));
 }
 
-function findNextUpcomingEvent(): {
-  id: number;
-  title: string;
-  date: string;
-} | null {
-  const db = getDB();
-  const result = db.exec(
-    "SELECT id, title, date FROM events WHERE date >= date('now') ORDER BY date ASC, startTime ASC LIMIT 1",
-  );
-  if (result.length === 0 || result[0].values.length === 0) return null;
-  return {
-    id: result[0].values[0][0] as number,
-    title: result[0].values[0][1] as string,
-    date: (result[0].values[0][2] as string) || "",
-  };
+function findNextUpcomingEvent() {
+  return findNextUpcomingEventAny();
 }
 
 /**
@@ -110,7 +101,8 @@ function handleDisambiguation(
     index < 1 ||
     index > context.pendingPlayerIds.length
   ) {
-    const helpMsg = getBotTemplate("whatsapp_help", lang);
+    const baseUrl = process.env.BASE_URL ?? "http://localhost:3000";
+    const helpMsg = getBotTemplate("whatsapp_help", lang, { url: `${baseUrl}/rsvp` });
     sendMessage(phone, helpMsg).catch(() => {});
     logOutbound(phone, helpMsg, "help_sent");
     return;
@@ -193,8 +185,8 @@ whatsappRouter.post(
       return;
     }
 
-    // 4. Strip @c.us suffix
-    const phone = senderChatId.replace(/@c\.us$/, "");
+    // 4. Strip @c.us suffix and normalize
+    const phone = normalizePhone(senderChatId.replace(/@c\.us$/, ""));
 
     // 5. Dedup check
     if (messageId && isDuplicate(messageId)) {
@@ -222,7 +214,7 @@ whatsappRouter.post(
             settingResult[0].values.length > 0 &&
             settingResult[0].values[0][0] === "true";
           if (!allowOnboarding) {
-            if (messageId) updateMessageLog(messageId, { action: "ignored_unknown" });
+            if (messageId) updateMessageLog(messageId, { action: "ignored_unknown", body: null, phone: obfuscatePhone(phone) });
             res.status(200).json({ status: "ignored" });
             return;
           }
@@ -274,7 +266,7 @@ whatsappRouter.post(
       // 11. If no guardian found: start onboarding (DM only) or react in group
       if (!guardian) {
         if (isGroup && messageId) {
-          updateMessageLog(messageId, { action: "ignored_unknown_group" });
+          updateMessageLog(messageId, { action: "ignored_unknown_group", body: null, phone: obfuscatePhone(phone) });
           reactToMessage(messageId, "\u2049\uFE0F").catch(() => {});
           res.status(200).json({ status: "unknown_sender" });
           return;
@@ -315,7 +307,8 @@ whatsappRouter.post(
 
       // 13. Unknown intent: send help message
       if (parsed.intent === "unknown") {
-        const helpMsg = getBotTemplate("whatsapp_help", lang);
+        const baseUrl = process.env.BASE_URL ?? "http://localhost:3000";
+        const helpMsg = getBotTemplate("whatsapp_help", lang, { url: `${baseUrl}/rsvp` });
         await sendMessage(phone, helpMsg);
         logOutbound(phone, helpMsg, "help_sent");
         if (messageId) updateMessageLog(messageId, { intent: "unknown", action: "help_sent", outboundBody: helpMsg });
@@ -326,16 +319,10 @@ whatsappRouter.post(
         return;
       }
 
-      // 14. Attending or absent intent
-      const event = findNextUpcomingEvent();
-      if (!event) {
-        const noEventMsg = getBotTemplate("whatsapp_coach_no_event", lang);
-        await sendMessage(phone, noEventMsg);
-        logOutbound(phone, noEventMsg, "no_event");
-        if (messageId) updateMessageLog(messageId, { intent: parsed.intent, action: "no_event", outboundBody: noEventMsg });
-        res.status(200).json({ status: "no_event" });
-        return;
-      }
+      // 14. Build list of (event, intent, playerName) tuples from parsed entries
+      const entries = parsed.entries && parsed.entries.length > 0
+        ? parsed.entries
+        : [{ intent: parsed.intent as "attending" | "absent", playerName: parsed.playerName, date: null, reason: parsed.reason }];
 
       const players = findPlayersForGuardian(guardian.id);
       if (players.length === 0) {
@@ -347,71 +334,113 @@ whatsappRouter.post(
         return;
       }
 
-      // If a player name was mentioned, try to match it
-      let targetPlayers = players;
-      if (parsed.playerName) {
-        const matched = players.filter((p) =>
-          p.name.toLowerCase().includes(parsed.playerName!.toLowerCase()),
-        );
-        if (matched.length > 0) {
-          targetPlayers = matched;
+      const confirmMessages: string[] = [];
+      const noEventDates: string[] = [];
+      const outcomes: MessageOutcome[] = [];
+
+      for (const entry of entries) {
+        // Resolve event: by specific date or next upcoming
+        const event = entry.date
+          ? findEventByDate(entry.date)
+          : findNextUpcomingEvent();
+
+        if (!event) {
+          noEventDates.push(entry.date ?? "next");
+          continue;
+        }
+
+        // Match player by name
+        let targetPlayers = players;
+        if (entry.playerName) {
+          const matched = players.filter((p) =>
+            p.name.toLowerCase().includes(entry.playerName!.toLowerCase()),
+          );
+          if (matched.length > 0) {
+            targetPlayers = matched;
+          }
+        }
+
+        // Multi-child disambiguation (only for single-entry messages with no name)
+        if (targetPlayers.length > 1 && !entry.playerName && entries.length === 1) {
+          const options = targetPlayers
+            .map((p, i) => `${i + 1}) ${p.name}`)
+            .join("\n");
+          updateSessionState(phone, "disambiguating_child", {
+            pendingPlayerIds: targetPlayers.map((p) => p.id),
+            pendingStatus: entry.intent,
+            pendingEventId: event.id as number,
+          });
+          const disambigMsg = getBotTemplate("whatsapp_disambiguate", lang, { options });
+          await sendMessage(phone, disambigMsg);
+          logOutbound(phone, disambigMsg, "disambiguating");
+          if (messageId) updateMessageLog(messageId, { intent: entry.intent, action: "disambiguating", eventId: event.id as number, outboundBody: disambigMsg });
+          res.status(200).json({ status: "disambiguating" });
+          return;
+        }
+
+        // Set attendance for each target player
+        for (const player of targetPlayers) {
+          const { finalStatus } = setAttendance(
+            event.id as number,
+            player.id,
+            entry.intent,
+            "whatsapp",
+            entry.reason ?? undefined,
+          );
+
+          const confirmKey =
+            finalStatus === "waitlist"
+              ? "whatsapp_confirm_waitlist"
+              : finalStatus === "attending"
+                ? "whatsapp_confirm_attending"
+                : "whatsapp_confirm_absent";
+
+          const confirmMsg = getBotTemplate(confirmKey, lang, {
+            playerName: player.name,
+            eventTitle: event.title,
+            eventDate: event.date,
+          });
+          confirmMessages.push(confirmMsg);
+
+          outcomes.push({
+            action: `attendance_${finalStatus}`,
+            playerId: player.id,
+            playerName: player.name,
+            eventId: event.id as number,
+            eventTitle: event.title,
+            eventDate: event.date,
+          });
         }
       }
 
-      // Multi-child disambiguation (only when no name matched)
-      if (targetPlayers.length > 1 && !parsed.playerName) {
-        const options = targetPlayers
-          .map((p, i) => `${i + 1}) ${p.name}`)
-          .join("\n");
-        updateSessionState(phone, "disambiguating_child", {
-          pendingPlayerIds: targetPlayers.map((p) => p.id),
-          pendingStatus: parsed.intent,
-          pendingEventId: event.id,
+      // Store all outcomes at once
+      if (messageId && outcomes.length > 0) {
+        const last = outcomes[outcomes.length - 1];
+        updateMessageLog(messageId, {
+          intent: parsed.intent,
+          action: outcomes.length > 1 ? "attendance_multi" : last.action,
+          playerId: last.playerId,
+          eventId: last.eventId,
+          outboundBody: confirmMessages.join("\n"),
+          outcomes,
         });
-        const disambigMsg = getBotTemplate("whatsapp_disambiguate", lang, { options });
-        await sendMessage(phone, disambigMsg);
-        logOutbound(phone, disambigMsg, "disambiguating");
-        if (messageId) updateMessageLog(messageId, { intent: parsed.intent, action: "disambiguating", eventId: event.id, outboundBody: disambigMsg });
-        res.status(200).json({ status: "disambiguating" });
+      }
+
+      // Send no-event notice for dates that had no matching event
+      if (noEventDates.length > 0 && confirmMessages.length === 0) {
+        const noEventMsg = getBotTemplate("whatsapp_coach_no_event", lang);
+        await sendMessage(phone, noEventMsg);
+        logOutbound(phone, noEventMsg, "no_event");
+        if (messageId) updateMessageLog(messageId, { intent: parsed.intent, action: "no_event", outboundBody: noEventMsg });
+        res.status(200).json({ status: "no_event" });
         return;
       }
 
-      // Single player (or matched by name): set attendance
-      const confirmMessages: string[] = [];
-      for (const player of targetPlayers) {
-        const { finalStatus } = setAttendance(
-          event.id,
-          player.id,
-          parsed.intent as "attending" | "absent",
-          "whatsapp",
-          parsed.reason ?? undefined,
-        );
-
-        const confirmKey =
-          finalStatus === "waitlist"
-            ? "whatsapp_confirm_waitlist"
-            : finalStatus === "attending"
-              ? "whatsapp_confirm_attending"
-              : "whatsapp_confirm_absent";
-
-        const confirmMsg = getBotTemplate(confirmKey, lang, {
-          playerName: player.name,
-          eventTitle: event.title,
-          eventDate: event.date,
-        });
-        confirmMessages.push(confirmMsg);
-        await sendMessage(phone, confirmMsg);
-        logOutbound(phone, confirmMsg, `attendance_${finalStatus}`);
-
-        if (messageId) {
-          updateMessageLog(messageId, {
-            intent: parsed.intent,
-            action: `attendance_${finalStatus}`,
-            playerId: player.id,
-            eventId: event.id,
-            outboundBody: confirmMessages.join("\n"),
-          });
-        }
+      // Send a single combined confirmation
+      if (confirmMessages.length > 0) {
+        const combined = confirmMessages.join("\n");
+        await sendMessage(phone, combined);
+        if (!messageId) logOutbound(phone, combined, outcomes.length > 1 ? "attendance_multi" : outcomes[0]?.action ?? "attendance_absent");
       }
 
       // 15. React with eyes on group messages
@@ -441,7 +470,7 @@ whatsappRouter.get(
       `SELECT
         ml.id, ml.wahaMessageId, ml.phone, ml.direction, ml.body,
         ml.intent, ml.action, ml.playerId, ml.eventId, ml.outboundBody,
-        ml.createdAt,
+        ml.outcomes, ml.createdAt,
         g.name AS guardianName, g.role AS guardianRole,
         p.name AS playerName,
         e.title AS eventTitle, e.date AS eventDate
@@ -449,6 +478,7 @@ whatsappRouter.get(
       LEFT JOIN guardians g ON g.phone = ml.phone
       LEFT JOIN players p ON p.id = ml.playerId
       LEFT JOIN events e ON e.id = ml.eventId
+      WHERE ml.direction = 'in'
       ORDER BY ml.createdAt DESC
       LIMIT ? OFFSET ?`,
       [limit, offset],
@@ -463,10 +493,14 @@ whatsappRouter.get(
     const entries = result[0].values.map((row) => {
       const obj: Record<string, unknown> = {};
       cols.forEach((col, i) => { obj[col] = row[i]; });
+      // Parse outcomes JSON string into array
+      if (typeof obj.outcomes === "string") {
+        try { obj.outcomes = JSON.parse(obj.outcomes); } catch { obj.outcomes = null; }
+      }
       return obj;
     });
 
-    const countResult = db.exec("SELECT COUNT(*) FROM message_log");
+    const countResult = db.exec("SELECT COUNT(*) FROM message_log WHERE direction = 'in'");
     const total = countResult[0]?.values[0]?.[0] as number || 0;
 
     res.json({ entries, total });

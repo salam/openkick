@@ -231,7 +231,7 @@ export function getUpcomingVacations(limit = 3): VacationPeriod[] {
   const db = getDB();
   const today = formatDate(new Date());
   const result = db.exec(
-    "SELECT name, startDate, endDate, source FROM vacation_periods WHERE endDate >= ? ORDER BY startDate ASC LIMIT ?",
+    "SELECT name, startDate, endDate, source FROM vacation_periods WHERE endDate >= ? GROUP BY name, startDate, endDate ORDER BY startDate ASC LIMIT ?",
     [today, limit],
   );
   if (!result[0]) return [];

@@ -224,7 +224,7 @@ export default function TournamentResultsForm({
           </h2>
           <button
             onClick={handleEdit}
-            className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-600"
+            className="rounded-xl bg-primary-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-600"
           >
             {t('add_results')}
           </button>
@@ -264,7 +264,7 @@ export default function TournamentResultsForm({
               {results.achievements.map((a) => (
                 <span
                   key={a.type}
-                  className="inline-block rounded-full bg-emerald-100 px-3 py-0.5 text-xs font-semibold text-emerald-700"
+                  className="inline-block rounded-full bg-primary-100 px-3 py-0.5 text-xs font-semibold text-primary-700"
                 >
                   {a.label}
                 </span>
@@ -278,7 +278,7 @@ export default function TournamentResultsForm({
               href={results.resultsUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-sm text-emerald-600 underline hover:text-emerald-800"
+              className="inline-flex items-center gap-1 text-sm text-primary-600 underline hover:text-primary-800"
             >
               {t('view_full_results')}
               <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
@@ -292,7 +292,7 @@ export default function TournamentResultsForm({
             <div className="pt-1">
               <button
                 onClick={handleEdit}
-                className="text-sm text-emerald-600 underline hover:text-emerald-800"
+                className="text-sm text-primary-600 underline hover:text-primary-800"
               >
                 {t('edit')}
               </button>
@@ -328,7 +328,7 @@ export default function TournamentResultsForm({
               value={placement}
               onChange={(e) => setPlacement(e.target.value)}
               placeholder="e.g. 1"
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
             />
           </label>
           <label className="block text-sm text-gray-600">
@@ -339,7 +339,7 @@ export default function TournamentResultsForm({
               value={totalTeams}
               onChange={(e) => setTotalTeams(e.target.value)}
               placeholder="e.g. 8"
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
             />
           </label>
         </div>
@@ -352,7 +352,7 @@ export default function TournamentResultsForm({
             value={summary}
             onChange={(e) => setSummary(e.target.value)}
             placeholder={t('summary_placeholder')}
-            className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
           />
         </label>
 
@@ -372,7 +372,7 @@ export default function TournamentResultsForm({
                   onClick={() => toggleAchievement({ type: a.type, label })}
                   className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
                     active
-                      ? 'border-emerald-400 bg-emerald-100 text-emerald-700'
+                      ? 'border-primary-400 bg-primary-100 text-primary-700'
                       : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50'
                   }`}
                 >
@@ -395,12 +395,12 @@ export default function TournamentResultsForm({
                 }
               }}
               placeholder={t('add_achievement')}
-              className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
             />
             <button
               type="button"
               onClick={addCustomAchievement}
-              className="rounded-lg border border-emerald-300 bg-white px-3 py-1.5 text-sm font-medium text-emerald-600 transition hover:bg-emerald-50"
+              className="rounded-lg border border-primary-300 bg-white px-3 py-1.5 text-sm font-medium text-primary-600 transition hover:bg-primary-50"
             >
               {t('add')}
             </button>
@@ -412,13 +412,13 @@ export default function TournamentResultsForm({
               {achievements.map((a) => (
                 <span
                   key={a.type}
-                  className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-0.5 text-xs font-semibold text-emerald-700"
+                  className="inline-flex items-center gap-1 rounded-full bg-primary-100 px-3 py-0.5 text-xs font-semibold text-primary-700"
                 >
                   {a.label}
                   <button
                     type="button"
                     onClick={() => removeAchievement(a.type)}
-                    className="ml-0.5 text-emerald-500 hover:text-emerald-800"
+                    className="ml-0.5 text-primary-500 hover:text-primary-800"
                     aria-label={`${t('delete')} ${a.label}`}
                   >
                     &times;
@@ -439,13 +439,13 @@ export default function TournamentResultsForm({
                 value={resultsUrl}
                 onChange={(e) => setResultsUrl(e.target.value)}
                 placeholder="https://..."
-                className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
               />
               <button
                 type="button"
                 onClick={handleImportFromUrl}
                 disabled={importing || !resultsUrl.trim()}
-                className="whitespace-nowrap rounded-lg border border-emerald-300 bg-white px-3 py-2 text-sm font-medium text-emerald-600 transition hover:bg-emerald-50 disabled:opacity-50"
+                className="whitespace-nowrap rounded-lg border border-primary-300 bg-white px-3 py-2 text-sm font-medium text-primary-600 transition hover:bg-primary-50 disabled:opacity-50"
               >
                 {importing ? (
                   <span className="inline-flex items-center gap-1">
@@ -469,7 +469,7 @@ export default function TournamentResultsForm({
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-600 disabled:opacity-50"
+            className="rounded-xl bg-primary-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-600 disabled:opacity-50"
           >
             {saving ? t('saving') : t('save')}
           </button>

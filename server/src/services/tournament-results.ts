@@ -81,7 +81,7 @@ function validateInput(input: CreateResultsInput): void {
   }
   if (input.achievements) {
     for (const a of input.achievements) {
-      if (!VALID_ACHIEVEMENT_TYPES.includes(a.type)) {
+      if (!VALID_ACHIEVEMENT_TYPES.includes(a.type) && !a.type.startsWith("custom_")) {
         throw new Error(`Invalid achievement type: ${a.type}`);
       }
     }

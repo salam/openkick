@@ -12,7 +12,7 @@ export interface LLMResponse {
 }
 
 export interface LLMConfig {
-  provider: "openai" | "claude" | "euria";
+  provider: "openai" | "claude" | "anthropic" | "euria";
   model: string;
   apiKey: string;
   productId?: string;
@@ -170,6 +170,7 @@ export async function chatCompletion(
     case "openai":
       return callOpenAI(messages, config);
     case "claude":
+    case "anthropic":
       return callClaude(messages, config);
     case "euria":
       return callEuria(messages, config);

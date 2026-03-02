@@ -283,6 +283,9 @@ export default function EventDetailClient() {
   const [rsvpResult, setRsvpResult] = useState<string | null>(null);
   const [rsvpError, setRsvpError] = useState<string | null>(null);
 
+  // Weather
+  const [weather, setWeather] = useState<{ temperature: number; precipitation: number; icon: string; description: string } | null>(null);
+
   // Language reactivity
   const [, setLang] = useState(() => getLanguage());
   useEffect(() => {
@@ -293,7 +296,7 @@ export default function EventDetailClient() {
 
   /* ── Fetch payment status ── */
   useEffect(() => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
     fetch(`${apiUrl}/api/public/payment-status`)
       .then((r) => r.json())
       .then((data) => {
@@ -384,6 +387,19 @@ export default function EventDetailClient() {
         .finally(() => setLoading(false));
     }
   }, [id, authed, parsedSeriesId, parsedDate]);
+
+  // Fetch weather for event (only for events within 7 days)
+  useEffect(() => {
+    if (!event || !id) return;
+    const eventDate = new Date(event.date);
+    const now = new Date();
+    const diffDays = (eventDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
+    if (diffDays > 7 || diffDays < -1) return;
+
+    apiFetch<{ temperature: number; precipitation: number; icon: string; description: string }>(`/api/events/${id}/weather`)
+      .then(setWeather)
+      .catch(() => {});
+  }, [id, event?.date]);
 
   /* ── Fetch attendance for coaches ── */
   const fetchAttendance = useCallback(() => {
@@ -492,7 +508,7 @@ export default function EventDetailClient() {
     if (!event?.fee) return;
     setPayingFee(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
       const res = await fetch(`${apiUrl}/api/payments/checkout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -581,7 +597,7 @@ export default function EventDetailClient() {
         {/* ── Header ── */}
         <div>
           <div className="mb-2 flex flex-wrap items-center gap-2">
-            <span className="inline-block rounded-full bg-emerald-100 px-3 py-0.5 text-xs font-semibold text-emerald-700">
+            <span className="inline-block rounded-full bg-primary-100 px-3 py-0.5 text-xs font-semibold text-primary-700">
               {TYPE_I18N_KEYS[event.type] ? t(TYPE_I18N_KEYS[event.type]) : event.type}
             </span>
             {event.deadline && (
@@ -622,6 +638,19 @@ export default function EventDetailClient() {
               value={`${feeCurrency} ${(event.fee! / 100).toFixed(2)}`}
             />
           )}
+          {weather && (
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-gray-500 mb-1">
+                {t('weather_precipitation')}
+              </p>
+              <p className="text-sm text-gray-700">
+                {weather.icon} {Math.round(weather.temperature)}&deg;C &middot; {weather.description}
+                {weather.precipitation > 0 && (
+                  <span className="text-gray-400"> &middot; {weather.precipitation}% {t('weather_precipitation')}</span>
+                )}
+              </p>
+            </div>
+          )}
         </section>
 
         {/* ── Description ── */}
@@ -646,7 +675,7 @@ export default function EventDetailClient() {
               {categories.map((cat) => (
                 <span
                   key={cat}
-                  className="inline-block rounded-full border border-emerald-300 bg-emerald-50 px-3 py-0.5 text-xs font-medium text-emerald-600"
+                  className="inline-block rounded-full border border-primary-300 bg-primary-50 px-3 py-0.5 text-xs font-medium text-primary-600"
                 >
                   {cat}
                 </span>
@@ -662,7 +691,7 @@ export default function EventDetailClient() {
               href={event.attachmentUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-emerald-600 transition hover:bg-emerald-50"
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-primary-600 transition hover:bg-primary-50"
             >
               <svg
                 className="h-4 w-4"
@@ -692,7 +721,7 @@ export default function EventDetailClient() {
             <button
               onClick={handlePayFee}
               disabled={payingFee}
-              className="rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:opacity-50"
+              className="rounded-lg bg-primary-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-primary-700 disabled:opacity-50"
             >
               {payingFee ? '...' : `${t('event_fee_pay')} ${feeCurrency} ${(event.fee! / 100).toFixed(2)}`}
             </button>
@@ -700,11 +729,11 @@ export default function EventDetailClient() {
         )}
 
         {/* ── Public RSVP ── */}
-        <section className="rounded-xl border-2 border-emerald-300 bg-emerald-50 p-6">
-          <h2 className="mb-1 text-lg font-semibold text-emerald-800">
+        <section className="rounded-xl border-2 border-primary-300 bg-primary-50 p-6">
+          <h2 className="mb-1 text-lg font-semibold text-primary-800">
             {t('public_rsvp_title')}
           </h2>
-          <p className="mb-4 text-sm text-emerald-700">{t('public_rsvp_desc')}</p>
+          <p className="mb-4 text-sm text-primary-700">{t('public_rsvp_desc')}</p>
 
           {rsvpError && (
             <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-2 text-sm text-red-700">
@@ -720,12 +749,12 @@ export default function EventDetailClient() {
                 value={rsvpName}
                 onChange={(e) => setRsvpName(e.target.value)}
                 placeholder={t('rsvp_child_name_placeholder')}
-                className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-400"
               />
               <button
                 onClick={handlePublicRsvpSearch}
                 disabled={rsvpSearching || !rsvpCaptcha || !rsvpName.trim()}
-                className="w-full rounded-xl bg-emerald-500 px-6 py-3 text-sm font-bold text-white shadow transition hover:bg-emerald-600 disabled:opacity-50"
+                className="w-full rounded-xl bg-primary-500 px-6 py-3 text-sm font-bold text-white shadow transition hover:bg-primary-600 disabled:opacity-50"
               >
                 {rsvpSearching ? t('rsvp_searching') : t('rsvp_continue')}
               </button>
@@ -743,7 +772,7 @@ export default function EventDetailClient() {
                 <button
                   onClick={() => handlePublicRsvpConfirm('attending')}
                   disabled={rsvpConfirming}
-                  className="flex-1 rounded-xl bg-emerald-500 px-6 py-4 text-lg font-bold text-white shadow transition hover:bg-emerald-600 disabled:opacity-50"
+                  className="flex-1 rounded-xl bg-primary-500 px-6 py-4 text-lg font-bold text-white shadow transition hover:bg-primary-600 disabled:opacity-50"
                 >
                   {rsvpConfirming ? '...' : t('rsvp_attending')}
                 </button>
@@ -757,7 +786,7 @@ export default function EventDetailClient() {
               </div>
               <button
                 onClick={() => { setRsvpStep('search'); setRsvpToken(''); setRsvpCaptcha(''); }}
-                className="text-sm text-emerald-600 underline hover:text-emerald-800"
+                className="text-sm text-primary-600 underline hover:text-primary-800"
               >
                 {t('rsvp_select_other')}
               </button>
@@ -766,7 +795,7 @@ export default function EventDetailClient() {
 
           {rsvpStep === 'done' && (
             <div className="space-y-3 text-center">
-              <p className="text-sm font-semibold text-emerald-800">{rsvpResult}</p>
+              <p className="text-sm font-semibold text-primary-800">{rsvpResult}</p>
               <button
                 onClick={() => {
                   setRsvpStep('search');
@@ -775,7 +804,7 @@ export default function EventDetailClient() {
                   setRsvpName('');
                   setRsvpResult(null);
                 }}
-                className="text-sm text-emerald-600 underline hover:text-emerald-800"
+                className="text-sm text-primary-600 underline hover:text-primary-800"
               >
                 {t('rsvp_confirm_another')}
               </button>
@@ -786,7 +815,7 @@ export default function EventDetailClient() {
         {/* ── Login banner ── */}
         <section className="rounded-xl border border-gray-200 bg-white p-6 text-center">
           <p className="text-sm text-gray-600">
-            {t('login_for_details_pre')}<a href="/login" className="font-semibold text-emerald-600 underline hover:text-emerald-800">{t('login_for_details_link')}</a>{t('login_for_details_post')}
+            {t('login_for_details_pre')}<a href="/login" className="font-semibold text-primary-600 underline hover:text-primary-800">{t('login_for_details_link')}</a>{t('login_for_details_post')}
           </p>
         </section>
       </main>
@@ -804,7 +833,7 @@ export default function EventDetailClient() {
       {/* ── Header ── */}
       <div>
         <div className="mb-2 flex flex-wrap items-center gap-2">
-          <span className="inline-block rounded-full bg-emerald-100 px-3 py-0.5 text-xs font-semibold text-emerald-700">
+          <span className="inline-block rounded-full bg-primary-100 px-3 py-0.5 text-xs font-semibold text-primary-700">
             {TYPE_I18N_KEYS[event.type] ? t(TYPE_I18N_KEYS[event.type]) : event.type}
           </span>
           {event.deadline && (
@@ -855,6 +884,19 @@ export default function EventDetailClient() {
             value={`${feeCurrency} ${(event.fee / 100).toFixed(2)}`}
           />
         )}
+        {weather && (
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-gray-500 mb-1">
+              {t('weather_precipitation')}
+            </p>
+            <p className="text-sm text-gray-700">
+              {weather.icon} {Math.round(weather.temperature)}&deg;C &middot; {weather.description}
+              {weather.precipitation > 0 && (
+                <span className="text-gray-400"> &middot; {weather.precipitation}% {t('weather_precipitation')}</span>
+              )}
+            </p>
+          </div>
+        )}
       </section>
 
       {/* ── Description ── */}
@@ -879,7 +921,7 @@ export default function EventDetailClient() {
             {categories.map((cat) => (
               <span
                 key={cat}
-                className="inline-block rounded-full border border-emerald-300 bg-emerald-50 px-3 py-0.5 text-xs font-medium text-emerald-600"
+                className="inline-block rounded-full border border-primary-300 bg-primary-50 px-3 py-0.5 text-xs font-medium text-primary-600"
               >
                 {cat}
               </span>
@@ -895,7 +937,7 @@ export default function EventDetailClient() {
             href={event.attachmentUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-emerald-600 transition hover:bg-emerald-50"
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-primary-600 transition hover:bg-primary-50"
           >
             <svg
               className="h-4 w-4"
@@ -947,8 +989,8 @@ export default function EventDetailClient() {
 
       {/* ── Parent RSVP ── */}
       {isParent && (
-        <section className="rounded-xl border border-emerald-200 bg-emerald-50 p-6">
-          <h2 className="mb-4 text-lg font-semibold text-emerald-800">
+        <section className="rounded-xl border border-primary-200 bg-primary-50 p-6">
+          <h2 className="mb-4 text-lg font-semibold text-primary-800">
             {t('your_response')}
           </h2>
 
@@ -957,7 +999,7 @@ export default function EventDetailClient() {
               <span
                 className={`inline-block rounded-full px-4 py-1 text-sm font-semibold ${
                   rsvpStatus === 'attending'
-                    ? 'bg-emerald-200 text-emerald-800'
+                    ? 'bg-primary-200 text-primary-800'
                     : 'bg-red-200 text-red-900'
                 }`}
               >
@@ -965,7 +1007,7 @@ export default function EventDetailClient() {
               </span>
               <button
                 onClick={() => setRsvpStatus(null)}
-                className="text-sm text-emerald-600 underline hover:text-emerald-800"
+                className="text-sm text-primary-600 underline hover:text-primary-800"
               >
                 {t('change')}
               </button>
@@ -977,7 +1019,7 @@ export default function EventDetailClient() {
                 <button
                   onClick={() => handleRsvp('attending')}
                   disabled={rsvpLoading || !captchaPayload}
-                  className="flex-1 rounded-xl bg-emerald-500 px-6 py-4 text-lg font-bold text-white shadow transition hover:bg-emerald-600 disabled:opacity-50"
+                  className="flex-1 rounded-xl bg-primary-500 px-6 py-4 text-lg font-bold text-white shadow transition hover:bg-primary-600 disabled:opacity-50"
                 >
                   {rsvpLoading ? '...' : t('attend')}
                 </button>
@@ -1004,7 +1046,7 @@ export default function EventDetailClient() {
           <button
             onClick={handlePayFee}
             disabled={payingFee}
-            className="rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:opacity-50"
+            className="rounded-lg bg-primary-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-primary-700 disabled:opacity-50"
           >
             {payingFee ? '...' : `${t('event_fee_pay')} ${feeCurrency} ${(event.fee / 100).toFixed(2)}`}
           </button>
@@ -1020,7 +1062,7 @@ export default function EventDetailClient() {
             </h2>
             <button
               onClick={fetchAttendance}
-              className="text-xs text-emerald-600 underline hover:text-emerald-800"
+              className="text-xs text-primary-600 underline hover:text-primary-800"
             >
               {t('refresh')}
             </button>
@@ -1058,7 +1100,7 @@ export default function EventDetailClient() {
             <button
               onClick={handleAutoAssignTeams}
               disabled={assigningTeams}
-              className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-600 disabled:opacity-50"
+              className="rounded-xl bg-primary-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-600 disabled:opacity-50"
             >
               {assigningTeams ? t('assigning') : t('auto_assign')}
             </button>
@@ -1107,12 +1149,12 @@ export default function EventDetailClient() {
           <button
             onClick={handleSendReminder}
             disabled={reminderSent}
-            className="rounded-xl border border-emerald-300 bg-white px-4 py-2 text-sm font-medium text-emerald-600 transition hover:bg-emerald-50 disabled:opacity-50"
+            className="rounded-xl border border-primary-300 bg-white px-4 py-2 text-sm font-medium text-primary-600 transition hover:bg-primary-50 disabled:opacity-50"
           >
             {reminderSent ? t('reminder_sent') : t('send_reminder')}
           </button>
           {reminderSent && (
-            <span className="text-xs text-emerald-600">
+            <span className="text-xs text-primary-600">
               {t('reminder_sent_msg')}
             </span>
           )}
@@ -1134,7 +1176,7 @@ export default function EventDetailClient() {
             </button>
             <a
               href="/events/"
-              className="rounded-xl border border-emerald-300 bg-white px-4 py-2 text-sm font-medium text-emerald-600 transition hover:bg-emerald-50"
+              className="rounded-xl border border-primary-300 bg-white px-4 py-2 text-sm font-medium text-primary-600 transition hover:bg-primary-50"
             >
               {t('view_all_events')}
             </a>
@@ -1156,7 +1198,7 @@ export default function EventDetailClient() {
       <div className="pt-4">
         <a
           href="/dashboard/"
-          className="text-sm text-emerald-600 underline hover:text-emerald-800"
+          className="text-sm text-primary-600 underline hover:text-primary-800"
         >
           {t('back_to_dashboard')}
         </a>

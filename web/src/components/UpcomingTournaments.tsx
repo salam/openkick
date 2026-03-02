@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
+import { t } from '@/lib/i18n';
 
 interface Tournament {
   id: string;
@@ -27,7 +28,7 @@ function getRegistrationStatus(deadline?: string): RegistrationStatus {
 }
 
 const statusStyles: Record<RegistrationStatus, string> = {
-  open: 'bg-emerald-100 text-emerald-700',
+  open: 'bg-primary-100 text-primary-700',
   closing_soon: 'bg-amber-100 text-amber-700',
   closed: 'bg-red-100 text-red-700',
 };
@@ -97,13 +98,13 @@ export default function UpcomingTournaments() {
     <div className="mb-8 rounded-lg border border-gray-200 bg-white p-5">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
-          Upcoming Tournaments
+          {t('upcoming_tournaments')}
         </h2>
         <Link
           href="/events?type=tournament"
-          className="text-xs text-emerald-600 hover:text-emerald-800"
+          className="text-xs text-primary-600 hover:text-primary-800"
         >
-          View all
+          {t('view_all')}
         </Link>
       </div>
       <div className="space-y-3">

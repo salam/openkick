@@ -7,6 +7,7 @@ import pngToIco from "png-to-ico";
 import { getDB } from "../database.js";
 import { authMiddleware, requireRole } from "../auth.js";
 import { invalidateHomepageStatsCache } from "../services/statistics.service.js";
+import { geocodeLocation } from "../services/geocoding.js";
 import { sendEmail, buildTestEmail } from "../services/email.js";
 import { chatCompletion } from "../services/llm.js";
 
@@ -69,6 +70,23 @@ settingsRouter.put("/settings/:key", (req: Request, res: Response) => {
   db.run("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", [key as string, String(value)]);
 
   res.json({ key, value: String(value) });
+});
+
+// POST /api/settings/geocode — look up an address and return lat/lon
+settingsRouter.post("/settings/geocode", authMiddleware, requireRole("admin"), async (req: Request, res: Response) => {
+  const { address } = req.body;
+  if (!address || typeof address !== "string" || !address.trim()) {
+    res.status(400).json({ error: "address is required" });
+    return;
+  }
+
+  const coords = await geocodeLocation(address.trim());
+  if (!coords) {
+    res.status(404).json({ error: "Address not found" });
+    return;
+  }
+
+  res.json(coords);
 });
 
 // POST /api/settings/upload-logo — accept base64-encoded image, save to public/uploads/

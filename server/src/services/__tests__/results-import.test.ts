@@ -1,3 +1,4 @@
+import { describe, it, expect } from "vitest";
 import { parseResultsResponse } from "../results-import.js";
 
 describe("results-import", () => {

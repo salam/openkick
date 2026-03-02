@@ -77,12 +77,13 @@ describe("Security audit routes", () => {
       expect(check).toHaveProperty("category");
       expect(check).toHaveProperty("status");
       expect(check).toHaveProperty("message");
-      expect(["pass", "warn", "fail"]).toContain(check.status);
+      expect(["pass", "warn", "fail", "info"]).toContain(check.status);
     }
 
     expect(body).toHaveProperty("summary");
     expect(typeof body.summary.pass).toBe("number");
     expect(typeof body.summary.warn).toBe("number");
     expect(typeof body.summary.fail).toBe("number");
+    expect(typeof body.summary.info).toBe("number");
   });
 });

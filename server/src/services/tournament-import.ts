@@ -1,5 +1,4 @@
 import { chatCompletion } from "./llm.js";
-import { getDocument } from "pdfjs-dist";
 
 export interface ImportedTournament {
   title: string;
@@ -25,6 +24,7 @@ Return JSON with these fields:
 Return only the JSON object, no other text.`;
 
 export async function extractPdfText(buffer: Buffer): Promise<string> {
+  const { getDocument } = await import("pdfjs-dist");
   const data = new Uint8Array(buffer);
   const doc = await getDocument({ data }).promise;
   let text = "";

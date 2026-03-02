@@ -2,8 +2,9 @@ import { Router, type Request, type Response } from "express";
 import crypto from "node:crypto";
 import { getDB, getLastInsertId } from "../database.js";
 import { authMiddleware, requireRole, verifyPassword } from "../auth.js";
-import { sendEmail } from "../services/email.js";
+import { sendEmail, buildInviteEmail, buildResetEmail } from "../services/email.js";
 import { checkAdminPassword } from "../services/password-check.service.js";
+import { normalizePhone } from "../utils/phone.js";
 
 export const usersRouter = Router();
 
@@ -86,10 +87,7 @@ usersRouter.put(
   },
 );
 
-// Helper: normalize phone number (strip spaces, leading + and 00)
-function normalizePhone(raw: string): string {
-  return raw.replace(/\s+/g, "").replace(/^\+/, "").replace(/^00/, "");
-}
+// normalizePhone is imported from ../utils/phone.js
 
 // PUT /api/users/:id/phone — admin updates a user's phone number
 usersRouter.put(
@@ -208,11 +206,10 @@ usersRouter.post(
     const resetUrl = `${baseUrl}/reset-password/${resetToken}/`;
 
     try {
-      await sendEmail(
-        email,
-        "You've been invited to OpenKick",
-        `<p>Hi ${name},</p><p>You've been invited as a ${role}. Click <a href="${resetUrl}">here</a> to set your password and get started.</p>`,
-      );
+      const langRow = db.exec("SELECT value FROM settings WHERE key = 'bot_language'");
+      const lang = (langRow[0]?.values[0]?.[0] as string) || "de";
+      const { subject, html } = buildInviteEmail(name, role, resetUrl, lang);
+      await sendEmail(email, subject, html);
     } catch (err) {
       console.error("Failed to send invite email:", err);
     }
@@ -253,11 +250,10 @@ usersRouter.post(
     const resetUrl = `${baseUrl}/reset-password/${resetToken}/`;
 
     try {
-      await sendEmail(
-        email,
-        "Password Reset",
-        `<p>Click <a href="${resetUrl}">here</a> to reset your password.</p>`,
-      );
+      const langRow = db.exec("SELECT value FROM settings WHERE key = 'bot_language'");
+      const lang = (langRow[0]?.values[0]?.[0] as string) || "de";
+      const { subject, html } = buildResetEmail(resetUrl, lang);
+      await sendEmail(email, subject, html);
     } catch (err) {
       console.error("Failed to send password reset email:", err);
     }

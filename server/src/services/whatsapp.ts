@@ -54,29 +54,59 @@ export interface ParsedAttendance {
   reason: string | null;
 }
 
+export interface ParsedIntentEntry {
+  intent: "attending" | "absent";
+  playerName: string | null;
+  date: string | null; // YYYY-MM-DD or null for "next event"
+  reason: string | null;
+}
+
 export interface ParsedIntent {
   intent: "attending" | "absent" | "unknown";
   playerName: string | null;
   reason: string | null;
+  entries?: ParsedIntentEntry[];
 }
 
 export async function parseIntent(text: string): Promise<ParsedIntent> {
+  const today = new Date().toISOString().slice(0, 10);
   const response = await chatCompletion([
     {
       role: "system",
-      content: `You are a football team attendance bot. Classify the parent's message.
-Return JSON only: { "intent": "attending"|"absent"|"unknown", "playerName": string|null, "reason": string|null }
-- "attending": the parent confirms their child will attend
-- "absent": the parent reports their child cannot attend
-- "unknown": the message is unrelated to attendance
-Extract the child's name if mentioned. Extract the reason if given.`,
+      content: `You are a football team attendance bot. Parse the parent's message about their child's attendance.
+Today is ${today}.
+
+The message may mention one or MULTIPLE dates. Return JSON with an "entries" array.
+Each entry: { "intent": "attending"|"absent", "playerName": string|null, "date": "YYYY-MM-DD"|null, "reason": string|null }
+
+Rules:
+- If specific dates are mentioned (e.g. "am 11. März", "nächsten Mittwoch"), resolve them to YYYY-MM-DD format.
+- If no date is mentioned, set date to null (means "next event").
+- If the message covers multiple dates, return one entry per date.
+- If the message mentions multiple children by name (e.g. "Ava ist krank am 11. März. Marlo nimmt am 18. März teil."), return one entry per child+date combination with the correct playerName for each.
+- If the message is unrelated to attendance, return: { "entries": [] }
+
+Return JSON only: { "entries": [...] }`,
     },
     { role: "user", content: text },
   ]);
   try {
-    return JSON.parse(response.content);
+    const parsed = JSON.parse(response.content);
+    const entries: ParsedIntentEntry[] = Array.isArray(parsed.entries) ? parsed.entries : [];
+
+    if (entries.length === 0) {
+      return { intent: "unknown", playerName: null, reason: null, entries: [] };
+    }
+
+    // Backwards-compatible: top-level fields from first entry
+    return {
+      intent: entries[0].intent,
+      playerName: entries[0].playerName,
+      reason: entries[0].reason,
+      entries,
+    };
   } catch {
-    return { intent: "unknown", playerName: null, reason: null };
+    return { intent: "unknown", playerName: null, reason: null, entries: [] };
   }
 }
 

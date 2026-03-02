@@ -226,7 +226,7 @@ export default function OnboardingPage() {
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-600 border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent" />
       </div>
     );
   }
@@ -249,7 +249,7 @@ export default function OnboardingPage() {
           <div
             key={i}
             className={`h-1.5 flex-1 rounded-full transition-colors ${
-              i <= currentStep ? 'bg-emerald-500' : 'bg-gray-200'
+              i <= currentStep ? 'bg-primary-500' : 'bg-gray-200'
             }`}
           />
         ))}
@@ -291,7 +291,7 @@ export default function OnboardingPage() {
           <button
             onClick={handleSaveAndContinue}
             disabled={saving || !canSave}
-            className="rounded-xl bg-emerald-500 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-600 disabled:opacity-50"
+            className="rounded-xl bg-primary-500 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-primary-600 disabled:opacity-50"
           >
             {saving
               ? t('saving')

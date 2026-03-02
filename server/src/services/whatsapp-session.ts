@@ -67,6 +67,15 @@ export function logMessage(
   );
 }
 
+export interface MessageOutcome {
+  action: string;
+  playerId?: number;
+  playerName?: string;
+  eventId?: number;
+  eventTitle?: string;
+  eventDate?: string;
+}
+
 export function updateMessageLog(
   wahaMessageId: string,
   fields: {
@@ -75,6 +84,9 @@ export function updateMessageLog(
     playerId?: number;
     eventId?: number;
     outboundBody?: string;
+    body?: string | null;
+    phone?: string;
+    outcomes?: MessageOutcome[];
   },
 ): void {
   const db = getDB();
@@ -85,7 +97,16 @@ export function updateMessageLog(
   if (fields.playerId !== undefined) { sets.push("playerId = ?"); vals.push(fields.playerId); }
   if (fields.eventId !== undefined) { sets.push("eventId = ?"); vals.push(fields.eventId); }
   if (fields.outboundBody !== undefined) { sets.push("outboundBody = ?"); vals.push(fields.outboundBody); }
+  if (fields.body !== undefined) { sets.push("body = ?"); vals.push(fields.body); }
+  if (fields.phone !== undefined) { sets.push("phone = ?"); vals.push(fields.phone); }
+  if (fields.outcomes !== undefined) { sets.push("outcomes = ?"); vals.push(JSON.stringify(fields.outcomes)); }
   if (sets.length === 0) return;
   vals.push(wahaMessageId);
   db.run(`UPDATE message_log SET ${sets.join(", ")} WHERE wahaMessageId = ?`, vals);
+}
+
+/** Obfuscate a phone number for privacy: show first 4 and last 2 digits. */
+export function obfuscatePhone(phone: string): string {
+  if (phone.length <= 6) return "***";
+  return phone.slice(0, 4) + "***" + phone.slice(-2);
 }

@@ -34,6 +34,20 @@
 
 - [✔️] **BUG9** — Altcha captcha "Verified" but RSVP button stays disabled. Root cause: `AltchaWidget.tsx` listens for the `"verification"` DOM event, but Altcha v2.x fires `"verified"` instead. The `onVerify` callback was never called, leaving captcha payload empty. Fixed by changing the event listener from `"verification"` to `"verified"`. This affected all captcha-gated flows (parent RSVP, public RSVP, login).
 
+## Theming
+
+- [✔️] **BUG10** — Primary tint color setting has no effect on UI. Root cause: `--tint` CSS variable is set on `<main>` in HomeClient.tsx but no CSS rule or Tailwind utility consumes it. All 343 color references across 57 files use hardcoded `bg-emerald-*` / `text-emerald-*` Tailwind classes, ignoring the user-configured `tint_color`. Fix: define a `primary-*` color palette in `@theme` derived from `--tint` via `color-mix()`, inject `--tint` globally, and replace all `emerald-*` usages with `primary-*`.
+
+## WhatsApp Bot
+
+- [✔️] **BUG11** — WhatsApp phone number matching fails for local-format numbers. Root cause: `normalizePhone()` strips `+`, `00`, and whitespace but does not convert local format (e.g., `0765612900`) to international format (`41765612900`). WAHA sends phones as `41765612900@c.us` (international, no `+`), but guardians entered via admin UI in local format are stored as `0765612900`, causing `findGuardianByPhone` exact match to fail. Fixed by creating shared `normalizePhone()` in `utils/phone.ts` that also strips leading `0` and prepends country code (default `41`, configurable via `default_country_code` setting).
+
+- [✔️] **BUG12** — WhatsApp bot replies "Kein bevorstehendes Event gefunden" even when weekly training exists. Root cause: `findNextUpcomingEvent()` and `findNextEvent()` only query the `events` table. Recurring training schedules (stored in `training_schedule`) and virtual event series instances (expanded from `event_series`) are not checked. Fixed by creating `findNextUpcomingEventAny()` in `services/next-event.ts` that checks all three sources (events, series, training schedules) and auto-materializes virtual events into the `events` table so attendance can be recorded.
+
+## Guardians / Players
+
+- [✔️] **BUG13** — Adding a second player for the same guardian crashes with "UNIQUE constraint failed: guardians.phone". Root cause: `POST /api/guardians` does a blind `INSERT INTO guardians` without checking if a guardian with that phone already exists. The `guardians.phone` column has a `UNIQUE` constraint, so a second insert for the same phone fails. The same issue existed in the WhatsApp onboarding flow. Fixed by checking for an existing guardian by phone first; if found, return the existing record (200) instead of inserting a duplicate. Also added `INSERT OR IGNORE` for the `guardian_players` link in the onboarding flow.
+
 ## Setup / Persistence
 
 - [✔️] **BUG2** — Setup page shown even when an admin account already exists. Root cause: sql.js runs in-memory and `saveDB()` is never called in production code. After creating an admin via `POST /api/setup`, the admin is stored only in memory. On server restart, the DB reloads from disk (which was never updated), so the admin is lost and setup shows again. Fixed by adding auto-persist: `db.run()` is wrapped to call `saveDB()` after every mutation when a `dbPath` is configured.

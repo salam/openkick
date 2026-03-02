@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { t, getLanguage } from '@/lib/i18n';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 interface TickerEntry {
   id: number;
@@ -67,7 +67,7 @@ export default function LiveTickerDetail({ tournamentId }: LiveTickerDetailProps
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-600 border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent" />
       </div>
     );
   }
@@ -78,10 +78,10 @@ export default function LiveTickerDetail({ tournamentId }: LiveTickerDetailProps
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="relative flex h-3 w-3">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex h-3 w-3 rounded-full bg-emerald-500" />
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary-400 opacity-75" />
+            <span className="relative inline-flex h-3 w-3 rounded-full bg-primary-500" />
           </span>
-          <span className="text-sm font-semibold uppercase tracking-wide text-emerald-700">
+          <span className="text-sm font-semibold uppercase tracking-wide text-primary-700">
             {t('live')}
           </span>
         </div>
@@ -114,7 +114,7 @@ export default function LiveTickerDetail({ tournamentId }: LiveTickerDetailProps
                   {entry.homeTeam}
                 </span>
 
-                <span className="min-w-[3rem] text-center text-xl font-bold text-emerald-600">
+                <span className="min-w-[3rem] text-center text-xl font-bold text-primary-600">
                   {entry.score ?? '-'}
                 </span>
 

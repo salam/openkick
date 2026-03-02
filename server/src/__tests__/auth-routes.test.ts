@@ -7,6 +7,8 @@ import { initDB } from "../database.js";
 vi.mock("../services/email.js", () => ({
   sendEmail: vi.fn(),
   getSmtpConfig: vi.fn(),
+  buildResetEmail: vi.fn().mockReturnValue({ subject: "Password Reset", html: "<p>reset</p>" }),
+  buildInviteEmail: vi.fn().mockReturnValue({ subject: "Invite", html: "<p>invite</p>" }),
 }));
 
 // Dynamic import so mock is in place

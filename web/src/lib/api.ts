@@ -72,14 +72,14 @@ export async function fetchTournamentParticipation(period?: string) {
 }
 
 export function getStatsExportUrl(format: "csv" | "pdf", type: string, period?: string): string {
-  const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+  const base = process.env.NEXT_PUBLIC_API_URL || "";
   const params = new URLSearchParams({ format, type });
   if (period) params.set("period", period);
   return `${base}/api/admin/stats/export?${params}`;
 }
 
 export async function fetchHomepageStats() {
-  const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+  const base = process.env.NEXT_PUBLIC_API_URL || "";
   const res = await fetch(`${base}/api/public/homepage-stats`);
   return res.json();
 }

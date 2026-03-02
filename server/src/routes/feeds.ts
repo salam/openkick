@@ -32,7 +32,10 @@ function isFeedEnabled(feedKey: string): boolean {
 }
 
 function getBaseUrl(req: Request): string {
-  return `${req.protocol}://${req.get("host")}`;
+  // Use the public-facing origin instead of the internal host,
+  // since requests may arrive via a reverse proxy (Next.js dev / Apache).
+  const cors = process.env.CORS_ORIGIN || "http://localhost:3000";
+  return cors.split(",")[0].trim();
 }
 
 function parseQuery(req: Request): FeedQuery & { trophiesOnly?: boolean } {

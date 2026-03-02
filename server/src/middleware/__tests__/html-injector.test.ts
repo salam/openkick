@@ -100,6 +100,52 @@ describe("htmlInjector middleware", () => {
     expect(body).toContain("<title>Custom OG Title -");
   });
 
+  it("injects JSON-LD structured data and og:url", async () => {
+    const db = getDB();
+    db.run("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", [
+      "club_name",
+      "FC Flügelflitzer",
+    ]);
+    db.run("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", [
+      "club_description",
+      "Junioren E",
+    ]);
+    db.run("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", [
+      "club_logo",
+      "/uploads/logo.png",
+    ]);
+
+    fs.writeFileSync(
+      path.join(tmpDir, "index.html"),
+      "<html><head><title>X</title></head><body></body></html>",
+    );
+
+    const app = express();
+    app.use(createHtmlInjector(tmpDir));
+    app.use(express.static(tmpDir));
+    server = app.listen(0);
+    port = (server.address() as any).port;
+
+    const res = await fetch(`http://localhost:${port}/`);
+    const body = await res.text();
+
+    // og:url
+    expect(body).toContain('property="og:url"');
+
+    // JSON-LD
+    expect(body).toContain('type="application/ld+json"');
+    const jsonLdMatch = body.match(
+      /<script type="application\/ld\+json">(.*?)<\/script>/,
+    );
+    expect(jsonLdMatch).toBeTruthy();
+    const jsonLd = JSON.parse(jsonLdMatch![1].replace(/\\u003c/g, "<"));
+    expect(jsonLd["@context"]).toBe("https://schema.org");
+    expect(jsonLd["@type"]).toBe("SportsOrganization");
+    expect(jsonLd.name).toBe("FC Flügelflitzer");
+    expect(jsonLd.description).toBe("Junioren E");
+    expect(jsonLd.logo).toContain("/uploads/logo.png");
+  });
+
   it("injects into nested page HTML files", async () => {
     const db = getDB();
     db.run("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", [

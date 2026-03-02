@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { t, getLanguage } from '@/lib/i18n';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 const PRESET_AMOUNTS = [500, 1000, 2000, 5000]; // centimes
 
@@ -80,7 +80,7 @@ export default function DonateCard() {
             onClick={() => { setAmount(a); setCustomAmount(''); }}
             className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
               !customAmount && amount === a
-                ? 'bg-emerald-500 text-white'
+                ? 'bg-primary-500 text-white'
                 : 'border border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
             }`}
           >
@@ -98,7 +98,7 @@ export default function DonateCard() {
           placeholder={t('donate_custom_amount')}
           value={customAmount}
           onChange={(e) => setCustomAmount(e.target.value)}
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:ring-emerald-500"
+          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-primary-500"
         />
       </div>
 
@@ -110,14 +110,14 @@ export default function DonateCard() {
           placeholder={t('donate_message_placeholder')}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:ring-emerald-500"
+          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-primary-500"
         />
       </div>
 
       <button
         onClick={handleDonate}
         disabled={submitting || effectiveAmount <= 0}
-        className="w-full rounded-md bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:opacity-50"
+        className="w-full rounded-md bg-primary-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-primary-700 disabled:opacity-50"
       >
         {submitting ? '...' : `${t('donate_button')} ${currency} ${(effectiveAmount / 100).toFixed(2)}`}
       </button>

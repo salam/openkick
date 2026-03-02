@@ -69,6 +69,7 @@ const SETTING_KEYS = [
   'legal_responsible', 'dpo_name', 'dpo_email',
   'imprint_extra', 'privacy_extra',
   'tint_color', 'homepage_bg_image',
+  'latitude', 'longitude',
 ] as const;
 
 type SettingsMap = Record<string, string>;
@@ -426,7 +427,7 @@ export default function SettingsPage() {
   const cardClass = 'rounded-lg border border-gray-200 bg-white p-6';
   const labelClass = 'block text-sm font-medium text-gray-700 mb-1';
   const inputClass =
-    'w-full rounded-xl border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500';
+    'w-full rounded-xl border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500';
   const btnSecondary =
     'rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50';
 
@@ -480,7 +481,7 @@ export default function SettingsPage() {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="rounded-xl bg-emerald-500 px-5 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-600 disabled:opacity-50"
+                className="rounded-xl bg-primary-500 px-5 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-primary-600 disabled:opacity-50"
               >
                 {saving ? t('saving') : t('save_settings')}
               </button>
@@ -491,7 +492,7 @@ export default function SettingsPage() {
 
       {loading ? (
         <div className="flex justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-600 border-t-transparent" />
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent" />
         </div>
       ) : (
         <>
@@ -503,7 +504,7 @@ export default function SettingsPage() {
                 onClick={() => scrollTo(g.id)}
                 className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition ${
                   activeSection === g.id
-                    ? 'bg-emerald-500 text-white shadow-sm'
+                    ? 'bg-primary-500 text-white shadow-sm'
                     : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-gray-50'
                 }`}
               >
@@ -522,7 +523,7 @@ export default function SettingsPage() {
                     onClick={() => scrollTo(g.id)}
                     className={`block w-full rounded-lg px-3 py-2 text-left text-sm font-medium transition ${
                       activeSection === g.id
-                        ? 'bg-emerald-50 text-emerald-700'
+                        ? 'bg-primary-50 text-primary-700'
                         : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                     }`}
                   >
@@ -568,7 +569,7 @@ export default function SettingsPage() {
                             value={lang.value}
                             checked={settings.bot_language === lang.value}
                             onChange={(e) => update('bot_language', e.target.value)}
-                            className="h-4 w-4 text-emerald-600 focus:ring-emerald-500"
+                            className="h-4 w-4 text-primary-600 focus:ring-primary-500"
                           />
                           <span className="text-sm text-gray-700">{lang.label}</span>
                         </label>
@@ -731,7 +732,7 @@ export default function SettingsPage() {
                           className={`text-sm font-medium ${
                             holidayMsg.includes('Failed')
                               ? 'text-red-600'
-                              : 'text-emerald-600'
+                              : 'text-primary-600'
                           }`}
                         >
                           {holidayMsg}
@@ -757,7 +758,7 @@ export default function SettingsPage() {
                               ? 'bg-red-100 text-red-700'
                               : auditResult.summary.warn > 0
                                 ? 'bg-amber-100 text-amber-700'
-                                : 'bg-emerald-100 text-emerald-700'
+                                : 'bg-primary-100 text-primary-700'
                           }`}>
                             {auditResult.summary.fail > 0
                               ? `${auditResult.summary.fail} ${t('issues')}`
@@ -782,7 +783,7 @@ export default function SettingsPage() {
                     {auditResult && (
                       <>
                         <div className="mb-3 flex items-center gap-4 text-sm">
-                          <span className="text-emerald-600 font-medium">{auditResult.summary.pass} {t('passed')}</span>
+                          <span className="text-primary-600 font-medium">{auditResult.summary.pass} {t('passed')}</span>
                           {auditResult.summary.warn > 0 && (
                             <span className="text-amber-600 font-medium">{auditResult.summary.warn} {t('warnings')}</span>
                           )}
@@ -874,8 +875,8 @@ export default function SettingsPage() {
                       </div>
 
                       {(settings.captcha_provider || 'altcha') === 'altcha' && (
-                        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-gray-700">
-                          <p className="mb-2 font-semibold text-emerald-800">{t('captcha_altcha_title')}</p>
+                        <div className="rounded-lg border border-primary-200 bg-primary-50 p-4 text-sm text-gray-700">
+                          <p className="mb-2 font-semibold text-primary-800">{t('captcha_altcha_title')}</p>
                           <ul className="list-inside list-disc space-y-1 text-gray-600">
                             <li><strong>{t('captcha_how_it_works')}</strong> {t('captcha_altcha_how')}</li>
                             <li><strong>{t('captcha_privacy')}</strong> {t('captcha_altcha_privacy')}</li>
@@ -962,7 +963,7 @@ export default function SettingsPage() {
                             aria-checked={settings[key] !== 'false'}
                             onClick={() => update(key, settings[key] === 'false' ? 'true' : 'false')}
                             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                              settings[key] === 'false' ? 'bg-gray-300' : 'bg-emerald-500'
+                              settings[key] === 'false' ? 'bg-gray-300' : 'bg-primary-500'
                             }`}
                           >
                             <span
@@ -1017,14 +1018,14 @@ export default function SettingsPage() {
                             {isAdmin && <option value="admin">{t('admin')}</option>}
                           </select>
                         </div>
-                        <button onClick={handleInvite} disabled={inviting || !inviteName.trim() || !inviteEmail.trim()} className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-600 disabled:opacity-50">
+                        <button onClick={handleInvite} disabled={inviting || !inviteName.trim() || !inviteEmail.trim()} className="rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-600 disabled:opacity-50">
                           {inviting ? t('sending') : t('send_invite')}
                         </button>
                       </div>
                     )}
 
                     {userMsg && (
-                      <p className={`mb-3 text-sm font-medium ${userMsg.includes('Failed') ? 'text-red-600' : 'text-emerald-600'}`}>
+                      <p className={`mb-3 text-sm font-medium ${userMsg.includes('Failed') ? 'text-red-600' : 'text-primary-600'}`}>
                         {userMsg}
                       </p>
                     )}
@@ -1058,13 +1059,13 @@ export default function SettingsPage() {
                                         value={editPhoneValue}
                                         onChange={(e) => setEditPhoneValue(e.target.value)}
                                         placeholder="+41 79 123 45 67"
-                                        className="w-36 rounded border border-gray-300 px-2 py-1 text-sm focus:border-emerald-500 focus:outline-none"
+                                        className="w-36 rounded border border-gray-300 px-2 py-1 text-sm focus:border-primary-500 focus:outline-none"
                                         onKeyDown={(e) => e.key === 'Enter' && handleSavePhone(u.id)}
                                       />
                                       <button
                                         onClick={() => handleSavePhone(u.id)}
                                         disabled={savingPhone || !editPhoneValue.trim()}
-                                        className="rounded bg-emerald-500 px-2 py-1 text-xs text-white hover:bg-emerald-600 disabled:opacity-50"
+                                        className="rounded bg-primary-500 px-2 py-1 text-xs text-white hover:bg-primary-600 disabled:opacity-50"
                                       >
                                         {savingPhone ? '...' : t('save')}
                                       </button>
@@ -1077,11 +1078,14 @@ export default function SettingsPage() {
                                     </div>
                                   ) : (
                                     <span
-                                      className={`cursor-pointer hover:text-emerald-600 ${u.phone ? '' : 'text-gray-400 italic'}`}
+                                      className={`inline-flex cursor-pointer items-center gap-1 hover:text-primary-600 ${u.phone ? '' : 'text-gray-400 italic'}`}
                                       onClick={() => { setEditingPhoneId(u.id); setEditPhoneValue(u.phone || ''); }}
                                       title={t('edit_phone')}
                                     >
                                       {u.phone || t('edit_phone')}
+                                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5 shrink-0 text-gray-400">
+                                        <path d="M13.488 2.513a1.75 1.75 0 0 0-2.475 0L3.05 10.476a.75.75 0 0 0-.188.335l-.758 2.86a.75.75 0 0 0 .918.918l2.86-.758a.75.75 0 0 0 .335-.188l7.963-7.963a1.75 1.75 0 0 0 0-2.475l-.692-.692ZM11.72 3.22a.25.25 0 0 1 .354 0l.692.692a.25.25 0 0 1 0 .354L5.95 11.08l-1.59.422.422-1.59 6.938-6.692Z" />
+                                      </svg>
                                     </span>
                                   )}
                                 </td>
@@ -1120,7 +1124,7 @@ export default function SettingsPage() {
                                       </div>
                                     );
                                   })() : (
-                                    <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${u.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                                    <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${u.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-primary-100 text-primary-700'}`}>
                                       {u.role}
                                     </span>
                                   )}
@@ -1158,7 +1162,7 @@ export default function SettingsPage() {
                       className={`text-sm font-medium ${
                         saveMsg.includes('Failed')
                           ? 'text-red-600'
-                          : 'text-emerald-600'
+                          : 'text-primary-600'
                       }`}
                     >
                       {saveMsg}
@@ -1167,7 +1171,7 @@ export default function SettingsPage() {
                   <button
                     onClick={handleSave}
                     disabled={saving}
-                    className="rounded-xl bg-emerald-500 px-6 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-600 disabled:opacity-50"
+                    className="rounded-xl bg-primary-500 px-6 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-primary-600 disabled:opacity-50"
                   >
                     {saving ? t('saving') : t('save_settings')}
                   </button>

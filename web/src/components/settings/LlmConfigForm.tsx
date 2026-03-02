@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { apiFetch } from '@/lib/api';
+import { t } from '@/lib/i18n';
 import type { SettingsFormProps } from './ClubProfileForm';
 
 interface LlmConfigFormProps extends SettingsFormProps {
@@ -49,7 +50,7 @@ export const PROVIDER_DASHBOARD_LINKS: Record<string, { url: string; label: stri
 const cardClass = 'rounded-lg border border-gray-200 bg-white p-6';
 const labelClass = 'block text-sm font-medium text-gray-700 mb-1';
 const inputClass =
-  'w-full rounded-xl border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500';
+  'w-full rounded-xl border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500';
 const btnSecondary =
   'rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50';
 
@@ -73,9 +74,9 @@ export default function LlmConfigForm({
         '/api/settings/test-llm',
         { method: 'POST' },
       );
-      setTestResult({ ok: res.success, msg: res.message || 'Connection successful.' });
+      setTestResult({ ok: res.success, msg: res.message || t('connection_ok') });
     } catch {
-      setTestResult({ ok: false, msg: 'Connection test failed.' });
+      setTestResult({ ok: false, msg: t('connection_failed') });
     } finally {
       setTestingConnection(false);
     }
@@ -84,12 +85,12 @@ export default function LlmConfigForm({
   return (
     <div className={cardClass}>
       <h2 className="mb-4 text-lg font-semibold text-gray-900">
-        LLM Configuration
+        {t('llm_config')}
       </h2>
       <div className="space-y-4">
         <div>
           <label htmlFor="llm_provider" className={labelClass}>
-            Provider
+            {t('llm_provider')}
           </label>
           <select
             id="llm_provider"
@@ -97,7 +98,7 @@ export default function LlmConfigForm({
             onChange={(e) => onUpdate('llm_provider', e.target.value)}
             className={inputClass}
           >
-            <option value="">Select provider...</option>
+            <option value="">{t('select_provider')}</option>
             {LLM_PROVIDERS.map((p) => (
               <option key={p.value} value={p.value}>
                 {p.label}
@@ -108,7 +109,7 @@ export default function LlmConfigForm({
 
         <div>
           <label htmlFor="llm_model" className={labelClass}>
-            Model
+            {t('llm_model')}
           </label>
           {(() => {
             const provider = settings.llm_provider || '';
@@ -135,7 +136,7 @@ export default function LlmConfigForm({
                       onClick={() => setUseCustomModel(false)}
                       className="text-xs text-blue-600 hover:text-blue-800"
                     >
-                      &larr; Back to suggested models
+                      {t('back_to_suggested')}
                     </button>
                   )}
                 </div>
@@ -168,17 +169,17 @@ export default function LlmConfigForm({
                         </span>
                         {m.tier === 'latest' && (
                           <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700 uppercase">
-                            Latest
+                            {t('latest')}
                           </span>
                         )}
                         {m.tier === 'budget' && (
                           <span className="rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold text-green-700 uppercase">
-                            Budget
+                            {t('budget')}
                           </span>
                         )}
                       </div>
                       <span className="text-xs text-gray-500">
-                        {m.pricing} /M tokens
+                        {m.pricing} {t('llm_m_tokens')}
                       </span>
                     </label>
                   ))}
@@ -191,7 +192,7 @@ export default function LlmConfigForm({
                       onClick={() => setShowMoreModels(!showMoreModels)}
                       className="text-xs text-gray-500 hover:text-gray-700"
                     >
-                      {showMoreModels ? '▾ Hide more models' : '▸ More models...'}
+                      {showMoreModels ? `▾ ${t('hide_models')}` : `▸ ${t('more_models')}`}
                     </button>
                     {showMoreModels && (
                       <div className="mt-1 space-y-1">
@@ -218,7 +219,7 @@ export default function LlmConfigForm({
                               </span>
                             </div>
                             <span className="text-xs text-gray-500">
-                              {m.pricing} /M tokens
+                              {m.pricing} {t('llm_m_tokens')}
                             </span>
                           </label>
                         ))}
@@ -232,12 +233,12 @@ export default function LlmConfigForm({
                   onClick={() => setUseCustomModel(true)}
                   className="text-xs text-gray-400 hover:text-gray-600"
                 >
-                  Enter custom model ID...
+                  {t('custom_model')}
                 </button>
 
                 {!isKnownModel && currentValue && (
                   <p className="text-xs text-amber-600">
-                    Custom model: {currentValue}
+                    {t('llm_custom_model_prefix')} {currentValue}
                   </p>
                 )}
               </div>
@@ -247,20 +248,20 @@ export default function LlmConfigForm({
 
         <div>
           <label htmlFor="llm_api_key" className={labelClass}>
-            API Key
+            {t('llm_api_key')}
           </label>
           <input
             id="llm_api_key"
             type="password"
             value={settings.llm_api_key || ''}
             onChange={(e) => onUpdate('llm_api_key', e.target.value)}
-            placeholder="Enter API key"
+            placeholder={t('llm_enter_api_key')}
             className={inputClass}
           />
           {settings.llm_provider && PROVIDER_DASHBOARD_LINKS[settings.llm_provider] && (
             <div className="mt-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2">
               <p className="text-xs text-blue-800">
-                Get your API key from the{' '}
+                {t('llm_get_api_key')}{' '}
                 <a
                   href={PROVIDER_DASHBOARD_LINKS[settings.llm_provider].url}
                   target="_blank"
@@ -277,14 +278,14 @@ export default function LlmConfigForm({
         {settings.llm_provider === 'euria' && (
           <div>
             <label htmlFor="llm_product_id" className={labelClass}>
-              Product ID
+              {t('llm_product_id')}
             </label>
             <input
               id="llm_product_id"
               type="text"
               value={settings.llm_product_id || ''}
               onChange={(e) => onUpdate('llm_product_id', e.target.value)}
-              placeholder="Infomaniak Product ID"
+              placeholder={t('llm_enter_product_id')}
               className={inputClass}
             />
           </div>
@@ -296,12 +297,12 @@ export default function LlmConfigForm({
             disabled={testingConnection}
             className={btnSecondary}
           >
-            {testingConnection ? 'Testing...' : 'Test Connection'}
+            {testingConnection ? t('testing') : t('test_connection')}
           </button>
           {testResult && (
             <span
               className={`text-sm font-medium ${
-                testResult.ok ? 'text-emerald-600' : 'text-red-600'
+                testResult.ok ? 'text-primary-600' : 'text-red-600'
               }`}
             >
               {testResult.msg}

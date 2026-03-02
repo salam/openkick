@@ -217,7 +217,7 @@ export default function NewSurveyPage() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
             />
           </div>
 
@@ -232,7 +232,7 @@ export default function NewSurveyPage() {
                 onClick={() => setAnonymous(true)}
                 className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
                   anonymous
-                    ? 'bg-emerald-500 text-white'
+                    ? 'bg-primary-500 text-white'
                     : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
                 }`}
               >
@@ -243,7 +243,7 @@ export default function NewSurveyPage() {
                 onClick={() => setAnonymous(false)}
                 className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
                   !anonymous
-                    ? 'bg-emerald-500 text-white'
+                    ? 'bg-primary-500 text-white'
                     : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
                 }`}
               >
@@ -261,7 +261,7 @@ export default function NewSurveyPage() {
               type="datetime-local"
               value={deadline}
               onChange={(e) => setDeadline(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 sm:max-w-xs"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 sm:max-w-xs"
             />
           </div>
         </div>
@@ -290,7 +290,7 @@ export default function NewSurveyPage() {
                     onChange={(e) =>
                       handleTypeChange(qIdx, e.target.value as QuestionForm['type'])
                     }
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
                   >
                     {QUESTION_TYPES.map((qt) => (
                       <option key={qt.value} value={qt.value}>
@@ -309,7 +309,7 @@ export default function NewSurveyPage() {
                     type="text"
                     value={q.label}
                     onChange={(e) => updateQuestion(qIdx, { label: e.target.value })}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
                   />
                 </div>
 
@@ -326,7 +326,7 @@ export default function NewSurveyPage() {
                             type="text"
                             value={opt}
                             onChange={(e) => updateOption(qIdx, oIdx, e.target.value)}
-                            className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                            className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
                           />
                           <button
                             type="button"
@@ -341,7 +341,7 @@ export default function NewSurveyPage() {
                     <button
                       type="button"
                       onClick={() => addOption(qIdx)}
-                      className="mt-2 text-sm font-medium text-emerald-600 hover:text-emerald-700"
+                      className="mt-2 text-sm font-medium text-primary-600 hover:text-primary-700"
                     >
                       {t('survey_option_add')}
                     </button>
@@ -381,7 +381,7 @@ export default function NewSurveyPage() {
           <button
             type="button"
             onClick={addQuestion}
-            className="mt-4 rounded-xl bg-emerald-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-600"
+            className="mt-4 rounded-xl bg-primary-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-600"
           >
             {t('survey_add_question')}
           </button>
@@ -392,7 +392,7 @@ export default function NewSurveyPage() {
           <button
             type="submit"
             disabled={!canSubmit}
-            className="rounded-xl bg-emerald-500 px-6 py-3 text-sm font-medium text-white transition hover:bg-emerald-600 disabled:opacity-50"
+            className="rounded-xl bg-primary-500 px-6 py-3 text-sm font-medium text-white transition hover:bg-primary-600 disabled:opacity-50"
           >
             {saving ? t('loading') : t('survey_create')}
           </button>

@@ -3,6 +3,7 @@ import { chatCompletion } from "./llm.js";
 import { sendMessage } from "./whatsapp.js";
 import { getBotTemplate } from "./whatsapp-templates.js";
 import { setAttendance } from "./attendance.js";
+import { findNextUpcomingEventAny } from "./next-event.js";
 
 export interface CoachIntent {
   intent:
@@ -50,20 +51,10 @@ Extract the player's name if mentioned. Extract the status if marking attendance
 }
 
 /**
- * Find the next upcoming event from the database.
+ * Find the next upcoming event from all sources (events, series, training schedules).
  */
-function findNextEvent(): { id: number; title: string; date: string; startTime: string | null } | null {
-  const db = getDB();
-  const result = db.exec(
-    "SELECT id, title, date, startTime FROM events WHERE date >= date('now') ORDER BY date ASC, startTime ASC LIMIT 1",
-  );
-  if (result.length === 0 || result[0].values.length === 0) return null;
-  return {
-    id: result[0].values[0][0] as number,
-    title: result[0].values[0][1] as string,
-    date: result[0].values[0][2] as string,
-    startTime: result[0].values[0][3] as string | null,
-  };
+function findNextEvent() {
+  return findNextUpcomingEventAny();
 }
 
 /**
@@ -130,7 +121,7 @@ async function handleAttendanceOverview(phone: string, lang: string): Promise<vo
     return;
   }
 
-  const { attending, absent, pending } = buildAttendanceLists(event.id);
+  const { attending, absent, pending } = buildAttendanceLists(event.id as number);
 
   const attendingStr = attending.length > 0
     ? `${attending.join(", ")} (${attending.length})`
@@ -290,7 +281,7 @@ async function handleMarkAttendance(
   const playerName = playerResult[0].values[0][1] as string;
   const status = intent.status || "attending";
 
-  setAttendance(event.id, playerId, status, "whatsapp");
+  setAttendance(event.id as number, playerId, status, "whatsapp");
 
   const statusLabel = getBotTemplate(
     status === "attending" ? "attendance_confirmed_label" : "attendance_absent_label",

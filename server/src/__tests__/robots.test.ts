@@ -1,18 +1,19 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import express from "express";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
+import { initDB } from "../database.js";
+import { wellKnownRouter } from "../routes/feeds.js";
+import type { Database } from "sql.js";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
+let db: Database;
 let server: Server;
 let baseUrl: string;
 
 async function createTestApp() {
+  db = await initDB();
   const app = express();
-  app.use(express.static(path.resolve(__dirname, "../../../public")));
+  app.use(wellKnownRouter);
   server = createServer(app);
   await new Promise<void>((resolve) => server.listen(0, resolve));
   const { port } = server.address() as AddressInfo;
@@ -23,6 +24,7 @@ async function teardown() {
   await new Promise<void>((resolve, reject) =>
     server.close((err) => (err ? reject(err) : resolve()))
   );
+  db.close();
 }
 
 describe("GET /robots.txt", () => {
@@ -40,9 +42,21 @@ describe("GET /robots.txt", () => {
     expect(text).toContain("User-agent: *");
   });
 
-  it("contains Disallow: /api/settings", async () => {
+  it("contains Disallow: /api/", async () => {
     const res = await fetch(`${baseUrl}/robots.txt`);
     const text = await res.text();
-    expect(text).toContain("Disallow: /api/settings");
+    expect(text).toContain("Disallow: /api/");
+  });
+
+  it("contains Allow: /api/feeds/", async () => {
+    const res = await fetch(`${baseUrl}/robots.txt`);
+    const text = await res.text();
+    expect(text).toContain("Allow: /api/feeds/");
+  });
+
+  it("contains Sitemap with base URL", async () => {
+    const res = await fetch(`${baseUrl}/robots.txt`);
+    const text = await res.text();
+    expect(text).toContain(`Sitemap: ${baseUrl}/api/sitemap.xml`);
   });
 });

@@ -1,7 +1,7 @@
 import PublicTournamentClient from './PublicTournamentClient';
 
 export async function generateStaticParams() {
-  return [{ id: '_placeholder' }];
+  return [{ id: '_' }];
 }
 
 export default function PublicTournamentPage() {

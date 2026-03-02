@@ -11,6 +11,8 @@ interface ClubSettings {
   club_name: string;
   club_description: string;
   club_logo: string;
+  tint_color: string;
+  homepage_bg_image: string;
   og_title: string;
   og_description: string;
   og_image: string;
@@ -33,6 +35,8 @@ function getSettings(): ClubSettings {
     club_name: all.club_name || "OpenKick",
     club_description: all.club_description || "Youth Football Management",
     club_logo: all.club_logo || "",
+    tint_color: all.tint_color || "#10b981",
+    homepage_bg_image: all.homepage_bg_image || "",
     og_title: all.og_title || "",
     og_description: all.og_description || "",
     og_image: all.og_image || "",
@@ -95,6 +99,26 @@ function buildInjection(s: ClubSettings, baseUrl: string): string {
     parts.push(`<meta name="twitter:image" content="${esc(image)}">`);
   if (s.twitter_handle)
     parts.push(`<meta name="twitter:site" content="${esc(s.twitter_handle)}">`);
+
+  // og:url
+  parts.push(`<meta property="og:url" content="${esc(baseUrl)}">`);
+
+  // JSON-LD structured data
+  const jsonLd: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": "SportsOrganization",
+    name: title,
+    description,
+    url: baseUrl,
+  };
+  if (image) jsonLd.logo = image;
+  const safeJsonLd = JSON.stringify(jsonLd).replace(/</g, "\\u003c");
+  parts.push(
+    `<script type="application/ld+json">${safeJsonLd}</script>`,
+  );
+
+  // Tint CSS variable for dynamic theming
+  parts.push(`<style>:root{--tint:${esc(s.tint_color)}}</style>`);
 
   // Settings script for React
   const safeJson = JSON.stringify(s).replace(/</g, "\\u003c");

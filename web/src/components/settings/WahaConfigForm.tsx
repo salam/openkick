@@ -9,7 +9,7 @@ import { t } from '@/lib/i18n';
 const cardClass = 'rounded-lg border border-gray-200 bg-white p-6';
 const labelClass = 'block text-sm font-medium text-gray-700 mb-1';
 const inputClass =
-  'w-full rounded-xl border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500';
+  'w-full rounded-xl border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500';
 
 type ConnectionStatus = 'connected' | 'qr_pending' | 'disconnected' | 'checking';
 type DockerStatus = 'checking' | 'available' | 'unavailable';
@@ -41,6 +41,7 @@ export default function WahaConfigForm({
   const [installLog, setInstallLog] = useState<string[]>([]);
   const [installError, setInstallError] = useState<string | null>(null);
   const [containerAction, setContainerAction] = useState(false);
+  const [recheckingInfra, setRecheckingInfra] = useState(false);
   const [groupMsg, setGroupMsg] = useState('');
   const [startingSession, setStartingSession] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -63,6 +64,14 @@ export default function WahaConfigForm({
   }, []);
 
   useEffect(() => { checkInfra(); }, [checkInfra]);
+
+  const handleRecheck = async () => {
+    setRecheckingInfra(true);
+    setDockerStatus('checking');
+    setContainerStatus('checking');
+    await checkInfra();
+    setRecheckingInfra(false);
+  };
 
   const handleInstallDocker = async () => {
     setInstallingDocker(true);
@@ -281,7 +290,7 @@ export default function WahaConfigForm({
   // ── Status indicator ────────────────────────────────────────────
   const statusDot =
     status === 'connected'
-      ? 'bg-emerald-500'
+      ? 'bg-primary-500'
       : status === 'qr_pending'
         ? 'bg-amber-500'
         : status === 'checking'
@@ -315,10 +324,19 @@ export default function WahaConfigForm({
       <div className="mb-4 space-y-3">
         {/* Docker status */}
         <div className="flex items-center gap-2 text-sm">
-          <span className={`h-2 w-2 rounded-full ${dockerStatus === 'available' ? 'bg-emerald-500' : dockerStatus === 'unavailable' ? 'bg-red-500' : 'bg-gray-400 animate-pulse'}`} />
+          <span className={`h-2 w-2 rounded-full ${dockerStatus === 'available' ? 'bg-primary-500' : dockerStatus === 'unavailable' ? 'bg-red-500' : 'bg-gray-400 animate-pulse'}`} />
           <span className="text-gray-700">
             Docker: {dockerStatus === 'available' ? t('docker_available') : dockerStatus === 'unavailable' ? t('docker_not_found_label') : t('waha_checking')}
           </span>
+          {dockerStatus !== 'checking' && (
+            <button
+              onClick={handleRecheck}
+              disabled={recheckingInfra}
+              className="ml-1 text-xs text-primary-600 hover:text-primary-800 underline disabled:opacity-50 disabled:no-underline"
+            >
+              {t('check_again')}
+            </button>
+          )}
         </div>
 
         {/* Docker not found — install button */}
@@ -350,7 +368,7 @@ export default function WahaConfigForm({
         {dockerStatus === 'available' && (
           <>
             <div className="flex items-center gap-2 text-sm">
-              <span className={`h-2 w-2 rounded-full ${containerStatus === 'running' ? 'bg-emerald-500' : containerStatus === 'stopped' ? 'bg-amber-500' : containerStatus === 'not_found' ? 'bg-red-500' : 'bg-gray-400 animate-pulse'}`} />
+              <span className={`h-2 w-2 rounded-full ${containerStatus === 'running' ? 'bg-primary-500' : containerStatus === 'stopped' ? 'bg-amber-500' : containerStatus === 'not_found' ? 'bg-red-500' : 'bg-gray-400 animate-pulse'}`} />
               <span className="text-gray-700">
                 {t('waha_container')}: {containerStatus === 'running' ? t('waha_running') : containerStatus === 'stopped' ? t('waha_stopped') : containerStatus === 'not_found' ? t('waha_not_installed') : t('waha_checking')}
               </span>
@@ -360,8 +378,17 @@ export default function WahaConfigForm({
                 </button>
               )}
               {containerStatus === 'stopped' && (
-                <button onClick={handleStartWaha} disabled={containerAction} className="ml-2 rounded border border-emerald-300 px-2 py-0.5 text-xs text-emerald-700 hover:bg-emerald-50 disabled:opacity-50">
+                <button onClick={handleStartWaha} disabled={containerAction} className="ml-2 rounded border border-primary-300 px-2 py-0.5 text-xs text-primary-700 hover:bg-primary-50 disabled:opacity-50">
                   {t('waha_start')}
+                </button>
+              )}
+              {containerStatus !== 'checking' && (
+                <button
+                  onClick={handleRecheck}
+                  disabled={recheckingInfra}
+                  className="ml-1 text-xs text-primary-600 hover:text-primary-800 underline disabled:opacity-50 disabled:no-underline"
+                >
+                  {t('check_again')}
                 </button>
               )}
             </div>
@@ -369,7 +396,7 @@ export default function WahaConfigForm({
             {containerStatus === 'not_found' && !installing && (
               <button
                 onClick={handleInstallWaha}
-                className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700"
+                className="rounded-xl bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700"
               >
                 {t('install_waha')}
               </button>
@@ -377,7 +404,7 @@ export default function WahaConfigForm({
 
             {installing && (
               <div className="space-y-2">
-                <p className="text-xs text-emerald-600 font-medium">{t('installing_waha')}</p>
+                <p className="text-xs text-primary-600 font-medium">{t('installing_waha')}</p>
                 <pre className="max-h-32 overflow-y-auto rounded-lg bg-gray-900 p-3 text-xs text-green-400">
                   {installLog.join('\n') || 'Starting...'}
                 </pre>
@@ -419,7 +446,7 @@ export default function WahaConfigForm({
           <button
             onClick={handleStartSession}
             disabled={startingSession}
-            className="ml-2 rounded-xl bg-emerald-600 px-3 py-1 text-xs font-medium text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50"
+            className="ml-2 rounded-xl bg-primary-600 px-3 py-1 text-xs font-medium text-white shadow-sm hover:bg-primary-700 disabled:opacity-50"
           >
             {startingSession ? t('waha_checking') : t('link_whatsapp')}
           </button>
@@ -432,7 +459,7 @@ export default function WahaConfigForm({
           href={`${wahaUrl}/dashboard`}
           target="_blank"
           rel="noopener noreferrer"
-          className="mb-4 inline-block text-sm font-medium text-emerald-600 underline hover:text-emerald-700"
+          className="mb-4 inline-block text-sm font-medium text-primary-600 underline hover:text-primary-700"
         >
           {t('open_waha_dashboard')}
         </a>
@@ -451,7 +478,7 @@ export default function WahaConfigForm({
               />
             ) : (
               <div className="flex h-48 w-48 items-center justify-center rounded-lg border border-gray-200 bg-gray-50">
-                <div className="h-6 w-6 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary-500 border-t-transparent" />
               </div>
             )}
           </div>
@@ -519,7 +546,7 @@ export default function WahaConfigForm({
               className={`mt-2 text-xs font-medium ${
                 groupMsg.includes('Failed')
                   ? 'text-red-600'
-                  : 'text-emerald-600'
+                  : 'text-primary-600'
               }`}
             >
               {groupMsg}

@@ -11,6 +11,9 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
+    "@zxcvbn-ts/core": "^3.0.4",
+    "@zxcvbn-ts/language-common": "^3.0.4",
+    "@zxcvbn-ts/language-en": "^3.0.2",
     "altcha-lib": "^1.4.1",
     "archiver": "^7.0.1",
     "bcryptjs": "^3.0.3",

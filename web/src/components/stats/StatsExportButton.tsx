@@ -13,7 +13,7 @@ export default function StatsExportButton({ type, period }: Props) {
 
   async function download(format: 'csv' | 'pdf') {
     setOpen(false);
-    const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    const base = process.env.NEXT_PUBLIC_API_URL || '';
     const params = new URLSearchParams({ format, type });
     if (period) params.set('period', period);
     const token = getToken();

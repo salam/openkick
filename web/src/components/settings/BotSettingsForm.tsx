@@ -177,7 +177,7 @@ function fillPreview(template: string, sampleData: Record<string, string>): stri
 const cardClass = 'rounded-lg border border-gray-200 bg-white p-6';
 const labelClass = 'block text-sm font-medium text-gray-700 mb-1';
 const inputClass =
-  'w-full rounded-xl border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500';
+  'w-full rounded-xl border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500';
 const btnSecondary =
   'rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50';
 
@@ -283,7 +283,7 @@ export default function BotSettingsForm({
             aria-checked={onboardingEnabled}
             onClick={handleToggleOnboarding}
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-              onboardingEnabled ? 'bg-emerald-500' : 'bg-gray-300'
+              onboardingEnabled ? 'bg-primary-500' : 'bg-gray-300'
             }`}
           >
             <span
@@ -351,7 +351,7 @@ export default function BotSettingsForm({
                               type="button"
                               onClick={() => handleSaveTemplate(tmpl.key)}
                               disabled={savingTemplate === tmpl.key}
-                              className="rounded border border-emerald-300 bg-emerald-50 px-2 py-1 text-xs text-emerald-700 hover:bg-emerald-100 transition-colors disabled:opacity-50"
+                              className="rounded border border-primary-300 bg-primary-50 px-2 py-1 text-xs text-primary-700 hover:bg-primary-100 transition-colors disabled:opacity-50"
                             >
                               {savingTemplate === tmpl.key ? t('saving') : t('save_settings')}
                             </button>
@@ -390,7 +390,7 @@ export default function BotSettingsForm({
                         {saveMsg && saveMsg.key === tmpl.key && (
                           <p
                             className={`text-xs font-medium ${
-                              saveMsg.ok ? 'text-emerald-600' : 'text-red-600'
+                              saveMsg.ok ? 'text-primary-600' : 'text-red-600'
                             }`}
                           >
                             {saveMsg.msg}

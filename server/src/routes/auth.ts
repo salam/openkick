@@ -1,8 +1,9 @@
 import crypto from "node:crypto";
 import { Router, type Request, type Response } from "express";
-import { getDB } from "../database.js";
+import { getDB, getLastInsertId } from "../database.js";
 import { hashPassword, generateJWT } from "../auth.js";
-import { sendEmail } from "../services/email.js";
+import { sendEmail, buildResetEmail } from "../services/email.js";
+import { checkAdminPassword } from "../services/password-check.service.js";
 
 export const authRouter = Router();
 
@@ -50,11 +51,12 @@ authRouter.post("/setup", async (req: Request, res: Response) => {
     [email, name, email, passwordHash],
   );
 
-  const idResult = db.exec("SELECT last_insert_rowid()");
-  const id = idResult[0].values[0][0] as number;
+  const id = getLastInsertId();
 
-  const token = generateJWT({ id, role: "admin" });
-  res.status(201).json({ token });
+  const check = await checkAdminPassword(password);
+  const piiAccessLevel = check.acceptable ? 'full' : 'restricted';
+  const token = generateJWT({ id, role: "admin", piiAccessLevel });
+  res.status(201).json({ token, piiAccessLevel, passwordWarnings: check.reasons });
 });
 
 // POST /api/auth/forgot-password — request a password reset email
@@ -92,11 +94,10 @@ authRouter.post(
       const resetUrl = `${baseUrl}/reset-password/${resetToken}/`;
 
       try {
-        await sendEmail(
-          email,
-          "Password Reset",
-          `<p>Click <a href="${resetUrl}">here</a> to reset your password.</p>`,
-        );
+        const langRow = db.exec("SELECT value FROM settings WHERE key = 'bot_language'");
+        const lang = (langRow[0]?.values[0]?.[0] as string) || "de";
+        const { subject, html } = buildResetEmail(resetUrl, lang);
+        await sendEmail(email, subject, html);
       } catch (err) {
         console.error("Failed to send password reset email:", err);
       }
@@ -153,7 +154,15 @@ authRouter.post(
       [passwordHash, id],
     );
 
-    const jwt = generateJWT({ id, role });
-    res.json({ token: jwt });
+    let piiAccessLevel: 'full' | 'restricted' = 'restricted';
+    let passwordWarnings: string[] = [];
+    if (role === 'admin') {
+      const check = await checkAdminPassword(password);
+      piiAccessLevel = check.acceptable ? 'full' : 'restricted';
+      passwordWarnings = check.reasons;
+    }
+
+    const jwt = generateJWT({ id, role, piiAccessLevel });
+    res.json({ token: jwt, piiAccessLevel, passwordWarnings });
   },
 );

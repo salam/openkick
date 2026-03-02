@@ -1,7 +1,7 @@
 import EventDetailClient from './EventDetailClient';
 
 export async function generateStaticParams() {
-  return [{ id: '_placeholder' }];
+  return [{ id: '_' }];
 }
 
 export default function EventDetailPage() {

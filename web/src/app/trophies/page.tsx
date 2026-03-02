@@ -49,7 +49,7 @@ function placementBadgeClass(placement: number): string {
     case 3:
       return 'bg-gradient-to-r from-orange-50 to-amber-100 text-orange-900 border-orange-300 shadow-sm';
     default:
-      return 'bg-gradient-to-r from-emerald-50 to-teal-50 text-emerald-800 border-emerald-200 shadow-sm';
+      return 'bg-gradient-to-r from-primary-50 to-primary-100 text-primary-800 border-primary-200 shadow-sm';
   }
 }
 
@@ -60,7 +60,7 @@ function achievementPillClass(type: string): string {
     case '3rd_place':
       return 'bg-amber-50 text-amber-700';
     case 'fair_play':
-      return 'bg-emerald-50 text-emerald-700';
+      return 'bg-primary-50 text-primary-700';
     case 'best_player':
       return 'bg-blue-50 text-blue-700';
     default:
@@ -146,7 +146,7 @@ export default function TrophyCabinetPage() {
               <div className="text-center">
                 <a
                   href={`/events/${entry.eventId}`}
-                  className="text-base font-medium text-emerald-600 hover:text-emerald-800"
+                  className="text-base font-medium text-primary-600 hover:text-primary-800"
                 >
                   {entry.eventTitle}
                 </a>
@@ -181,7 +181,7 @@ export default function TrophyCabinetPage() {
                     href={entry.resultsUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-sm text-emerald-600 hover:text-emerald-800"
+                    className="inline-flex items-center gap-1 text-sm text-primary-600 hover:text-primary-800"
                   >
                     {t('view_results')}
                   </a>

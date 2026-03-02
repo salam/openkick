@@ -4,6 +4,7 @@ export interface AttendanceRecord {
   id: number;
   eventId: number;
   playerId: number;
+  playerName: string | null;
   status: string;
   reason: string | null;
   respondedAt: string | null;
@@ -127,9 +128,10 @@ export function setAttendance(
 export function getAttendanceForEvent(eventId: number): AttendanceRecord[] {
   const db = getDB();
   const rows = rowsToObjects(
-    db.exec("SELECT * FROM attendance WHERE eventId = ? ORDER BY respondedAt ASC", [
-      eventId,
-    ]),
+    db.exec(
+      "SELECT a.*, p.name AS playerName FROM attendance a LEFT JOIN players p ON p.id = a.playerId WHERE a.eventId = ? ORDER BY a.respondedAt ASC",
+      [eventId],
+    ),
   );
   return rows as unknown as AttendanceRecord[];
 }

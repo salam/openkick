@@ -22,7 +22,7 @@ export default function AltchaWidget({
     import('altcha');
   }, []);
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
   const url = challengeUrl || `${apiUrl}/api/captcha/challenge`;
 
   useEffect(() => {

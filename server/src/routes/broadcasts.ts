@@ -1,5 +1,5 @@
 import { Router, type Request, type Response } from "express";
-import { getDB } from "../database.js";
+import { getDB, getLastInsertId } from "../database.js";
 import {
   composeTrainingHeadsup,
   composeRainAlert,
@@ -42,8 +42,7 @@ broadcastsRouter.post("/broadcasts", (req: Request, res: Response) => {
     [type, templateKey ?? null, message ?? null, scheduledFor ?? null],
   );
 
-  const result = db.exec("SELECT last_insert_rowid() AS id");
-  const id = result[0].values[0][0] as number;
+  const id = getLastInsertId();
 
   const rows = rowsToObjects(
     db.exec("SELECT * FROM broadcasts WHERE id = ?", [id]),

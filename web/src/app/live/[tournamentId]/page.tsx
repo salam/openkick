@@ -1,7 +1,7 @@
 import LiveTickerClient from './LiveTickerClient';
 
 export async function generateStaticParams() {
-  return [{ tournamentId: '_placeholder' }];
+  return [{ tournamentId: '_' }];
 }
 
 export default function LivePage() {

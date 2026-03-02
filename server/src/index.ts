@@ -1,6 +1,17 @@
 import "dotenv/config";
+import { zxcvbnOptions } from '@zxcvbn-ts/core';
+import * as zxcvbnCommon from '@zxcvbn-ts/language-common';
+import * as zxcvbnEn from '@zxcvbn-ts/language-en';
 import express from "express";
 import cors from "cors";
+
+zxcvbnOptions.setOptions({
+  graphs: zxcvbnCommon.adjacencyGraphs,
+  dictionary: {
+    ...zxcvbnCommon.dictionary,
+    ...zxcvbnEn.dictionary,
+  },
+});
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import crypto from "node:crypto";
@@ -37,6 +48,7 @@ import { gameHistoryRouter } from "./routes/game-history.routes.js";
 import { createRsvpRouter } from "./routes/rsvp.js";
 import { securityTxtRouter } from "./routes/security-txt.js";
 import { htmlInjector } from "./middleware/html-injector.js";
+import { piiGateMiddleware } from "./middleware/pii-gate.middleware.js";
 import { checklistsRouter } from "./routes/checklists.routes.js";
 import { resetAdminChecklists } from "./services/checklist.service.js";
 import { surveysRouter } from "./routes/surveys.routes.js";
@@ -49,6 +61,7 @@ import { DatatransProvider } from "./services/datatrans.service.js";
 import { createPaymentsRouter } from "./routes/payments.js";
 import { statisticsRouter } from "./routes/statistics.js";
 import { homepageStatsRouter } from "./routes/public/homepage-stats.js";
+import { weatherRouter } from "./routes/weather.js";
 
 const app = express();
 
@@ -75,6 +88,16 @@ app.use("/", llmsRouter);
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });
 });
+
+// PII gate: mask personal data for users without full PII access.
+// Applied without authMiddleware — the gate checks req.user if present
+// and masks PII for unauthenticated or restricted users.
+app.use("/api/players", piiGateMiddleware);
+app.use("/api/guardians", piiGateMiddleware);
+app.use("/api/attendance", piiGateMiddleware);
+app.use("/api/events", piiGateMiddleware);
+app.use("/api/users", piiGateMiddleware);
+app.use("/api/whatsapp", piiGateMiddleware);
 
 app.use("/api", publicTournamentsRouter);
 app.use("/api", publicEventsRouter);
@@ -104,6 +127,7 @@ app.use("/api", surveysRouter);
 app.use("/api/public", surveyRespondRouter);
 app.use("/api", statisticsRouter);
 app.use("/api", homepageStatsRouter);
+app.use("/api", weatherRouter);
 app.use("/mcp", mcpRouter);
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;

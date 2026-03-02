@@ -88,7 +88,7 @@ export default function ImprintPage() {
       <div className="absolute right-4 top-4">
         <LanguageToggle />
       </div>
-      <Link href="/" className="mb-8 inline-block text-sm text-emerald-600 hover:text-emerald-800">
+      <Link href="/" className="mb-8 inline-block text-sm text-primary-600 hover:text-primary-800">
         &larr; {s.club_name || 'Home'}
       </Link>
 
@@ -118,7 +118,7 @@ export default function ImprintPage() {
           {email ? (
             <p>
               E-Mail:{' '}
-              <a href={`mailto:${email}`} className="text-emerald-600 hover:underline">
+              <a href={`mailto:${email}`} className="text-primary-600 hover:underline">
                 {email}
               </a>
             </p>
@@ -129,11 +129,11 @@ export default function ImprintPage() {
           {s.contact_info && !contactInfoUsedAsEmail && (
             <p>
               {s.contact_info.startsWith('https://') || s.contact_info.startsWith('http://') ? (
-                <a href={s.contact_info} className="text-emerald-600 hover:underline" target="_blank" rel="noopener noreferrer">
+                <a href={s.contact_info} className="text-primary-600 hover:underline" target="_blank" rel="noopener noreferrer">
                   {s.contact_info}
                 </a>
               ) : (
-                <a href={`mailto:${s.contact_info}`} className="text-emerald-600 hover:underline">
+                <a href={`mailto:${s.contact_info}`} className="text-primary-600 hover:underline">
                   {s.contact_info}
                 </a>
               )}

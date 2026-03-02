@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { apiFetch } from '@/lib/api';
+import { t } from '@/lib/i18n';
 import type { SettingsFormProps } from './ClubProfileForm';
 
 interface SmtpFormProps extends SettingsFormProps {
@@ -11,7 +12,7 @@ interface SmtpFormProps extends SettingsFormProps {
 const cardClass = 'rounded-lg border border-gray-200 bg-white p-6';
 const labelClass = 'block text-sm font-medium text-gray-700 mb-1';
 const inputClass =
-  'w-full rounded-xl border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500';
+  'w-full rounded-xl border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500';
 const btnSecondary =
   'rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50';
 
@@ -34,9 +35,9 @@ export default function SmtpForm({
         '/api/settings/test-smtp',
         { method: 'POST', body: JSON.stringify({ to: smtpTestTo }) },
       );
-      setSmtpTestResult({ ok: res.success, msg: res.message || 'Test email sent.' });
+      setSmtpTestResult({ ok: res.success, msg: res.message || t('smtp_test_sent') });
     } catch {
-      setSmtpTestResult({ ok: false, msg: 'Failed to send test email.' });
+      setSmtpTestResult({ ok: false, msg: t('smtp_test_failed') });
     } finally {
       setTestingSmtp(false);
     }
@@ -45,16 +46,16 @@ export default function SmtpForm({
   return (
     <div className={cardClass}>
       <h2 className="mb-4 text-lg font-semibold text-gray-900">
-        Email (SMTP)
+        {t('smtp_settings')}
       </h2>
       <p className="mb-3 text-sm text-gray-500">
-        Required for password reset emails.
+        {t('smtp_required')}
       </p>
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label htmlFor="smtp_host" className={labelClass}>
-              SMTP Host
+              {t('smtp_host')}
             </label>
             <input
               id="smtp_host"
@@ -67,7 +68,7 @@ export default function SmtpForm({
           </div>
           <div>
             <label htmlFor="smtp_port" className={labelClass}>
-              Port
+              {t('smtp_port')}
             </label>
             <input
               id="smtp_port"
@@ -81,7 +82,7 @@ export default function SmtpForm({
         </div>
         <div>
           <label htmlFor="smtp_user" className={labelClass}>
-            Username
+            {t('smtp_username')}
           </label>
           <input
             id="smtp_user"
@@ -94,20 +95,20 @@ export default function SmtpForm({
         </div>
         <div>
           <label htmlFor="smtp_pass" className={labelClass}>
-            Password
+            {t('password')}
           </label>
           <input
             id="smtp_pass"
             type="password"
             value={settings.smtp_pass || ''}
             onChange={(e) => onUpdate('smtp_pass', e.target.value)}
-            placeholder="Enter SMTP password"
+            placeholder={t('smtp_password_placeholder')}
             className={inputClass}
           />
         </div>
         <div>
           <label htmlFor="smtp_from" className={labelClass}>
-            From Address
+            {t('smtp_from')}
           </label>
           <input
             id="smtp_from"
@@ -123,7 +124,7 @@ export default function SmtpForm({
             type="email"
             value={smtpTestTo}
             onChange={(e) => setSmtpTestTo(e.target.value)}
-            placeholder="Send test to..."
+            placeholder={t('smtp_send_test')}
             className={inputClass + ' max-w-xs'}
           />
           <button
@@ -131,13 +132,13 @@ export default function SmtpForm({
             disabled={testingSmtp || !smtpTestTo}
             className={btnSecondary + ' whitespace-nowrap'}
           >
-            {testingSmtp ? 'Sending...' : 'Send Test Email'}
+            {testingSmtp ? t('sending') : t('smtp_test')}
           </button>
         </div>
         {smtpTestResult && (
           <p
             className={`text-sm font-medium ${
-              smtpTestResult.ok ? 'text-emerald-600' : 'text-red-600'
+              smtpTestResult.ok ? 'text-primary-600' : 'text-red-600'
             }`}
           >
             {smtpTestResult.msg}

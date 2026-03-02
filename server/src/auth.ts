@@ -7,7 +7,7 @@ import { getDB } from "./database.js";
 declare global {
   namespace Express {
     interface Request {
-      user?: { id: number; role: string };
+      user?: { id: number; role: string; piiAccessLevel?: 'full' | 'restricted' };
     }
   }
 }
@@ -25,16 +25,20 @@ export async function verifyPassword(
   return bcrypt.compare(password, hash);
 }
 
-export function generateJWT(payload: { id: number; role: string }): string {
+export function generateJWT(payload: { id: number; role: string; piiAccessLevel?: 'full' | 'restricted' }): string {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: "30d" });
 }
 
 export function verifyJWT(
   token: string
-): { id: number; role: string } | null {
+): { id: number; role: string; piiAccessLevel?: 'full' | 'restricted' } | null {
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as jwt.JwtPayload;
-    return { id: decoded.id as number, role: decoded.role as string };
+    return {
+      id: decoded.id as number,
+      role: decoded.role as string,
+      piiAccessLevel: decoded.piiAccessLevel as 'full' | 'restricted' | undefined,
+    };
   } catch {
     return null;
   }

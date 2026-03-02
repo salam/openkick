@@ -81,7 +81,7 @@ export default function SetupPage() {
   if (checking) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-600 border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent" />
       </div>
     );
   }
@@ -103,7 +103,7 @@ export default function SetupPage() {
       <div className="w-full max-w-sm">
         {/* Branding */}
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-emerald-600">OpenKick</h1>
+          <h1 className="text-3xl font-bold text-primary-600">OpenKick</h1>
           <p className="mt-1 text-sm text-gray-500">{t('youth_football_mgmt')}</p>
         </div>
 
@@ -133,7 +133,7 @@ export default function SetupPage() {
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="mb-4 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            className="mb-4 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
             placeholder="Your name"
             autoComplete="name"
           />
@@ -146,7 +146,7 @@ export default function SetupPage() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="mb-4 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            className="mb-4 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
             placeholder="you@example.com"
             autoComplete="email"
           />
@@ -160,7 +160,7 @@ export default function SetupPage() {
             minLength={8}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mb-4 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            className="mb-4 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
             placeholder="••••••••"
             autoComplete="new-password"
           />
@@ -174,7 +174,7 @@ export default function SetupPage() {
             minLength={8}
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            className="mb-6 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            className="mb-6 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
             placeholder="••••••••"
             autoComplete="new-password"
           />
@@ -182,7 +182,7 @@ export default function SetupPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-xl bg-emerald-500 px-6 py-3 text-sm font-medium text-white transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 disabled:opacity-50"
+            className="w-full rounded-xl bg-primary-500 px-6 py-3 text-sm font-medium text-white transition hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-offset-2 disabled:opacity-50"
           >
             {loading ? '...' : t('setup_submit')}
           </button>

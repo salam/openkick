@@ -147,7 +147,7 @@ export default function PaymentSettingsPage() {
         <h1 className="text-2xl font-bold text-gray-900">{t('payments_settings')}</h1>
         <Link
           href="/dashboard/payments/"
-          className="text-sm text-emerald-600 hover:text-emerald-800"
+          className="text-sm text-primary-600 hover:text-primary-800"
         >
           &larr; {t('payments_title')}
         </Link>
@@ -166,7 +166,7 @@ export default function PaymentSettingsPage() {
                     type="checkbox"
                     checked={prov.enabled}
                     onChange={(e) => updateProvider(prov.id, { enabled: e.target.checked })}
-                    className="rounded border-gray-300 text-emerald-600"
+                    className="rounded border-gray-300 text-primary-600"
                   />
                   {t('payments_enabled')}
                 </label>
@@ -175,7 +175,7 @@ export default function PaymentSettingsPage() {
                     type="checkbox"
                     checked={prov.testMode}
                     onChange={(e) => updateProvider(prov.id, { testMode: e.target.checked })}
-                    className="rounded border-gray-300 text-emerald-600"
+                    className="rounded border-gray-300 text-primary-600"
                   />
                   {t('payments_test_mode')}
                 </label>
@@ -211,7 +211,7 @@ export default function PaymentSettingsPage() {
                       value={prov.config[field.key] || ''}
                       onChange={(e) => updateProviderConfig(prov.id, field.key, e.target.value)}
                       placeholder={field.secret ? '••••••••' : ''}
-                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:ring-emerald-500"
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-primary-500"
                     />
                   </div>
                 ))}
@@ -231,7 +231,7 @@ export default function PaymentSettingsPage() {
                 type="checkbox"
                 checked={uc.enabled}
                 onChange={(e) => updateUseCase(uc.id, { enabled: e.target.checked })}
-                className="rounded border-gray-300 text-emerald-600"
+                className="rounded border-gray-300 text-primary-600"
               />
               {t(USE_CASE_LABELS[uc.id] || uc.id)}
             </label>
@@ -266,7 +266,7 @@ export default function PaymentSettingsPage() {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="rounded-md bg-emerald-600 px-6 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+          className="rounded-md bg-primary-600 px-6 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
         >
           {saving ? 'Saving...' : 'Save'}
         </button>

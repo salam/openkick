@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import { t, getLanguage } from '@/lib/i18n';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 
@@ -56,7 +56,7 @@ interface RawResponsesData {
 /* ── Helpers ───────────────────────────────────────────────────────── */
 
 const STATUS_BADGE: Record<SurveyDetail['status'], string> = {
-  open: 'bg-emerald-100 text-emerald-700',
+  open: 'bg-primary-100 text-primary-700',
   closed: 'bg-gray-100 text-gray-600',
   archived: 'bg-gray-50 text-gray-400',
 };
@@ -185,7 +185,7 @@ export default function SurveyDetailClient() {
             <span className="w-32 shrink-0 truncate text-gray-700">{option}</span>
             <div className="relative h-5 flex-1 rounded bg-gray-100">
               <div
-                className="absolute left-0 top-0 h-5 rounded bg-emerald-400"
+                className="absolute left-0 top-0 h-5 rounded bg-primary-400"
                 style={{ width: `${(count / maxCount) * 100}%` }}
               />
             </div>
@@ -343,7 +343,7 @@ export default function SurveyDetailClient() {
       {/* Back link */}
       <button
         onClick={() => router.push('/surveys/')}
-        className="mb-4 text-sm text-emerald-600 hover:underline"
+        className="mb-4 text-sm text-primary-600 hover:underline"
       >
         &larr; {t('surveys')}
       </button>
@@ -372,11 +372,11 @@ export default function SurveyDetailClient() {
                 value={titleDraft}
                 onChange={(e) => setTitleDraft(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Escape') setEditingTitle(false); }}
-                className="rounded-lg border border-gray-300 px-3 py-1.5 text-lg font-bold text-gray-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                className="rounded-lg border border-gray-300 px-3 py-1.5 text-lg font-bold text-gray-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
               />
               <button
                 type="submit"
-                className="rounded-lg bg-emerald-500 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-emerald-600"
+                className="rounded-lg bg-primary-500 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-primary-600"
               >
                 {t('save')}
               </button>
@@ -393,7 +393,7 @@ export default function SurveyDetailClient() {
               <h1 className="text-2xl font-bold text-gray-900">{survey.title}</h1>
               <button
                 onClick={() => { setTitleDraft(survey.title); setEditingTitle(true); }}
-                className="text-sm text-gray-400 opacity-0 transition group-hover:opacity-100 hover:text-emerald-600"
+                className="text-sm text-gray-400 opacity-0 transition group-hover:opacity-100 hover:text-primary-600"
                 title={t('survey_rename')}
               >
                 &#9998;
@@ -448,7 +448,7 @@ export default function SurveyDetailClient() {
             />
             <button
               onClick={copyLink}
-              className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-600"
+              className="rounded-xl bg-primary-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-600"
             >
               {copied ? t('survey_link_copied') : t('survey_copy_link')}
             </button>
@@ -482,7 +482,7 @@ export default function SurveyDetailClient() {
                 onClick={() => setViewMode('charts')}
                 className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
                   viewMode === 'charts'
-                    ? 'bg-emerald-500 text-white'
+                    ? 'bg-primary-500 text-white'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
@@ -492,7 +492,7 @@ export default function SurveyDetailClient() {
                 onClick={() => setViewMode('table')}
                 className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
                   viewMode === 'table'
-                    ? 'bg-emerald-500 text-white'
+                    ? 'bg-primary-500 text-white'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >

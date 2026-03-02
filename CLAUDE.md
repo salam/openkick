@@ -20,7 +20,11 @@
 - Coordinate with other agents before removing their in-progress edits—don't revert or delete work you didn't author unless everyone agrees.
 - Moving/renaming and restoring files is allowed.
 
-- By default, run implementations as Subagent-Driven (same session) — and dispatch a fresh subagent per task, review between tasks, fast iteration. Don't ask this each time, if sub-agent-driven or parallel session. Automatically pick "1. Subagent-Driven".
+- By default, run implementations as Subagent-Driven (same session) — and dispatch a fresh subagent per task, review between tasks, fast iteration. Don't ask this each time, if sub-agent-driven or parallel session. Automatically pick "1. Subagent-Driven", and go for it.
+
+- By default, just go with the plan variant that you're most confident.
+
+- By default, don't stop the conversation by asking, if the consolidated plan is okay. Just go for it. Less interruptions.
 
 # ATOMIC COMMITS
 
@@ -56,3 +60,31 @@ When a bug is reported, before fixing, do the following:
 The Product Requirements Document (PRD) is in `./requirements/FOOTBALL_TOOL_Attendance_and_Tournament_Management.md`.
 
 The original thought is in `./requirements/original-prompt.txt`.
+
+
+# USER DOCUMENTATION
+
+User-facing guides live in `./docs/`:
+- `docs/QUICK_START_PARENTS.md` — Quick start for parents
+- `docs/QUICK_START_COACHES.md` — Quick start for coaches
+- `docs/FAQ.md` — Extended FAQ (parents, coaches, technical)
+
+When implementing a new feature that changes user-facing behaviour:
+1. Update the relevant guide(s) in `./docs/` to reflect the new functionality.
+2. If the feature adds a new FAQ-worthy topic, add it to `docs/FAQ.md`.
+3. Keep the language simple and jargon-free — these docs are for non-technical parents and volunteer coaches.
+4. Update `FEATURES.md` to check off completed items and add new ones.
+
+# BLUEPRINTS
+
+There are blueprints and proactive research for implementations in `./docs/blueprints` and `./docs/guides`.
+
+# DESIGN
+
+There's a design guideline in `CICD.md`.
+
+# AUTHORING
+
+Don't write or mention Claude in code comments. So don't add those lines here:
+
+"Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"

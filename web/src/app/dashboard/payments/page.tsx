@@ -83,7 +83,7 @@ export default function PaymentsPage() {
         <h1 className="text-2xl font-bold text-gray-900">{t('payments_title')}</h1>
         <Link
           href="/dashboard/payments/settings/"
-          className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+          className="rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
         >
           {t('payments_settings')}
         </Link>
@@ -165,10 +165,10 @@ export default function PaymentsPage() {
                         )}
                         {(tx.status === 'completed' || tx.status === 'refunded') && (
                           <a
-                            href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/payments/receipt/${tx.id}`}
+                            href={`${process.env.NEXT_PUBLIC_API_URL || ''}/api/payments/receipt/${tx.id}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-emerald-600 hover:text-emerald-800"
+                            className="text-primary-600 hover:text-primary-800"
                           >
                             {t('payments_receipt')}
                           </a>

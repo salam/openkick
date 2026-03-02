@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { t, getLanguage } from '@/lib/i18n';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 /* ── Types ──────────────────────────────────────────────────────────── */
 
@@ -44,7 +44,7 @@ function statusLabel(status: TournamentView['status']): string {
 }
 
 const STATUS_CLASSES: Record<TournamentView['status'], string> = {
-  open: 'bg-emerald-100 text-emerald-700',
+  open: 'bg-primary-100 text-primary-700',
   closing_soon: 'bg-amber-100 text-amber-800',
   closed: 'bg-red-100 text-red-800',
 };
@@ -119,7 +119,7 @@ export default function PublicTournamentClient() {
           </h2>
           <a
             href="/"
-            className="mt-4 inline-block text-sm text-emerald-600 underline hover:text-emerald-800"
+            className="mt-4 inline-block text-sm text-primary-600 underline hover:text-primary-800"
           >
             {t('back_to_home')}
           </a>
@@ -132,7 +132,7 @@ export default function PublicTournamentClient() {
     <main className="mx-auto max-w-3xl space-y-8 px-4 py-8 sm:px-6">
       <div>
         <div className="mb-2 flex flex-wrap items-center gap-2">
-          <span className="inline-block rounded-full bg-emerald-100 px-3 py-0.5 text-xs font-semibold text-emerald-700">
+          <span className="inline-block rounded-full bg-primary-100 px-3 py-0.5 text-xs font-semibold text-primary-700">
             {t('tournament')}
           </span>
           <span
@@ -188,7 +188,7 @@ export default function PublicTournamentClient() {
                     {team.players.map((p, j) => (
                       <span
                         key={j}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-xs font-semibold text-emerald-700"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 text-xs font-semibold text-primary-700"
                       >
                         {p.initial}
                       </span>
@@ -204,7 +204,7 @@ export default function PublicTournamentClient() {
       <div className="pt-4">
         <a
           href="/"
-          className="text-sm text-emerald-600 underline hover:text-emerald-800"
+          className="text-sm text-primary-600 underline hover:text-primary-800"
         >
           {t('back_to_home')}
         </a>

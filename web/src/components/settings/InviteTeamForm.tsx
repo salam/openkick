@@ -7,7 +7,7 @@ import { t } from '@/lib/i18n';
 const cardClass = 'rounded-lg border border-gray-200 bg-white p-6';
 const labelClass = 'block text-sm font-medium text-gray-700 mb-1';
 const inputClass =
-  'w-full rounded-xl border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500';
+  'w-full rounded-xl border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500';
 
 interface User {
   id: number;
@@ -177,7 +177,7 @@ export default function InviteTeamForm() {
         <button
           onClick={handleInvite}
           disabled={inviting || !inviteName.trim() || !inviteEmail.trim()}
-          className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-600 disabled:opacity-50"
+          className="rounded-xl bg-primary-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-600 disabled:opacity-50"
         >
           {inviting ? t('sending') : t('send_invite')}
         </button>
@@ -186,7 +186,7 @@ export default function InviteTeamForm() {
       {msg && (
         <p
           className={`mt-3 text-sm font-medium ${
-            msg.includes('Failed') || msg.includes('error') ? 'text-red-600' : 'text-emerald-600'
+            msg.includes('Failed') || msg.includes('error') ? 'text-red-600' : 'text-primary-600'
           }`}
         >
           {msg}
@@ -215,7 +215,7 @@ export default function InviteTeamForm() {
                       {t('password_not_set')}
                     </span>
                   ) : (
-                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-600">
+                    <span className="rounded-full bg-primary-50 px-2 py-0.5 text-xs font-medium text-primary-600">
                       {t('password_status')}
                     </span>
                   )}
@@ -224,10 +224,13 @@ export default function InviteTeamForm() {
                     </span>
                     <button
                       onClick={() => { setEditingPhoneId(editingPhoneId === u.id ? null : u.id); setEditPhoneValue(u.phone || ''); }}
-                      className="text-xs text-gray-400 hover:text-emerald-600"
+                      className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-primary-600"
                       title={t('edit_phone')}
                     >
                       {u.phone ? u.phone : t('edit_phone')}
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5 shrink-0">
+                        <path d="M13.488 2.513a1.75 1.75 0 0 0-2.475 0L3.05 10.476a.75.75 0 0 0-.188.335l-.758 2.86a.75.75 0 0 0 .918.918l2.86-.758a.75.75 0 0 0 .335-.188l7.963-7.963a1.75 1.75 0 0 0 0-2.475l-.692-.692ZM11.72 3.22a.25.25 0 0 1 .354 0l.692.692a.25.25 0 0 1 0 .354L5.95 11.08l-1.59.422.422-1.59 6.938-6.692Z" />
+                      </svg>
                     </button>
                   </div>
                 </div>
@@ -238,13 +241,13 @@ export default function InviteTeamForm() {
                       value={editPhoneValue}
                       onChange={(e) => setEditPhoneValue(e.target.value)}
                       placeholder="+41 79 123 45 67"
-                      className="flex-1 rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className="flex-1 rounded-lg border border-gray-300 px-2 py-1 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
                       onKeyDown={(e) => e.key === 'Enter' && handleSavePhone(u.id)}
                     />
                     <button
                       onClick={() => handleSavePhone(u.id)}
                       disabled={savingPhone || !editPhoneValue.trim()}
-                      className="rounded-lg bg-emerald-500 px-3 py-1 text-sm font-medium text-white hover:bg-emerald-600 disabled:opacity-50"
+                      className="rounded-lg bg-primary-500 px-3 py-1 text-sm font-medium text-white hover:bg-primary-600 disabled:opacity-50"
                     >
                       {savingPhone ? '...' : t('save')}
                     </button>
@@ -260,7 +263,7 @@ export default function InviteTeamForm() {
               <span className="text-sm font-medium text-gray-700">{t('password_check')}</span>
               <button
                 onClick={() => { setShowPwCheck(!showPwCheck); setPwCheckResult(null); setPwInput(''); }}
-                className="text-xs font-medium text-emerald-600 hover:text-emerald-700"
+                className="text-xs font-medium text-primary-600 hover:text-primary-700"
               >
                 {showPwCheck ? '×' : t('password_check')}
               </button>
@@ -272,13 +275,13 @@ export default function InviteTeamForm() {
                   value={pwInput}
                   onChange={(e) => setPwInput(e.target.value)}
                   placeholder="Enter your password"
-                  className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
                   onKeyDown={(e) => e.key === 'Enter' && handlePasswordCheck()}
                 />
                 <button
                   onClick={handlePasswordCheck}
                   disabled={checkingPw || !pwInput}
-                  className="rounded-lg bg-emerald-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-600 disabled:opacity-50"
+                  className="rounded-lg bg-primary-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-600 disabled:opacity-50"
                 >
                   {checkingPw ? t('password_checking') : t('password_check')}
                 </button>
@@ -287,16 +290,16 @@ export default function InviteTeamForm() {
             {pwCheckResult && (
               <div className="mt-2 space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className={`inline-block h-2 w-2 rounded-full ${pwCheckResult.acceptable ? 'bg-emerald-500' : 'bg-red-500'}`} />
-                  <span className={`text-sm font-medium ${pwCheckResult.acceptable ? 'text-emerald-700' : 'text-red-700'}`}>
+                  <span className={`inline-block h-2 w-2 rounded-full ${pwCheckResult.acceptable ? 'bg-primary-500' : 'bg-red-500'}`} />
+                  <span className={`text-sm font-medium ${pwCheckResult.acceptable ? 'text-primary-700' : 'text-red-700'}`}>
                     {pwCheckResult.acceptable ? t('password_strong') : t('password_weak')}
                     {' — '}
                     {t('password_status')}: {pwCheckResult.zxcvbnScore}/4
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className={`inline-block h-2 w-2 rounded-full ${pwCheckResult.pwnedCount === 0 ? 'bg-emerald-500' : pwCheckResult.pwnedCount === -1 ? 'bg-gray-400' : 'bg-red-500'}`} />
-                  <span className={`text-xs ${pwCheckResult.pwnedCount === 0 ? 'text-emerald-600' : pwCheckResult.pwnedCount === -1 ? 'text-gray-500' : 'text-red-600'}`}>
+                  <span className={`inline-block h-2 w-2 rounded-full ${pwCheckResult.pwnedCount === 0 ? 'bg-primary-500' : pwCheckResult.pwnedCount === -1 ? 'bg-gray-400' : 'bg-red-500'}`} />
+                  <span className={`text-xs ${pwCheckResult.pwnedCount === 0 ? 'text-primary-600' : pwCheckResult.pwnedCount === -1 ? 'text-gray-500' : 'text-red-600'}`}>
                     HIBP: {pwCheckResult.pwnedCount === 0 ? t('hibp_clean') : pwCheckResult.pwnedCount === -1 ? t('hibp_unknown') : t('hibp_breached')}
                     {pwCheckResult.pwnedCount > 0 && ` (${pwCheckResult.pwnedCount.toLocaleString()}×)`}
                   </span>
@@ -314,7 +317,7 @@ export default function InviteTeamForm() {
 
       {loadingUsers && (
         <div className="mt-4 flex justify-center">
-          <div className="h-5 w-5 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary-500 border-t-transparent" />
         </div>
       )}
     </div>

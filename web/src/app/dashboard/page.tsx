@@ -74,7 +74,7 @@ export default function DashboardPage() {
     filter === 'all' ? events : events.filter((e) => e.type === filter);
 
   const pendingResponses = events.reduce(
-    (sum, e) => sum + (e.totalPlayers - e.attendingCount),
+    (sum, e) => sum + ((e.totalPlayers ?? 0) - (e.attendingCount ?? 0)),
     0,
   );
 
@@ -117,16 +117,16 @@ export default function DashboardPage() {
       {/* Statistics link */}
       <Link
         href="/dashboard/stats/"
-        className="mb-8 flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-4 transition-colors hover:border-emerald-300 hover:bg-emerald-50"
+        className="mb-8 flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-4 transition-colors hover:border-primary-300 hover:bg-primary-50"
       >
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-100 text-primary-600">
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
           </svg>
         </div>
         <div>
-          <p className="text-sm font-semibold text-gray-900">Statistics &amp; Reports</p>
-          <p className="text-xs text-gray-500">Training hours, attendance rates, exports</p>
+          <p className="text-sm font-semibold text-gray-900">{t('stats_reports')}</p>
+          <p className="text-xs text-gray-500">{t('stats_reports_desc')}</p>
         </div>
       </Link>
 
@@ -138,7 +138,7 @@ export default function DashboardPage() {
             onClick={() => setFilter(btn.value)}
             className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
               filter === btn.value
-                ? 'bg-emerald-500 text-white'
+                ? 'bg-primary-500 text-white'
                 : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
             }`}
           >
@@ -150,7 +150,7 @@ export default function DashboardPage() {
       {/* Events grid */}
       {loading ? (
         <div className="flex justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-600 border-t-transparent" />
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent" />
         </div>
       ) : filteredEvents.length === 0 ? (
         <div className="rounded-lg border border-dashed border-gray-300 bg-white py-16 text-center">
@@ -162,13 +162,13 @@ export default function DashboardPage() {
           <div className="mt-4 flex justify-center gap-3">
             <Link
               href="/events/new/"
-              className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-600"
+              className="rounded-xl bg-primary-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-600"
             >
               {t('create_event')}
             </Link>
             <Link
               href="/events/new/?series=true"
-              className="rounded-xl border border-emerald-500 px-4 py-2 text-sm font-medium text-emerald-600 transition hover:bg-emerald-50"
+              className="rounded-xl border border-primary-500 px-4 py-2 text-sm font-medium text-primary-600 transition hover:bg-primary-50"
             >
               {t('create_series')}
             </Link>

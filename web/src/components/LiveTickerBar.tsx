@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { t, getLanguage } from '@/lib/i18n';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 interface TickerEntry {
   homeTeam: string;
@@ -72,13 +72,13 @@ export default function LiveTickerBar() {
   return (
     <Link
       href={`/live/${entry.tournamentId}`}
-      className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm transition hover:bg-emerald-100"
+      className="flex items-center gap-3 rounded-xl border border-primary-200 bg-primary-50 px-5 py-3 text-sm transition hover:bg-primary-100"
     >
       <span className="relative flex h-2.5 w-2.5">
-        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-        <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary-400 opacity-75" />
+        <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-primary-500" />
       </span>
-      <span className="font-semibold text-emerald-700">{t('live')}</span>
+      <span className="font-semibold text-primary-700">{t('live')}</span>
       <span className="text-gray-700">
         {entry.homeTeam}{' '}
         <span className="font-bold">

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { t, getLanguage } from '@/lib/i18n';
 
@@ -36,6 +36,8 @@ interface CalendarViewProps {
   onMonthClick?: (month: number) => void;
   onDayClick?: (date: string) => void;
   onChangeMonth?: (year: number, month: number) => void;
+  onFetchMonth?: (monthKey: string) => Promise<{ events: CalendarEvent[]; vacations: CalendarVacation[] }>;
+  filter?: string;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -345,63 +347,168 @@ function MonthlyView({
 
 // ── List View ──────────────────────────────────────────────────────────────
 
-function ListView({
-  events,
-  vacations,
-}: {
-  events: CalendarEvent[];
-  vacations: CalendarVacation[];
-}) {
-  // Group events and vacations by month
-  type ListItem =
-    | { kind: 'event'; data: CalendarEvent }
-    | { kind: 'vacation'; data: CalendarVacation };
+type ListItem =
+  | { kind: 'event'; data: CalendarEvent }
+  | { kind: 'vacation'; data: CalendarVacation };
 
-  const grouped = useMemo(() => {
-    const map: Record<string, ListItem[]> = {};
+/** Build sorted list items for a single month's events + vacations. */
+function buildMonthItems(
+  monthEvents: CalendarEvent[],
+  monthVacations: CalendarVacation[],
+  monthKey: string,
+): ListItem[] {
+  const items: ListItem[] = [];
 
-    // Add events
-    for (const ev of events) {
-      const key = ev.date.slice(0, 7); // YYYY-MM
-      (map[key] ??= []).push({ kind: 'event', data: ev });
-    }
+  for (const ev of monthEvents) {
+    items.push({ kind: 'event', data: ev });
+  }
 
-    // Add vacations into each month they span (deduplicate by id+month)
-    const addedVacMonths = new Set<string>();
-    for (const v of vacations) {
-      const start = new Date(v.startDate + 'T00:00:00');
-      const end = new Date(v.endDate + 'T00:00:00');
-      const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
-      while (cursor <= end) {
-        const key = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}`;
+  const addedVacMonths = new Set<string>();
+  for (const v of monthVacations) {
+    const start = new Date(v.startDate + 'T00:00:00');
+    const end = new Date(v.endDate + 'T00:00:00');
+    const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
+    while (cursor <= end) {
+      const key = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}`;
+      if (key === monthKey) {
         const dedup = `${v.id}:${key}`;
         if (!addedVacMonths.has(dedup)) {
           addedVacMonths.add(dedup);
-          (map[key] ??= []).push({ kind: 'vacation', data: v });
+          items.push({ kind: 'vacation', data: v });
         }
-        cursor.setMonth(cursor.getMonth() + 1);
       }
+      cursor.setMonth(cursor.getMonth() + 1);
     }
+  }
 
-    // Sort each month: vacations first (by startDate), then events (by date)
-    for (const key of Object.keys(map)) {
-      map[key].sort((a, b) => {
-        const dateA = a.kind === 'event' ? a.data.date : a.data.startDate;
-        const dateB = b.kind === 'event' ? b.data.date : b.data.startDate;
-        if (dateA !== dateB) return dateA.localeCompare(dateB);
-        // Vacations before events on same date
-        if (a.kind !== b.kind) return a.kind === 'vacation' ? -1 : 1;
-        return 0;
+  items.sort((a, b) => {
+    const dateA = a.kind === 'event' ? a.data.date : a.data.startDate;
+    const dateB = b.kind === 'event' ? b.data.date : b.data.startDate;
+    if (dateA !== dateB) return dateA.localeCompare(dateB);
+    if (a.kind !== b.kind) return a.kind === 'vacation' ? -1 : 1;
+    return 0;
+  });
+
+  return items;
+}
+
+function ListView({
+  events: initialEvents,
+  vacations: initialVacations,
+  onFetchMonth,
+  filter,
+}: {
+  events: CalendarEvent[];
+  vacations: CalendarVacation[];
+  onFetchMonth?: (monthKey: string) => Promise<{ events: CalendarEvent[]; vacations: CalendarVacation[] }>;
+  filter?: string;
+}) {
+  const now = new Date();
+  const initialMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+  const [months, setMonths] = useState<Record<string, { events: CalendarEvent[]; vacations: CalendarVacation[] }>>(() => ({
+    [initialMonthKey]: { events: initialEvents, vacations: initialVacations },
+  }));
+  const [loadingTop, setLoadingTop] = useState(false);
+  const [loadingBottom, setLoadingBottom] = useState(false);
+
+  const topSentinelRef = useRef<HTMLDivElement>(null);
+  const bottomSentinelRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Update initial month when props change
+  useEffect(() => {
+    setMonths(prev => ({
+      ...prev,
+      [initialMonthKey]: { events: initialEvents, vacations: initialVacations },
+    }));
+  }, [initialEvents, initialVacations, initialMonthKey]);
+
+  const sortedKeys = useMemo(() => Object.keys(months).sort(), [months]);
+
+  function prevMonthKey(key: string): string {
+    const [y, m] = key.split('-').map(Number);
+    const pm = m === 1 ? 12 : m - 1;
+    const py = m === 1 ? y - 1 : y;
+    return `${py}-${String(pm).padStart(2, '0')}`;
+  }
+
+  function nextMonthKey(key: string): string {
+    const [y, m] = key.split('-').map(Number);
+    const nm = m === 12 ? 1 : m + 1;
+    const ny = m === 12 ? y + 1 : y;
+    return `${ny}-${String(nm).padStart(2, '0')}`;
+  }
+
+  function monthDiff(a: string, b: string): number {
+    const [ay, am] = a.split('-').map(Number);
+    const [by, bm] = b.split('-').map(Number);
+    return (by - ay) * 12 + (bm - am);
+  }
+
+  const loadPrev = useCallback(async () => {
+    if (!onFetchMonth || loadingTop) return;
+    const earliest = sortedKeys[0];
+    if (!earliest) return;
+    const prev = prevMonthKey(earliest);
+    if (months[prev]) return;
+    if (monthDiff(prev, initialMonthKey) > 12) return;
+
+    setLoadingTop(true);
+    try {
+      const data = await onFetchMonth(prev);
+      const scrollEl = containerRef.current;
+      const scrollBefore = scrollEl?.scrollHeight ?? 0;
+      setMonths(p => ({ [prev]: data, ...p }));
+      requestAnimationFrame(() => {
+        if (scrollEl) {
+          const scrollAfter = scrollEl.scrollHeight;
+          scrollEl.scrollTop += scrollAfter - scrollBefore;
+        }
       });
+    } finally {
+      setLoadingTop(false);
     }
+  }, [onFetchMonth, loadingTop, sortedKeys, months, initialMonthKey]);
 
-    // Sort month keys
-    const sorted: Record<string, ListItem[]> = {};
-    for (const key of Object.keys(map).sort()) {
-      sorted[key] = map[key];
+  const loadNext = useCallback(async () => {
+    if (!onFetchMonth || loadingBottom) return;
+    const latest = sortedKeys[sortedKeys.length - 1];
+    if (!latest) return;
+    const next = nextMonthKey(latest);
+    if (months[next]) return;
+    if (monthDiff(initialMonthKey, next) > 12) return;
+
+    setLoadingBottom(true);
+    try {
+      const data = await onFetchMonth(next);
+      setMonths(p => ({ ...p, [next]: data }));
+    } finally {
+      setLoadingBottom(false);
     }
-    return sorted;
-  }, [events, vacations]);
+  }, [onFetchMonth, loadingBottom, sortedKeys, months, initialMonthKey]);
+
+  useEffect(() => {
+    const el = topSentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting) loadPrev(); },
+      { rootMargin: '200px' },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [loadPrev]);
+
+  useEffect(() => {
+    const el = bottomSentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting) loadNext(); },
+      { rootMargin: '200px' },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [loadNext]);
 
   function scrollToToday() {
     const el = document.getElementById('calendar-today');
@@ -411,8 +518,7 @@ function ListView({
   const todayStr = new Date().toISOString().slice(0, 10);
 
   return (
-    <div className="relative">
-      {/* Scroll to today button */}
+    <div ref={containerRef} className="relative">
       <button
         type="button"
         onClick={scrollToToday}
@@ -421,23 +527,40 @@ function ListView({
         {t('scroll_to_today')}
       </button>
 
-      {/* Grouped events and vacations */}
-      {Object.keys(grouped).length === 0 ? (
+      <div ref={topSentinelRef} className="h-1" />
+      {loadingTop && (
+        <div className="flex justify-center py-4">
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary-600 border-t-transparent" />
+        </div>
+      )}
+
+      {sortedKeys.length === 0 ? (
         <div className="rounded-lg border border-gray-200 bg-white py-12 text-center">
           <p className="text-sm text-gray-400">{t('no_events_found')}</p>
         </div>
       ) : (
-        Object.entries(grouped).map(([monthKey, items]) => {
+        sortedKeys.map((monthKey) => {
+          const { events: monthEvents, vacations: monthVacations } = months[monthKey];
           const [y, m] = monthKey.split('-').map(Number);
-          // Track rendered vacation IDs to avoid duplicates within a month
+
+          // Apply filter
+          const filteredEvents = filter && filter !== 'all'
+            ? monthEvents.filter(ev => ev.type === filter)
+            : monthEvents;
+
+          const items = buildMonthItems(filteredEvents, monthVacations, monthKey);
+
+          if (items.length === 0) return null;
+
           const renderedVacations = new Set<string>();
+
           return (
             <div key={monthKey} className="mb-8">
               <h3 className="mb-3 text-base font-semibold text-gray-900">
                 {t(MONTH_KEYS[m - 1])} {y}
               </h3>
               <div className="space-y-2">
-                {items.map((item, idx) => {
+                {items.map((item) => {
                   if (item.kind === 'vacation') {
                     const v = item.data;
                     if (renderedVacations.has(v.id)) return null;
@@ -454,7 +577,7 @@ function ListView({
                   }
 
                   const ev = item.data;
-                  const vacation = isInVacation(ev.date, vacations);
+                  const vacation = isInVacation(ev.date, monthVacations);
                   const isTodayEvent = ev.date === todayStr;
 
                   return (
@@ -522,6 +645,13 @@ function ListView({
           );
         })
       )}
+
+      {loadingBottom && (
+        <div className="flex justify-center py-4">
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary-600 border-t-transparent" />
+        </div>
+      )}
+      <div ref={bottomSentinelRef} className="h-1" />
     </div>
   );
 }
@@ -537,6 +667,8 @@ export default function CalendarView({
   onMonthClick,
   onDayClick,
   onChangeMonth,
+  onFetchMonth,
+  filter,
 }: CalendarViewProps) {
   const [, setLang] = useState(() => getLanguage());
   useEffect(() => {
@@ -580,5 +712,5 @@ export default function CalendarView({
     );
   }
 
-  return <ListView events={events} vacations={vacations} />;
+  return <ListView events={events} vacations={vacations} onFetchMonth={onFetchMonth} filter={filter} />;
 }

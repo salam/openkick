@@ -75,8 +75,15 @@ function CalendarPageContent() {
       const data = await apiFetch<CalendarApiResponse>(
         `/api/calendar?${params}`,
       );
-      // Merge trainings into events for unified rendering
-      const allEvents = [...(data.events || []), ...(data.trainings || [])];
+      // Merge trainings into events for unified rendering, but skip
+      // training-schedule entries for dates already covered by an event
+      // (avoids duplicates when both event-series and training-schedule exist)
+      const eventsArr = data.events || [];
+      const coveredDates = new Set(eventsArr.map((e: CalendarEvent) => e.date));
+      const uniqueTrainings = (data.trainings || []).filter(
+        (tr: CalendarEvent) => !coveredDates.has(tr.date),
+      );
+      const allEvents = [...eventsArr, ...uniqueTrainings];
       setEvents(allEvents);
       setVacations(data.vacations || []);
     } catch {
@@ -102,6 +109,19 @@ function CalendarPageContent() {
       }
     }
     loadSeries();
+  }, []);
+
+  // ── Fetch callback for infinite scroll in list view ─────────────────────
+
+  const fetchMonth = useCallback(async (monthKey: string) => {
+    const data = await apiFetch<CalendarApiResponse>(`/api/calendar?month=${monthKey}`);
+    const eventsArr = data.events || [];
+    const coveredDates = new Set(eventsArr.map((e: CalendarEvent) => e.date));
+    const uniqueTrainings = (data.trainings || []).filter(
+      (tr: CalendarEvent) => !coveredDates.has(tr.date),
+    );
+    const allEvents = [...eventsArr, ...uniqueTrainings];
+    return { events: allEvents, vacations: data.vacations || [] };
   }, []);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
@@ -138,7 +158,7 @@ function CalendarPageContent() {
           <h1 className="text-2xl font-bold text-gray-900">{t('calendar')}</h1>
           <Link
             href="/events/new/"
-            className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-600"
+            className="rounded-xl bg-primary-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-600"
           >
             {t('new_event')}
           </Link>
@@ -154,7 +174,7 @@ function CalendarPageContent() {
                 onClick={() => setViewMode(vm)}
                 className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
                   viewMode === vm
-                    ? 'bg-emerald-500 text-white'
+                    ? 'bg-primary-500 text-white'
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
@@ -200,7 +220,7 @@ function CalendarPageContent() {
         <div className="min-w-0 flex-1">
           {loading ? (
             <div className="flex justify-center py-12">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-600 border-t-transparent" />
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent" />
             </div>
           ) : (
             <CalendarView
@@ -215,6 +235,7 @@ function CalendarPageContent() {
                 console.log('Day clicked:', date);
               }}
               onChangeMonth={handleChangeMonth}
+              onFetchMonth={fetchMonth}
             />
           )}
         </div>
@@ -231,7 +252,7 @@ function CalendarPageContent() {
                 <ul className="space-y-2">
                   {trainingDays.map((dayKey) => (
                     <li key={dayKey} className="flex items-center gap-2 text-sm text-gray-700">
-                      <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
+                      <span className="h-2 w-2 shrink-0 rounded-full bg-primary-500" />
                       {t(dayKey)}
                     </li>
                   ))}

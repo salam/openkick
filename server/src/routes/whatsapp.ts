@@ -27,6 +27,7 @@ interface WAHAWebhookPayload {
     author?: string;
     body: string;
     hasMedia: boolean;
+    fromMe?: boolean;
     isGroupMsg?: boolean;
     media?: {
       data: string; // base64-encoded
@@ -186,6 +187,28 @@ whatsappRouter.post(
     // 6. Log incoming message
     if (messageId) {
       logMessage(messageId, phone, "in", body.payload.body);
+    }
+
+    // 6b. Sender filter gate: block unknown senders unless onboarding is allowed
+    if (!body.payload.fromMe) {
+      const knownGuardian = findGuardianByPhone(phone);
+      if (!knownGuardian) {
+        const session = getOrCreateSession(phone);
+        if (session.state === "idle") {
+          const settingDb = getDB();
+          const settingResult = settingDb.exec(
+            "SELECT value FROM settings WHERE key = 'bot_allow_onboarding'",
+          );
+          const allowOnboarding =
+            settingResult.length > 0 &&
+            settingResult[0].values.length > 0 &&
+            settingResult[0].values[0][0] === "true";
+          if (!allowOnboarding) {
+            res.status(200).json({ status: "ignored" });
+            return;
+          }
+        }
+      }
     }
 
     try {

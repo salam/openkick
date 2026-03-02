@@ -227,6 +227,9 @@ describe("WhatsApp webhook route", () => {
 
   // --- Unknown sender -> onboarding ---
   it("unknown sender triggers onboarding welcome and sets session state", async () => {
+    // Enable onboarding so the sender filter gate lets unknown senders through
+    db.run("INSERT OR REPLACE INTO settings (key, value) VALUES ('bot_allow_onboarding', 'true')");
+
     const { sendMessage } = await import("../../services/whatsapp.js");
     const { updateSessionState } = await import(
       "../../services/whatsapp-session.js"
@@ -603,6 +606,9 @@ describe("WhatsApp webhook route", () => {
 
   // --- Unknown sender in group -> react with interrobang ---
   it("reacts with interrobang to group message from unknown sender", async () => {
+    // Enable onboarding so the sender filter gate lets unknown senders through
+    db.run("INSERT OR REPLACE INTO settings (key, value) VALUES ('bot_allow_onboarding', 'true')");
+
     const { sendMessage, reactToMessage } = await import(
       "../../services/whatsapp.js"
     );

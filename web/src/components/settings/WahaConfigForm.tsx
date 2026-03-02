@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { apiFetch } from '@/lib/api';
 import { getToken } from '@/lib/auth';
 import type { SettingsFormProps } from './ClubProfileForm';
+import { t } from '@/lib/i18n';
 
 const cardClass = 'rounded-lg border border-gray-200 bg-white p-6';
 const labelClass = 'block text-sm font-medium text-gray-700 mb-1';
@@ -41,6 +42,7 @@ export default function WahaConfigForm({
   const [installError, setInstallError] = useState<string | null>(null);
   const [containerAction, setContainerAction] = useState(false);
   const [groupMsg, setGroupMsg] = useState('');
+  const [startingSession, setStartingSession] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const wahaUrl = settings.waha_url || '';
@@ -146,6 +148,15 @@ export default function WahaConfigForm({
     setContainerAction(false);
   };
 
+  // ── Start WAHA session (triggers QR code) ──────────────────────
+  const handleStartSession = async () => {
+    setStartingSession(true);
+    try {
+      await apiFetch('/api/setup-waha/waha/session/start', { method: 'POST' });
+    } catch { /* polling will pick up state change */ }
+    setStartingSession(false);
+  };
+
   // ── Poll session status ─────────────────────────────────────────
   const pollSession = useCallback(async () => {
     if (!wahaUrl) {
@@ -241,11 +252,11 @@ export default function WahaConfigForm({
         body: JSON.stringify({ inviteLink: inviteLink.trim() }),
       });
       setInviteLink('');
-      setGroupMsg('Joined group successfully.');
+      setGroupMsg(t('joined_group'));
       loadGroups();
     } catch (err) {
       setGroupMsg(
-        err instanceof Error ? err.message : 'Failed to join group.',
+        err instanceof Error ? err.message : t('failed_join'),
       );
     } finally {
       setJoining(false);
@@ -262,7 +273,7 @@ export default function WahaConfigForm({
       });
       setGroups((prev) => prev.filter((g) => g.id !== groupId));
     } catch {
-      setGroupMsg('Failed to leave group.');
+      setGroupMsg(t('failed_leave'));
       setTimeout(() => setGroupMsg(''), 4000);
     }
   }
@@ -279,26 +290,24 @@ export default function WahaConfigForm({
 
   const statusLabel =
     status === 'connected'
-      ? `Connected${pushName ? ` as "${pushName}"` : ''}`
+      ? t('waha_connected') + (pushName ? ` as "${pushName}"` : '')
       : status === 'qr_pending'
-        ? 'Waiting for QR scan...'
+        ? t('waha_waiting')
         : status === 'checking'
-          ? 'Checking...'
-          : 'Disconnected';
+          ? t('waha_checking')
+          : t('waha_disconnected');
 
   return (
     <div className={cardClass}>
       <h2 className="mb-4 text-lg font-semibold text-gray-900">
-        WAHA Configuration
+        {t('waha_config')}
       </h2>
 
       {/* Info box */}
       <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-900 space-y-1.5">
-        <p className="font-medium">What is WAHA?</p>
+        <p className="font-medium">{t('what_is_waha')}</p>
         <p>
-          WAHA (WhatsApp HTTP API) is a self-hosted service that connects
-          OpenKick to WhatsApp. It runs as a Docker container on your server
-          and provides the bridge so the bot can receive and send messages.
+          {t('waha_desc')}
         </p>
       </div>
 
@@ -308,7 +317,7 @@ export default function WahaConfigForm({
         <div className="flex items-center gap-2 text-sm">
           <span className={`h-2 w-2 rounded-full ${dockerStatus === 'available' ? 'bg-emerald-500' : dockerStatus === 'unavailable' ? 'bg-red-500' : 'bg-gray-400 animate-pulse'}`} />
           <span className="text-gray-700">
-            Docker: {dockerStatus === 'available' ? 'Available' : dockerStatus === 'unavailable' ? 'Not found' : 'Checking...'}
+            Docker: {dockerStatus === 'available' ? t('docker_available') : dockerStatus === 'unavailable' ? t('docker_not_found_label') : t('waha_checking')}
           </span>
         </div>
 
@@ -316,13 +325,13 @@ export default function WahaConfigForm({
         {dockerStatus === 'unavailable' && !installingDocker && (
           <div className="rounded-md border border-amber-200 bg-amber-50 p-3 space-y-2">
             <p className="text-sm text-amber-900">
-              Docker is required to run WAHA. Click below to install it automatically.
+              {t('docker_required_msg')}
             </p>
             <button
               onClick={handleInstallDocker}
               className="rounded-xl bg-amber-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-amber-700"
             >
-              Install Docker
+              {t('install_docker')}
             </button>
           </div>
         )}
@@ -330,7 +339,7 @@ export default function WahaConfigForm({
         {/* Docker installing */}
         {installingDocker && (
           <div className="space-y-2">
-            <p className="text-xs text-amber-600 font-medium">Installing Docker...</p>
+            <p className="text-xs text-amber-600 font-medium">{t('installing_docker')}</p>
             <pre className="max-h-40 overflow-y-auto rounded-lg bg-gray-900 p-3 text-xs text-green-400">
               {dockerLog.join('\n') || 'Starting...'}
             </pre>
@@ -343,16 +352,16 @@ export default function WahaConfigForm({
             <div className="flex items-center gap-2 text-sm">
               <span className={`h-2 w-2 rounded-full ${containerStatus === 'running' ? 'bg-emerald-500' : containerStatus === 'stopped' ? 'bg-amber-500' : containerStatus === 'not_found' ? 'bg-red-500' : 'bg-gray-400 animate-pulse'}`} />
               <span className="text-gray-700">
-                WAHA Container: {containerStatus === 'running' ? 'Running' : containerStatus === 'stopped' ? 'Stopped' : containerStatus === 'not_found' ? 'Not installed' : 'Checking...'}
+                {t('waha_container')}: {containerStatus === 'running' ? t('waha_running') : containerStatus === 'stopped' ? t('waha_stopped') : containerStatus === 'not_found' ? t('waha_not_installed') : t('waha_checking')}
               </span>
               {containerStatus === 'running' && (
                 <button onClick={handleStopWaha} disabled={containerAction} className="ml-2 rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-50">
-                  Stop
+                  {t('waha_stop')}
                 </button>
               )}
               {containerStatus === 'stopped' && (
                 <button onClick={handleStartWaha} disabled={containerAction} className="ml-2 rounded border border-emerald-300 px-2 py-0.5 text-xs text-emerald-700 hover:bg-emerald-50 disabled:opacity-50">
-                  Start
+                  {t('waha_start')}
                 </button>
               )}
             </div>
@@ -362,13 +371,13 @@ export default function WahaConfigForm({
                 onClick={handleInstallWaha}
                 className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700"
               >
-                Install & Start WAHA
+                {t('install_waha')}
               </button>
             )}
 
             {installing && (
               <div className="space-y-2">
-                <p className="text-xs text-emerald-600 font-medium">Installing WAHA...</p>
+                <p className="text-xs text-emerald-600 font-medium">{t('installing_waha')}</p>
                 <pre className="max-h-32 overflow-y-auto rounded-lg bg-gray-900 p-3 text-xs text-green-400">
                   {installLog.join('\n') || 'Starting...'}
                 </pre>
@@ -379,7 +388,7 @@ export default function WahaConfigForm({
               <div className="space-y-2">
                 <p className="text-xs text-red-600">Error: {installError}</p>
                 <button onClick={handleInstallWaha} className="rounded-xl border border-gray-300 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50">
-                  Retry
+                  {t('waha_retry')}
                 </button>
               </div>
             )}
@@ -390,7 +399,7 @@ export default function WahaConfigForm({
       {/* WAHA URL */}
       <div className="mb-4">
         <label htmlFor="waha_url" className={labelClass}>
-          WAHA URL
+          {t('waha_url')}
         </label>
         <input
           id="waha_url"
@@ -406,6 +415,15 @@ export default function WahaConfigForm({
       <div className="mb-4 flex items-center gap-2">
         <span className={`h-2.5 w-2.5 rounded-full ${statusDot}`} />
         <span className="text-sm text-gray-700">{statusLabel}</span>
+        {status === 'disconnected' && containerStatus === 'running' && (
+          <button
+            onClick={handleStartSession}
+            disabled={startingSession}
+            className="ml-2 rounded-xl bg-emerald-600 px-3 py-1 text-xs font-medium text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50"
+          >
+            {startingSession ? t('waha_checking') : t('link_whatsapp')}
+          </button>
+        )}
       </div>
 
       {/* Dashboard link when connected */}
@@ -416,7 +434,7 @@ export default function WahaConfigForm({
           rel="noopener noreferrer"
           className="mb-4 inline-block text-sm font-medium text-emerald-600 underline hover:text-emerald-700"
         >
-          Open WAHA Dashboard &rarr;
+          {t('open_waha_dashboard')}
         </a>
       )}
 
@@ -438,10 +456,9 @@ export default function WahaConfigForm({
             )}
           </div>
           <div className="text-sm text-gray-600">
-            <p className="font-medium">Scan with WhatsApp</p>
+            <p className="font-medium">{t('scan_whatsapp')}</p>
             <p className="mt-1 text-xs text-gray-400">
-              Open WhatsApp on your phone, go to Settings &gt; Linked Devices,
-              and scan this QR code to connect.
+              {t('scan_instruction')}
             </p>
           </div>
         </div>
@@ -451,12 +468,12 @@ export default function WahaConfigForm({
       {status === 'connected' && (
         <div className="mt-4 border-t border-gray-200 pt-4">
           <h3 className="mb-3 text-sm font-semibold text-gray-800">
-            WhatsApp Groups
+            {t('whatsapp_groups')}
           </h3>
 
           {groups.length === 0 ? (
             <p className="mb-3 text-xs text-gray-400">
-              No groups joined yet.
+              {t('no_groups')}
             </p>
           ) : (
             <ul className="mb-3 space-y-2">
@@ -472,7 +489,7 @@ export default function WahaConfigForm({
                     onClick={() => handleLeaveGroup(g.id)}
                     className="text-xs text-red-500 hover:text-red-700"
                   >
-                    Leave
+                    {t('leave')}
                   </button>
                 </li>
               ))}
@@ -485,7 +502,7 @@ export default function WahaConfigForm({
               type="text"
               value={inviteLink}
               onChange={(e) => setInviteLink(e.target.value)}
-              placeholder="Paste WhatsApp group invite link..."
+              placeholder={t('paste_invite_link')}
               className={inputClass}
             />
             <button
@@ -493,7 +510,7 @@ export default function WahaConfigForm({
               disabled={joining || !inviteLink.trim()}
               className="whitespace-nowrap rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50"
             >
-              {joining ? 'Joining...' : 'Join'}
+              {joining ? t('joining') : t('join')}
             </button>
           </div>
 

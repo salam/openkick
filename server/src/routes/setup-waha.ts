@@ -188,6 +188,24 @@ setupWahaRouter.post("/waha/stop", async (_req: Request, res: Response) => {
   }
 });
 
+// ── POST /waha/session/start ────────────────────────────────────────
+// Starts the WAHA WhatsApp session so it transitions to SCAN_QR_CODE.
+
+setupWahaRouter.post("/waha/session/start", async (_req: Request, res: Response) => {
+  const wahaUrl = getWahaUrl();
+  try {
+    const upstream = await fetch(`${wahaUrl}/api/sessions/default/start`, {
+      method: "POST",
+      headers: wahaHeaders(),
+    });
+    const data = await upstream.json();
+    res.json(data);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.status(502).json({ error: message });
+  }
+});
+
 // ── GET /waha/qr ────────────────────────────────────────────────────
 
 setupWahaRouter.get("/waha/qr", async (_req: Request, res: Response) => {

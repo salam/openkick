@@ -312,6 +312,7 @@ const translations: Record<string, Record<string, string>> = {
     waha_checking: 'Prüfe...',
     waha_disconnected: 'Nicht verbunden',
     open_waha_dashboard: 'WAHA Dashboard öffnen →',
+    link_whatsapp: 'WhatsApp verknüpfen',
     scan_whatsapp: 'Mit WhatsApp scannen',
     scan_instruction: 'Öffnen Sie WhatsApp auf Ihrem Telefon, gehen Sie zu Einstellungen > Verknüpfte Geräte, und scannen Sie diesen QR-Code.',
     whatsapp_groups: 'WhatsApp-Gruppen',
@@ -819,6 +820,19 @@ const translations: Record<string, Record<string, string>> = {
     security_preferred_languages_label: 'Bevorzugte Sprachen',
     security_canonical_url_label: 'Kanonische URL',
 
+    // ── Password Security & PII ─────────────────────────────────────────
+    weak_password_banner: 'Dein Passwort ist zu schwach. Persoenliche Daten (Telefon, Name, E-Mail) sind ausgeblendet.',
+    weak_password_banner_link: 'Passwort aendern',
+    password_status: 'Passwortstatus',
+    password_strong: 'Stark',
+    password_weak: 'Schwach',
+    password_not_set: 'Nicht gesetzt',
+    password_check: 'Pruefen',
+    password_checking: 'Pruefe...',
+    hibp_clean: 'Nicht in Leaks',
+    hibp_breached: 'In Datenleck gefunden',
+    hibp_unknown: 'Nicht geprueft',
+
     // ── Statistics ──────────────────────────────────────────────────────
     stats_reports: 'Statistiken & Berichte',
     stats_reports_desc: 'Trainingsstunden, Anwesenheitsraten, Exporte',
@@ -1172,6 +1186,7 @@ const translations: Record<string, Record<string, string>> = {
     waha_checking: 'Checking...',
     waha_disconnected: 'Disconnected',
     open_waha_dashboard: 'Open WAHA Dashboard →',
+    link_whatsapp: 'Link WhatsApp',
     scan_whatsapp: 'Scan with WhatsApp',
     scan_instruction: 'Open WhatsApp on your phone, go to Settings > Linked Devices, and scan this QR code to connect.',
     whatsapp_groups: 'WhatsApp Groups',
@@ -1653,6 +1668,19 @@ const translations: Record<string, Record<string, string>> = {
     security_preferred_languages_label: 'Preferred Languages',
     security_canonical_url_label: 'Canonical URL',
 
+    // ── Password Security & PII ─────────────────────────────────────────
+    weak_password_banner: 'Your password is too weak. Personal data (phone, name, email) is hidden.',
+    weak_password_banner_link: 'Change password',
+    password_status: 'Password status',
+    password_strong: 'Strong',
+    password_weak: 'Weak',
+    password_not_set: 'Not set',
+    password_check: 'Check',
+    password_checking: 'Checking...',
+    hibp_clean: 'Not in leaks',
+    hibp_breached: 'Found in data breach',
+    hibp_unknown: 'Not checked',
+
     // ── Statistics ──────────────────────────────────────────────────────
     stats_reports: 'Statistics & Reports',
     stats_reports_desc: 'Training hours, attendance rates, exports',
@@ -2006,6 +2034,7 @@ const translations: Record<string, Record<string, string>> = {
     waha_checking: 'Verification...',
     waha_disconnected: 'Deconnecte',
     open_waha_dashboard: 'Ouvrir le tableau de bord WAHA →',
+    link_whatsapp: 'Associer WhatsApp',
     scan_whatsapp: 'Scanner avec WhatsApp',
     scan_instruction: 'Ouvrez WhatsApp sur votre telephone, allez dans Parametres > Appareils lies, et scannez ce code QR.',
     whatsapp_groups: 'Groupes WhatsApp',

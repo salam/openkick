@@ -34,6 +34,8 @@ export default function WahaConfigForm({
   // Docker + WAHA container state
   const [dockerStatus, setDockerStatus] = useState<DockerStatus>('checking');
   const [containerStatus, setContainerStatus] = useState<WahaContainerStatus>('checking');
+  const [installingDocker, setInstallingDocker] = useState(false);
+  const [dockerLog, setDockerLog] = useState<string[]>([]);
   const [installing, setInstalling] = useState(false);
   const [installLog, setInstallLog] = useState<string[]>([]);
   const [installError, setInstallError] = useState<string | null>(null);
@@ -59,6 +61,40 @@ export default function WahaConfigForm({
   }, []);
 
   useEffect(() => { checkInfra(); }, [checkInfra]);
+
+  const handleInstallDocker = async () => {
+    setInstallingDocker(true);
+    setDockerLog([]);
+    const token = getToken();
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
+    try {
+      const res = await fetch(`${API_URL}/api/setup-waha/docker/install`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      const reader = res.body?.getReader();
+      const decoder = new TextDecoder();
+      if (!reader) return;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const text = decoder.decode(value);
+        for (const line of text.split('\n').filter(l => l.startsWith('data: '))) {
+          try {
+            const json = JSON.parse(line.slice(6));
+            if (json.type === 'progress') setDockerLog(prev => [...prev, json.text]);
+            if (json.type === 'done') setDockerStatus('available');
+            if (json.type === 'error') setDockerLog(prev => [...prev, `Error: ${json.text}`]);
+          } catch { /* ignore parse errors */ }
+        }
+      }
+    } catch {
+      setDockerLog(prev => [...prev, 'Failed to run Docker installer.']);
+    } finally {
+      setInstallingDocker(false);
+      checkInfra();
+    }
+  };
 
   const handleInstallWaha = async () => {
     setInstalling(true);
@@ -268,54 +304,86 @@ export default function WahaConfigForm({
 
       {/* Docker + Container status */}
       <div className="mb-4 space-y-3">
+        {/* Docker status */}
         <div className="flex items-center gap-2 text-sm">
           <span className={`h-2 w-2 rounded-full ${dockerStatus === 'available' ? 'bg-emerald-500' : dockerStatus === 'unavailable' ? 'bg-red-500' : 'bg-gray-400 animate-pulse'}`} />
           <span className="text-gray-700">
             Docker: {dockerStatus === 'available' ? 'Available' : dockerStatus === 'unavailable' ? 'Not found' : 'Checking...'}
           </span>
         </div>
-        <div className="flex items-center gap-2 text-sm">
-          <span className={`h-2 w-2 rounded-full ${containerStatus === 'running' ? 'bg-emerald-500' : containerStatus === 'stopped' ? 'bg-amber-500' : containerStatus === 'not_found' ? 'bg-red-500' : 'bg-gray-400 animate-pulse'}`} />
-          <span className="text-gray-700">
-            WAHA Container: {containerStatus === 'running' ? 'Running' : containerStatus === 'stopped' ? 'Stopped' : containerStatus === 'not_found' ? 'Not installed' : 'Checking...'}
-          </span>
-          {containerStatus === 'running' && (
-            <button onClick={handleStopWaha} disabled={containerAction} className="ml-2 rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-50">
-              Stop
-            </button>
-          )}
-          {containerStatus === 'stopped' && (
-            <button onClick={handleStartWaha} disabled={containerAction} className="ml-2 rounded border border-emerald-300 px-2 py-0.5 text-xs text-emerald-700 hover:bg-emerald-50 disabled:opacity-50">
-              Start
-            </button>
-          )}
-        </div>
 
-        {containerStatus === 'not_found' && dockerStatus === 'available' && !installing && (
-          <button
-            onClick={handleInstallWaha}
-            className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700"
-          >
-            Install & Start WAHA
-          </button>
+        {/* Docker not found — install button */}
+        {dockerStatus === 'unavailable' && !installingDocker && (
+          <div className="rounded-md border border-amber-200 bg-amber-50 p-3 space-y-2">
+            <p className="text-sm text-amber-900">
+              Docker is required to run WAHA. Click below to install it automatically.
+            </p>
+            <button
+              onClick={handleInstallDocker}
+              className="rounded-xl bg-amber-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-amber-700"
+            >
+              Install Docker
+            </button>
+          </div>
         )}
 
-        {installing && (
+        {/* Docker installing */}
+        {installingDocker && (
           <div className="space-y-2">
-            <p className="text-xs text-emerald-600 font-medium">Installing WAHA...</p>
-            <pre className="max-h-32 overflow-y-auto rounded-lg bg-gray-900 p-3 text-xs text-green-400">
-              {installLog.join('\n') || 'Starting...'}
+            <p className="text-xs text-amber-600 font-medium">Installing Docker...</p>
+            <pre className="max-h-40 overflow-y-auto rounded-lg bg-gray-900 p-3 text-xs text-green-400">
+              {dockerLog.join('\n') || 'Starting...'}
             </pre>
           </div>
         )}
 
-        {installError && (
-          <div className="space-y-2">
-            <p className="text-xs text-red-600">Error: {installError}</p>
-            <button onClick={handleInstallWaha} className="rounded-xl border border-gray-300 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50">
-              Retry
-            </button>
-          </div>
+        {/* WAHA container status — only show when Docker is available */}
+        {dockerStatus === 'available' && (
+          <>
+            <div className="flex items-center gap-2 text-sm">
+              <span className={`h-2 w-2 rounded-full ${containerStatus === 'running' ? 'bg-emerald-500' : containerStatus === 'stopped' ? 'bg-amber-500' : containerStatus === 'not_found' ? 'bg-red-500' : 'bg-gray-400 animate-pulse'}`} />
+              <span className="text-gray-700">
+                WAHA Container: {containerStatus === 'running' ? 'Running' : containerStatus === 'stopped' ? 'Stopped' : containerStatus === 'not_found' ? 'Not installed' : 'Checking...'}
+              </span>
+              {containerStatus === 'running' && (
+                <button onClick={handleStopWaha} disabled={containerAction} className="ml-2 rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-50">
+                  Stop
+                </button>
+              )}
+              {containerStatus === 'stopped' && (
+                <button onClick={handleStartWaha} disabled={containerAction} className="ml-2 rounded border border-emerald-300 px-2 py-0.5 text-xs text-emerald-700 hover:bg-emerald-50 disabled:opacity-50">
+                  Start
+                </button>
+              )}
+            </div>
+
+            {containerStatus === 'not_found' && !installing && (
+              <button
+                onClick={handleInstallWaha}
+                className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700"
+              >
+                Install & Start WAHA
+              </button>
+            )}
+
+            {installing && (
+              <div className="space-y-2">
+                <p className="text-xs text-emerald-600 font-medium">Installing WAHA...</p>
+                <pre className="max-h-32 overflow-y-auto rounded-lg bg-gray-900 p-3 text-xs text-green-400">
+                  {installLog.join('\n') || 'Starting...'}
+                </pre>
+              </div>
+            )}
+
+            {installError && (
+              <div className="space-y-2">
+                <p className="text-xs text-red-600">Error: {installError}</p>
+                <button onClick={handleInstallWaha} className="rounded-xl border border-gray-300 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50">
+                  Retry
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 

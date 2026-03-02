@@ -256,6 +256,7 @@ describe("GET /api/setup-waha/waha/qr", () => {
     expect(res.status).toBe(200);
     expect(fetchSpy).toHaveBeenCalledWith(
       expect.stringContaining("/api/screenshot?session=default"),
+      expect.objectContaining({ headers: expect.any(Object) }),
     );
     fetchSpy.mockRestore();
   });
@@ -295,6 +296,7 @@ describe("GET /api/setup-waha/waha/session", () => {
     expect(res.body).toEqual(sessionData);
     expect(fetchSpy).toHaveBeenCalledWith(
       expect.stringContaining("/api/sessions/default"),
+      expect.objectContaining({ headers: expect.any(Object) }),
     );
     fetchSpy.mockRestore();
   });

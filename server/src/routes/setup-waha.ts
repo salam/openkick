@@ -16,12 +16,23 @@ setupWahaRouter.use(authMiddleware, requireRole("admin"));
 
 const docker = new DockerService();
 
-// ── Helper: read waha_url from settings ─────────────────────────────
+// ── Helper: read waha_url and waha_api_key from settings ────────────
 
 function getWahaUrl(): string {
   const db = getDB();
   const result = db.exec("SELECT value FROM settings WHERE key = 'waha_url'");
   return (result[0]?.values[0]?.[0] as string) || process.env.WAHA_URL || "http://localhost:3008";
+}
+
+function getWahaApiKey(): string {
+  const db = getDB();
+  const result = db.exec("SELECT value FROM settings WHERE key = 'waha_api_key'");
+  return (result[0]?.values[0]?.[0] as string) || process.env.WAHA_API_KEY || "";
+}
+
+function wahaHeaders(): Record<string, string> {
+  const apiKey = getWahaApiKey();
+  return apiKey ? { "Content-Type": "application/json", "X-Api-Key": apiKey } : { "Content-Type": "application/json" };
 }
 
 // ── Helper: send SSE event ──────────────────────────────────────────
@@ -108,6 +119,12 @@ setupWahaRouter.post("/waha/install", async (req: Request, res: Response) => {
     return;
   }
 
+  const RESERVED_PORTS = [3000, 3001];
+  if (RESERVED_PORTS.includes(portNum)) {
+    res.status(400).json({ error: "Port is already used by another service (3000 = web, 3001 = API)" });
+    return;
+  }
+
   // Validate engine
   if (!engine || !VALID_ENGINES.includes(engine)) {
     res.status(400).json({ error: "Engine must be one of: WEBJS, NOWEB" });
@@ -122,16 +139,20 @@ setupWahaRouter.post("/waha/install", async (req: Request, res: Response) => {
   });
 
   try {
-    await docker.installWaha(
+    const { apiKey } = await docker.installWaha(
       { port: portNum, engine },
       (msg) => sendSSE(res, { type: "progress", text: msg }),
     );
 
-    // Save waha_url setting
+    // Save waha_url and waha_api_key settings
     const db = getDB();
     db.run("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", [
       "waha_url",
       `http://localhost:${portNum}`,
+    ]);
+    db.run("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", [
+      "waha_api_key",
+      apiKey,
     ]);
 
     sendSSE(res, { type: "done", wahaUrl: `http://localhost:${portNum}` });
@@ -172,7 +193,9 @@ setupWahaRouter.post("/waha/stop", async (_req: Request, res: Response) => {
 setupWahaRouter.get("/waha/qr", async (_req: Request, res: Response) => {
   const wahaUrl = getWahaUrl();
   try {
-    const upstream = await fetch(`${wahaUrl}/api/screenshot?session=default`);
+    const upstream = await fetch(`${wahaUrl}/api/screenshot?session=default`, {
+      headers: wahaHeaders(),
+    });
     const contentType = upstream.headers.get("content-type") || "image/png";
     res.setHeader("Content-Type", contentType);
     const buffer = Buffer.from(await upstream.arrayBuffer());
@@ -188,7 +211,9 @@ setupWahaRouter.get("/waha/qr", async (_req: Request, res: Response) => {
 setupWahaRouter.get("/waha/session", async (_req: Request, res: Response) => {
   const wahaUrl = getWahaUrl();
   try {
-    const upstream = await fetch(`${wahaUrl}/api/sessions/default`);
+    const upstream = await fetch(`${wahaUrl}/api/sessions/default`, {
+      headers: wahaHeaders(),
+    });
     const data = await upstream.json();
     res.json(data);
   } catch (err) {
@@ -203,7 +228,7 @@ setupWahaRouter.get("/waha/groups", async (_req: Request, res: Response) => {
   const wahaUrl = getWahaUrl();
   try {
     const upstream = await fetch(`${wahaUrl}/api/default/groups`, {
-      headers: { "Content-Type": "application/json" },
+      headers: wahaHeaders(),
     });
     if (!upstream.ok) {
       const text = await upstream.text().catch(() => "");
@@ -232,7 +257,7 @@ setupWahaRouter.post("/waha/groups/join", async (req: Request, res: Response) =>
   try {
     const upstream = await fetch(`${wahaUrl}/api/default/groups/join`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: wahaHeaders(),
       body: JSON.stringify({ code: inviteLink }),
     });
     if (!upstream.ok) {
@@ -264,7 +289,7 @@ setupWahaRouter.post("/waha/groups/leave", async (req: Request, res: Response) =
       `${wahaUrl}/api/default/groups/${encodeURIComponent(groupId)}/leave`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: wahaHeaders(),
       },
     );
     if (!upstream.ok) {

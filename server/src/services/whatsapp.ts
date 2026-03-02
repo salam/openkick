@@ -1,20 +1,28 @@
 import { getDB } from "../database.js";
 import { chatCompletion } from "./llm.js";
 
+function getSetting(key: string, fallback: string): string {
+  const db = getDB();
+  const result = db.exec(`SELECT value FROM settings WHERE key = '${key}'`);
+  return (result[0]?.values[0]?.[0] as string) || fallback;
+}
+
+function wahaFetchHeaders(): Record<string, string> {
+  const apiKey = getSetting("waha_api_key", process.env.WAHA_API_KEY || "");
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (apiKey) headers["X-Api-Key"] = apiKey;
+  return headers;
+}
+
 export async function sendMessage(
   phone: string,
   text: string,
 ): Promise<void> {
-  const db = getDB();
-  const result = db.exec(
-    "SELECT value FROM settings WHERE key = 'waha_url'",
-  );
-  const wahaUrl =
-    (result[0]?.values[0]?.[0] as string) || "http://localhost:3008";
+  const wahaUrl = getSetting("waha_url", "http://localhost:3008");
 
   await fetch(`${wahaUrl}/api/sendText`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: wahaFetchHeaders(),
     body: JSON.stringify({
       chatId: `${phone}@c.us`,
       text,
@@ -27,16 +35,11 @@ export async function reactToMessage(
   messageId: string,
   reaction: string,
 ): Promise<void> {
-  const db = getDB();
-  const result = db.exec(
-    "SELECT value FROM settings WHERE key = 'waha_url'",
-  );
-  const wahaUrl =
-    (result[0]?.values[0]?.[0] as string) || "http://localhost:3008";
+  const wahaUrl = getSetting("waha_url", "http://localhost:3008");
 
   await fetch(`${wahaUrl}/api/reaction`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: wahaFetchHeaders(),
     body: JSON.stringify({
       messageId,
       reaction,

@@ -1,4 +1,5 @@
 import Docker from "dockerode";
+import crypto from "node:crypto";
 
 const CONTAINER_NAME = "openkick-waha";
 const IMAGE_NAME = "devlikeapro/waha";
@@ -85,7 +86,7 @@ export class DockerService {
   async installWaha(
     config: WahaInstallConfig,
     onProgress?: (msg: string) => void,
-  ): Promise<void> {
+  ): Promise<{ apiKey: string }> {
     // Remove any existing container to allow re-runs
     try {
       const existing = this.docker.getContainer(CONTAINER_NAME);
@@ -117,6 +118,9 @@ export class DockerService {
       );
     });
 
+    // Generate a random API key for WAHA authentication
+    const apiKey = crypto.randomBytes(24).toString("hex");
+
     // Build the webhook URL
     const webhookUrl =
       process.env.WEBHOOK_URL ??
@@ -128,6 +132,7 @@ export class DockerService {
       Image: IMAGE_NAME,
       platform: "linux/amd64",
       Env: [
+        `WHATSAPP_API_KEY=${apiKey}`,
         `WHATSAPP_HOOK_URL=${webhookUrl}`,
         "WHATSAPP_HOOK_EVENTS=message",
         `WHATSAPP_DEFAULT_ENGINE=${config.engine}`,
@@ -141,6 +146,7 @@ export class DockerService {
     });
 
     await container.start();
+    return { apiKey };
   }
 
   /**

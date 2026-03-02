@@ -46,6 +46,24 @@ const en: Record<string, string> = {
     "Send your child's name with 'attending' or 'absent', e.g. 'Luca is coming' or 'Luca is sick'.",
   whatsapp_reminder_with_link:
     "Reminder: {{eventTitle}} on {{eventDate}}. Please respond!\n\nRespond online: {{url}}",
+  whatsapp_coach_attendance_overview:
+    "📋 {{eventTitle}} on {{eventDate}}\n✅ {{attending}}\n❌ {{absent}}\n❓ {{pending}}",
+  whatsapp_coach_event_cancelled:
+    "{{eventTitle}} on {{eventDate}} has been cancelled. All parents have been notified.",
+  whatsapp_coach_cancellation_notice:
+    "{{eventTitle}} on {{eventDate}} has been cancelled.",
+  whatsapp_coach_reminder_sent:
+    "{{count}} reminders sent for {{eventTitle}}.",
+  whatsapp_coach_mark_confirmed:
+    "{{playerName}} is marked as {{status}} for {{eventTitle}}.",
+  whatsapp_coach_no_event: "No upcoming event found.",
+  whatsapp_coach_player_not_found: "Player '{{name}}' not found.",
+  whatsapp_coach_admin_link:
+    "This feature is available in the web portal: {{url}}",
+  attendance_confirmed_label: "attending",
+  attendance_absent_label: "absent",
+  whatsapp_coach_help:
+    "Available commands:\n- Who's coming?\n- Match sheet?\n- Cancel training\n- Send reminder\n- [Name] attending/absent",
 };
 
 export default en;

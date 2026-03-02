@@ -46,6 +46,24 @@ const de: Record<string, string> = {
     "Sende den Namen deines Kindes mit 'kommt' oder 'kommt nicht', z.B. 'Luca kommt' oder 'Luca ist krank'.",
   whatsapp_reminder_with_link:
     "Erinnerung: {{eventTitle}} am {{eventDate}}. Bitte gib Bescheid!\n\nOnline antworten: {{url}}",
+  whatsapp_coach_attendance_overview:
+    "📋 {{eventTitle}} am {{eventDate}}\n✅ {{attending}}\n❌ {{absent}}\n❓ {{pending}}",
+  whatsapp_coach_event_cancelled:
+    "{{eventTitle}} am {{eventDate}} wurde abgesagt. Alle Eltern wurden benachrichtigt.",
+  whatsapp_coach_cancellation_notice:
+    "{{eventTitle}} am {{eventDate}} wurde abgesagt.",
+  whatsapp_coach_reminder_sent:
+    "{{count}} Erinnerungen fuer {{eventTitle}} gesendet.",
+  whatsapp_coach_mark_confirmed:
+    "{{playerName}} ist fuer {{eventTitle}} als {{status}} markiert.",
+  whatsapp_coach_no_event: "Kein bevorstehendes Event gefunden.",
+  whatsapp_coach_player_not_found: "Spieler '{{name}}' nicht gefunden.",
+  whatsapp_coach_admin_link:
+    "Diese Funktion ist im Webportal verfuegbar: {{url}}",
+  attendance_confirmed_label: "anwesend",
+  attendance_absent_label: "abwesend",
+  whatsapp_coach_help:
+    "Verfuegbare Befehle:\n- Wer kommt?\n- Aufstellung?\n- Training absagen\n- Erinnerung senden\n- [Name] anwesend/abwesend",
 };
 
 export default de;

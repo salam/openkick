@@ -21,7 +21,8 @@ vi.mock('@/lib/i18n', () => ({
     const translations: Record<string, string> = {
       imprint_title: 'Imprint',
       privacy_responsible: 'Responsible Entity',
-      legal_email: 'Contact',
+      imprint_contact: 'Contact',
+      legal_email: 'Contact Email',
       legal_phone: 'Phone',
       imprint_legal_ref: 'Information pursuant to §5 DDG, §5 ECG, Art. 3 OR',
       imprint_to_be_completed: 'to be completed',

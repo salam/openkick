@@ -106,7 +106,7 @@ export default function ImprintPage() {
 
       {/* Contact — always shown */}
       <section className="mb-8">
-        <h2 className="mb-3 text-lg font-semibold">{t('legal_email')}</h2>
+        <h2 className="mb-3 text-lg font-semibold">{t('imprint_contact')}</h2>
         <div className="space-y-1 text-gray-700">
           {email ? (
             <p>

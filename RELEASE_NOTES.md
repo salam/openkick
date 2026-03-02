@@ -1,5 +1,27 @@
 # OpenKick Release Notes
 
+## Version 1.18 (Mon, Mar 2 2026)
+
+* Imprint fallback — shows a legally sound minimal imprint even when legal settings are not yet configured
+* Legal reference header (DDG/ECG/OR) always displayed on imprint page
+* Smart data cascade: club name, contact info, DPO email, and admin user data are used as fallback values
+* Incomplete-notice box informs visitors that legal details are being finalised
+* Admin Security & PII Gating — zero-trust data exposure model
+* Strong password enforcement on admin login (12+ chars, mixed case, digit, special char, zxcvbn score 3+)
+* HIBP breach checking via k-anonymity — passwords found in data breaches trigger PII restriction
+* PII masking middleware — phone numbers, names, and emails are automatically masked in API responses
+* Only admins with verified strong passwords see unmasked personal data
+* Login response now includes password warnings to help admins choose stronger passwords
+* Password checks on setup, login, and password reset endpoints
+
+## Version 1.17 (Sun, Mar 2 2026)
+
+* Settings page reorganised into 5 navigable groups: General, Integrations, Security, Content, Team
+* Sidebar navigation with scroll-spy highlights the active section as you scroll
+* Mobile-friendly: sidebar collapses to a horizontal scrollable pill bar on small screens
+* Sticky header keeps the page title visible while scrolling
+* Floating save bar appears at the bottom when there are unsaved changes — always reachable
+
 ## Version 1.16 (Sat, Mar 1 2026)
 
 * Statistics & Reporting: semester-based stats dashboard for coaches and admins

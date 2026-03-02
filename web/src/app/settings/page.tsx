@@ -13,6 +13,7 @@ import SecurityContactForm from '@/components/settings/SecurityContactForm';
 import LegalPrivacyForm from '@/components/settings/LegalPrivacyForm';
 import HomepageAppearanceCard from '@/components/settings/HomepageAppearanceCard';
 import BotSettingsForm from '@/components/settings/BotSettingsForm';
+import BotActivityLog from '@/components/settings/BotActivityLog';
 
 const BOT_LANGUAGES = [
   { value: 'de', label: 'Deutsch' },
@@ -611,6 +612,7 @@ export default function SettingsPage() {
                   <LlmConfigForm settings={settings} onUpdate={update} onSaveKeys={saveKeys} />
                   <WahaConfigForm settings={settings} onUpdate={update} />
                   <BotSettingsForm settings={settings} onUpdate={update} onSaveKeys={saveKeys} />
+                  <BotActivityLog />
                   <SmtpForm settings={settings} onUpdate={update} onSaveKeys={saveKeys} />
 
                   {/* Holiday Sources */}

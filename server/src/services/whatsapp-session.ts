@@ -66,3 +66,26 @@ export function logMessage(
     [wahaMessageId, phone, direction, body, intent ?? null],
   );
 }
+
+export function updateMessageLog(
+  wahaMessageId: string,
+  fields: {
+    intent?: string;
+    action?: string;
+    playerId?: number;
+    eventId?: number;
+    outboundBody?: string;
+  },
+): void {
+  const db = getDB();
+  const sets: string[] = [];
+  const vals: (string | number | null)[] = [];
+  if (fields.intent !== undefined) { sets.push("intent = ?"); vals.push(fields.intent); }
+  if (fields.action !== undefined) { sets.push("action = ?"); vals.push(fields.action); }
+  if (fields.playerId !== undefined) { sets.push("playerId = ?"); vals.push(fields.playerId); }
+  if (fields.eventId !== undefined) { sets.push("eventId = ?"); vals.push(fields.eventId); }
+  if (fields.outboundBody !== undefined) { sets.push("outboundBody = ?"); vals.push(fields.outboundBody); }
+  if (sets.length === 0) return;
+  vals.push(wahaMessageId);
+  db.run(`UPDATE message_log SET ${sets.join(", ")} WHERE wahaMessageId = ?`, vals);
+}

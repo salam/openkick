@@ -25,6 +25,7 @@ vi.mock("../../services/whatsapp-session.js", () => ({
   resetSession: vi.fn(),
   isDuplicate: vi.fn(),
   logMessage: vi.fn(),
+  updateMessageLog: vi.fn(),
 }));
 
 // Mock the whatsapp-onboarding service

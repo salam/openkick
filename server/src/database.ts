@@ -523,6 +523,21 @@ export async function initDB(dbPath?: string): Promise<Database> {
     try { db.run('ALTER TABLE game_history_matches ADD COLUMN matchLabel TEXT'); } catch {}
   }
 
+  // Migrate: add action, playerId, eventId, outboundBody to message_log
+  const mlCols = db.exec("PRAGMA table_info(message_log)")[0]?.values.map(r => r[1]) ?? [];
+  if (!mlCols.includes('action')) {
+    try { db.run('ALTER TABLE message_log ADD COLUMN action TEXT'); } catch {}
+  }
+  if (!mlCols.includes('playerId')) {
+    try { db.run('ALTER TABLE message_log ADD COLUMN playerId INTEGER'); } catch {}
+  }
+  if (!mlCols.includes('eventId')) {
+    try { db.run('ALTER TABLE message_log ADD COLUMN eventId INTEGER'); } catch {}
+  }
+  if (!mlCols.includes('outboundBody')) {
+    try { db.run('ALTER TABLE message_log ADD COLUMN outboundBody TEXT'); } catch {}
+  }
+
   // Seed default settings (INSERT OR IGNORE to avoid duplicates)
   for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) {
     db.run("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", [key, value]);

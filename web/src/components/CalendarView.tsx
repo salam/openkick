@@ -457,14 +457,11 @@ function ListView({
     setLoadingTop(true);
     try {
       const data = await onFetchMonth(prev);
-      const scrollEl = containerRef.current;
-      const scrollBefore = scrollEl?.scrollHeight ?? 0;
+      const scrollBefore = document.documentElement.scrollHeight;
       setMonths(p => ({ [prev]: data, ...p }));
       requestAnimationFrame(() => {
-        if (scrollEl) {
-          const scrollAfter = scrollEl.scrollHeight;
-          scrollEl.scrollTop += scrollAfter - scrollBefore;
-        }
+        const scrollAfter = document.documentElement.scrollHeight;
+        window.scrollBy(0, scrollAfter - scrollBefore);
       });
     } finally {
       setLoadingTop(false);

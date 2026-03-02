@@ -164,8 +164,11 @@ whatsappRouter.post(
       return;
     }
 
-    // 1b. Ignore WhatsApp Status broadcasts (stories)
-    if (body.payload.from === "status@broadcast") {
+    // 1b. Ignore WhatsApp Status broadcasts (stories) and certificate/security-code changes
+    if (
+      body.payload.from === "status@broadcast" ||
+      (body.payload.body && /^\d+@c\.us$/.test(body.payload.body.trim()))
+    ) {
       res.status(200).json({ status: "ignored" });
       return;
     }

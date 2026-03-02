@@ -94,8 +94,10 @@ export class DockerService {
       // Container doesn't exist, which is fine
     }
 
-    // Pull the image
-    const stream = await this.docker.pull(IMAGE_NAME);
+    // Pull the image (force linux/amd64 — WAHA has no ARM64 build)
+    const stream = await this.docker.pull(IMAGE_NAME, {
+      platform: "linux/amd64",
+    });
 
     await new Promise<void>((resolve, reject) => {
       this.docker.modem.followProgress(
@@ -120,10 +122,11 @@ export class DockerService {
       process.env.WEBHOOK_URL ??
       `http://host.docker.internal:${process.env.PORT || 3001}/api/whatsapp/webhook`;
 
-    // Create the container
+    // Create the container (platform ensures amd64 on ARM hosts via Rosetta)
     const container = await this.docker.createContainer({
       name: CONTAINER_NAME,
       Image: IMAGE_NAME,
+      platform: "linux/amd64",
       Env: [
         `WHATSAPP_HOOK_URL=${webhookUrl}`,
         "WHATSAPP_HOOK_EVENTS=message",

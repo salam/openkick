@@ -147,7 +147,7 @@ describe("DockerService.installWaha", () => {
     await service.installWaha({ port: 3080, engine: "WEBJS" });
 
     // Verify pull
-    expect(mockPull).toHaveBeenCalledWith("devlikeapro/waha");
+    expect(mockPull).toHaveBeenCalledWith("devlikeapro/waha", { platform: "linux/amd64" });
 
     // Verify container creation
     expect(mockCreateContainer).toHaveBeenCalledOnce();

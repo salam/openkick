@@ -1,5 +1,33 @@
 # OpenKick Release Notes
 
+## Version 1.25 (Mon, Mar 2 2026)
+
+* Calendar list view now supports infinite scroll — scroll down for future months, scroll up for past months
+* Each event in the list view shows compact attendance info (attending count and absent count)
+* Type filter pills (All / Training / Tournament / Match) in list mode to quickly find events
+* Events page merged into Calendar — one unified place for all your events and schedule
+* Visiting /events now redirects to the Calendar list view
+
+## Version 1.24 (Mon, Mar 2 2026)
+
+* Weather forecast now shown on training and tournament cards (temperature, icon, precipitation %)
+* Weather for each event is geocoded from the event's location using OpenStreetMap Nominatim
+* Compact weather pill in the navbar header showing current conditions at the club location
+* Event detail pages show full weather description with temperature and precipitation
+* Geocoding results are cached for 30 days to respect API rate limits
+
+## Version 1.23 (Mon, Mar 2 2026)
+
+* Primary color setting now actually applies across the entire UI (buttons, links, badges, spinners, focus rings)
+* All 57 themed components now respond to the user-configured tint color
+
+## Version 1.22 (Mon, Mar 2 2026)
+
+* Edit guardian details (name, phone, email) directly from the player edit modal
+* Unlink a guardian from a player without deleting the guardian
+* Delete a guardian entirely (with confirmation) — removes them from all linked players
+* Coaches and admins are protected from accidental deletion
+
 ## Version 1.21 (Mon, Mar 2 2026)
 
 * Coaches and admins can now have a real phone number stored (for WhatsApp bot features)

@@ -195,15 +195,17 @@
 - [ ] Reminder/n8n integration (future)
 - [x] Frontend UI — dashboard page with tabbed view + event detail widget
 
-## Remaining — Surveys & Questionnaires (PRD 4.5.11, blueprint: SURVEYS.md)
+## Completed — Surveys & Questionnaires (PRD 4.5.11, blueprint: SURVEYS.md)
 
-- [ ] Survey builder (5 types: single choice, multi choice, rating, text, size picker)
-- [ ] Anonymous vs. identified survey modes
-- [ ] Survey templates: Trikot order, end-of-semester feedback
-- [ ] Shareable survey links with QR code generation
-- [ ] Survey deadlines and reminders
-- [ ] Results dashboard with aggregation
-- [ ] Close and archive surveys
+- [x] Survey builder (5 types: single choice, multi choice, rating, text, size picker)
+- [x] Anonymous vs. identified survey modes
+- [x] Survey templates: Trikot order, end-of-semester feedback
+- [x] Shareable survey links with QR code generation
+- [x] Survey deadlines (enforcement — blocks submissions after expiry)
+- [x] Results dashboard with aggregation (charts, table view, CSV export)
+- [x] Close and archive surveys
+- [x] Inline title editing (all stages)
+- [x] Template auto-naming with date and counter suffix
 
 ## Completed — Payments (PRD 4.5.12, blueprint: PAYMENTS.md)
 

@@ -1,5 +1,13 @@
 # OpenKick Release Notes
 
+## Version 1.21 (Mon, Mar 2 2026)
+
+* Coaches and admins can now have a real phone number stored (for WhatsApp bot features)
+* Add phone number when inviting a new team member (optional field)
+* Edit phone number inline in the team members list (both Settings page and InviteTeamForm)
+* Phone numbers are automatically normalized (stripping spaces, + and 00 prefix)
+* Duplicate phone numbers are rejected during invite and update
+
 ## Version 1.20 (Mon, Mar 2 2026)
 
 * WhatsApp bot now only responds to known contacts (guardians, coaches, admins)

@@ -1,8 +1,9 @@
 import { Router, type Request, type Response } from "express";
 import crypto from "node:crypto";
-import { getDB } from "../database.js";
-import { authMiddleware, requireRole } from "../auth.js";
+import { getDB, getLastInsertId } from "../database.js";
+import { authMiddleware, requireRole, verifyPassword } from "../auth.js";
 import { sendEmail } from "../services/email.js";
+import { checkAdminPassword } from "../services/password-check.service.js";
 
 export const usersRouter = Router();
 
@@ -14,7 +15,7 @@ usersRouter.get(
   (_req: Request, res: Response) => {
     const db = getDB();
     const result = db.exec(
-      "SELECT id, name, email, role, createdAt FROM guardians WHERE role IN ('admin', 'coach') ORDER BY createdAt ASC",
+      "SELECT id, name, email, phone, role, passwordHash, createdAt FROM guardians WHERE role IN ('admin', 'coach') ORDER BY createdAt ASC",
     );
 
     if (result.length === 0) {
@@ -28,6 +29,13 @@ usersRouter.get(
       cols.forEach((col, i) => {
         obj[col] = row[i];
       });
+      // Expose whether a password is set, not the hash itself
+      obj.hasPassword = !!obj.passwordHash;
+      delete obj.passwordHash;
+      // Hide the phone hack: if phone === email, don't expose it
+      if (obj.phone === obj.email) {
+        delete obj.phone;
+      }
       return obj;
     });
 
@@ -78,13 +86,64 @@ usersRouter.put(
   },
 );
 
+// Helper: normalize phone number (strip spaces, leading + and 00)
+function normalizePhone(raw: string): string {
+  return raw.replace(/\s+/g, "").replace(/^\+/, "").replace(/^00/, "");
+}
+
+// PUT /api/users/:id/phone — admin updates a user's phone number
+usersRouter.put(
+  "/users/:id/phone",
+  authMiddleware,
+  requireRole("admin"),
+  (req: Request, res: Response) => {
+    const { phone } = req.body;
+    const targetId = Number(req.params.id);
+
+    if (!phone || typeof phone !== "string" || !phone.trim()) {
+      res.status(400).json({ error: "phone is required" });
+      return;
+    }
+
+    const normalized = normalizePhone(phone);
+
+    const db = getDB();
+
+    // Check user exists
+    const target = db.exec(
+      "SELECT id FROM guardians WHERE id = ? AND role IN ('admin', 'coach')",
+      [targetId],
+    );
+    if (target.length === 0 || target[0].values.length === 0) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    // Check phone not taken by another user
+    const existing = db.exec(
+      "SELECT id FROM guardians WHERE phone = ? AND id != ?",
+      [normalized, targetId],
+    );
+    if (existing.length > 0 && existing[0].values.length > 0) {
+      res.status(409).json({ error: "This phone number is already in use" });
+      return;
+    }
+
+    db.run("UPDATE guardians SET phone = ? WHERE id = ?", [
+      normalized,
+      targetId,
+    ]);
+    res.json({ id: targetId, phone: normalized });
+  },
+);
+
 // POST /api/users/invite — invite a new coach or admin
 usersRouter.post(
   "/users/invite",
   authMiddleware,
   requireRole("admin", "coach"),
   async (req: Request, res: Response) => {
-    const { name, email, role } = req.body;
+    const { name, email, role, phone } = req.body;
 
     if (!name || !email || !role) {
       res.status(400).json({ error: "name, email, and role are required" });
@@ -102,16 +161,32 @@ usersRouter.post(
       return;
     }
 
+    // Normalize phone: strip spaces, leading + and 00 prefix
+    const normalizedPhone = phone ? normalizePhone(phone) : null;
+
     const db = getDB();
 
-    // Check for duplicate email (phone column stores email for coaches/admins)
-    const existing = db.exec(
-      "SELECT id FROM guardians WHERE email = ? OR phone = ?",
-      [email, email],
-    );
-    if (existing.length > 0 && existing[0].values.length > 0) {
-      res.status(409).json({ error: "A user with this email already exists" });
-      return;
+    // Check for duplicate email and phone
+    if (normalizedPhone) {
+      const existing = db.exec(
+        "SELECT id FROM guardians WHERE email = ? OR phone = ? OR phone = ?",
+        [email, email, normalizedPhone],
+      );
+      if (existing.length > 0 && existing[0].values.length > 0) {
+        res
+          .status(409)
+          .json({ error: "A user with this email or phone already exists" });
+        return;
+      }
+    } else {
+      const existing = db.exec(
+        "SELECT id FROM guardians WHERE email = ? OR phone = ?",
+        [email, email],
+      );
+      if (existing.length > 0 && existing[0].values.length > 0) {
+        res.status(409).json({ error: "A user with this email already exists" });
+        return;
+      }
     }
 
     const resetToken = crypto.randomBytes(32).toString("hex");
@@ -119,13 +194,14 @@ usersRouter.post(
       Date.now() + 24 * 60 * 60 * 1000,
     ).toISOString();
 
+    const phoneValue = normalizedPhone || email;
+
     db.run(
       "INSERT INTO guardians (phone, name, email, role, resetToken, resetTokenExpiry) VALUES (?, ?, ?, ?, ?, ?)",
-      [email, name, email, role, resetToken, resetTokenExpiry],
+      [phoneValue, name, email, role, resetToken, resetTokenExpiry],
     );
 
-    const idResult = db.exec("SELECT last_insert_rowid()");
-    const id = idResult[0].values[0][0] as number;
+    const id = getLastInsertId();
 
     const baseUrl =
       process.env.CORS_ORIGIN?.split(",")[0] || "http://localhost:3000";
@@ -187,5 +263,45 @@ usersRouter.post(
     }
 
     res.status(204).send();
+  },
+);
+
+// POST /api/users/check-password — current user checks their own password strength + HIBP
+usersRouter.post(
+  "/users/check-password",
+  authMiddleware,
+  requireRole("admin", "coach"),
+  async (req: Request, res: Response) => {
+    const { password } = req.body;
+    if (!password) {
+      res.status(400).json({ error: "password is required" });
+      return;
+    }
+
+    const db = getDB();
+    const result = db.exec(
+      "SELECT passwordHash FROM guardians WHERE id = ?",
+      [req.user!.id],
+    );
+
+    if (result.length === 0 || result[0].values.length === 0 || !result[0].values[0][0]) {
+      res.status(400).json({ error: "No password set" });
+      return;
+    }
+
+    const hash = result[0].values[0][0] as string;
+    const valid = await verifyPassword(password, hash);
+    if (!valid) {
+      res.status(401).json({ error: "Incorrect password" });
+      return;
+    }
+
+    const check = await checkAdminPassword(password);
+    res.json({
+      acceptable: check.acceptable,
+      reasons: check.reasons,
+      zxcvbnScore: check.zxcvbnScore,
+      pwnedCount: check.pwnedCount,
+    });
   },
 );

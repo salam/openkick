@@ -51,7 +51,8 @@
 - [x] WebFinger + DID well-known discovery endpoints
 - [x] Security audit service (8 self-checks: DB permissions, HTTP exposure, .env, CORS, admin passwords, security.txt, HTTPS, .gitignore)
 - [x] Admin-only GET /api/security-audit endpoint
-- [x] User management API (list, role changes, password reset, invite) with role-based permissions
+- [x] User management API (list, role changes, password reset, invite, phone number) with role-based permissions
+- [x] Phone number management for team users (PUT /api/users/:id/phone, phone in invite)
 - [x] WAHA Docker setup wizard API (install Docker, pull/start/stop WAHA, QR proxy, session status)
 - [x] Onboarding status API (derives step/checklist completion from existing data, public GET for AuthGuard)
 - [x] Tournament results CRUD (placement, summary, achievements/trophies per event)

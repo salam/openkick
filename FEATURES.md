@@ -17,6 +17,8 @@
 - [x] WhatsApp integration via WAHA (webhook + message sending + session-based state machine)
 - [x] WhatsApp RSVP: parents confirm/decline attendance via chat message (intent classification, multi-child disambiguation)
 - [x] WhatsApp onboarding for unknown phone numbers (4-step: name, child, birth year, consent)
+- [x] WhatsApp coach/admin intent parsing (attendance overview, cancel event, send reminder, mark attendance, match sheet, admin link)
+- [x] WhatsApp webhook coach routing (role-based dispatch before parent flow)
 - [x] WhatsApp message deduplication and logging
 - [x] Weather forecasts via OpenMeteo (free, no key)
 - [x] Half-automated broadcast system (training headsup, rain alert, cancellation, holiday)
@@ -78,7 +80,7 @@
 - [x] Player management with SFV category badges
 - [x] Calendar page (yearly/monthly/list views)
 - [x] Broadcast composer with template selection
-- [x] Admin settings page (LLM, bot language, holidays, WAHA)
+- [x] Admin settings page (LLM, bot language, holidays, WAHA) with grouped sidebar navigation, scroll-spy, sticky header, and floating save bar
 - [x] Event creation with tournament import (URL/PDF)
 - [x] Event series creation mode (weekly recurrence, date range, deadline offset)
 - [x] Empty state buttons on dashboard and events pages (Create Event / Create Series)
@@ -93,6 +95,7 @@
 - [x] WAHA Docker setup wizard in onboarding (4-step: Docker check, configure, install, QR connect)
 - [x] Admin onboarding stepper (5-step wizard: Club Profile, SMTP, LLM, WAHA, Invite Team)
 - [x] Reusable settings form components (ClubProfile, SMTP, LLM, WAHA extracted from settings page)
+- [x] Bot settings UI with onboarding toggle and WhatsApp message template editor (26 templates, 5 categories, live preview)
 - [x] Dashboard onboarding checklist (holidays, training, players, parents, feeds — auto-hides when done)
 - [x] Tournament results form on event detail page (view/edit mode, predefined + custom achievements, URL import)
 - [x] Trophy cabinet page (/trophies — public, chronological, placement badges, achievement pills)
@@ -235,7 +238,19 @@
 
 ## Remaining — Admin Security & PII Gating (blueprint: ADMIN_SECURITY.md)
 
-- [ ] Strong password enforcement (12+ chars, zxcvbn score 3+)
-- [ ] HIBP breach checking on admin login (k-anonymity)
-- [ ] PII masking middleware (phone, name, email)
-- [ ] Zero-trust: only strong-password admins see unmasked PII
+- [x] Strong password enforcement (12+ chars, zxcvbn score 3+)
+- [x] HIBP breach checking on admin login (k-anonymity)
+- [x] PII masking middleware (phone, name, email)
+- [x] Zero-trust: only strong-password admins see unmasked PII
+
+## WhatsApp Bot Enhancements
+
+- [x] Sender filtering: only process messages from known guardians/coaches/admins
+- [x] `bot_allow_onboarding` toggle for unknown number onboarding (default: off)
+- [x] `fromMe` message processing for admin self-testing
+- [x] "(by OpenKick)" suffix on all bot replies
+- [x] Customizable bot text templates via Settings UI with live preview
+- [x] `getBotTemplate()` helper: custom templates override i18n defaults
+- [x] Coach/admin WhatsApp commands: attendance overview, cancel event, send reminders, mark attendance, match sheet, admin deep links
+- [x] Role-based intent routing in webhook (coach intents before parent flow)
+- [x] Bot Settings section in admin Settings page

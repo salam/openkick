@@ -1,5 +1,27 @@
 # OpenKick Release Notes
 
+## Version 1.20 (Mon, Mar 2 2026)
+
+* WhatsApp bot now only responds to known contacts (guardians, coaches, admins)
+* Unknown numbers are silently ignored by default — toggle "Allow onboarding" in settings to let new parents self-register
+* All bot replies now end with "(by OpenKick)" for transparency
+* Coach/admin WhatsApp commands: ask "Wer kommt?", cancel trainings, send reminders, mark attendance — all from WhatsApp
+* Customizable bot message templates in Settings — edit all 26 templates with live preview
+* Templates organized in 5 categories: General, Confirmations, Onboarding, Reminders, Coach
+* Per-template variable hints and "Reset to default" button
+
+## Version 1.19 (Mon, Mar 2 2026)
+
+* Coach/Admin WhatsApp commands — coaches and admins can now manage events via WhatsApp
+* "Wer kommt?" shows attendance overview with attending/absent/pending player counts
+* "Training absagen" cancels the next event and notifies all parents automatically
+* "Erinnerung senden" sends reminders only to parents who haven't responded
+* "[Name] anwesend/abwesend" marks a player's attendance directly from WhatsApp
+* "Aufstellung?" shows lineup/match sheet for the next event
+* "Dashboard" sends a link to the web admin portal
+* Coach commands fall through to parent attendance flow when unrecognised
+* Translation keys added for all coach messages (DE + EN)
+
 ## Version 1.18 (Mon, Mar 2 2026)
 
 * Imprint fallback — shows a legally sound minimal imprint even when legal settings are not yet configured
@@ -13,6 +35,10 @@
 * Only admins with verified strong passwords see unmasked personal data
 * Login response now includes password warnings to help admins choose stronger passwords
 * Password checks on setup, login, and password reset endpoints
+* Weak password warning banner on dashboard — shows specific issues and links to settings
+* Team members widget now shows password status (set/not set) per user
+* Self-service password check: verify your own password strength + HIBP status from the team widget
+* Security audit now includes password policy and PII gating checks
 
 ## Version 1.17 (Sun, Mar 2 2026)
 

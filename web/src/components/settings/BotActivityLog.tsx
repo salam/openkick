@@ -130,25 +130,28 @@ export default function BotActivityLog() {
             const isExpanded = expanded === entry.id;
 
             return (
-              <div key={entry.id} className="rounded-lg border border-gray-100 hover:border-gray-200 transition-colors">
+              <div key={entry.id} className={`rounded-lg border transition-colors ${entry.direction === 'out' ? 'border-emerald-100 bg-emerald-50/30 hover:border-emerald-200' : 'border-gray-100 hover:border-gray-200'}`}>
                 <button
                   type="button"
                   onClick={() => setExpanded(isExpanded ? null : entry.id)}
                   className="w-full px-3 py-2 text-left"
                 >
                   <div className="flex items-center gap-2 text-sm">
-                    {/* Timestamp */}
+                    {/* Direction + Timestamp */}
                     <span className="shrink-0 text-xs text-gray-400 w-28">
+                      <span className={entry.direction === 'out' ? 'text-emerald-500' : 'text-gray-400'}>
+                        {entry.direction === 'out' ? '↗' : '↙'}
+                      </span>{' '}
                       {formatTime(entry.createdAt)}
                     </span>
 
                     {/* Sender */}
                     <span className="shrink-0 text-xs font-medium text-gray-700 w-28 truncate" title={entry.phone}>
-                      {entry.guardianName || maskPhone(entry.phone)}
+                      {entry.direction === 'out' ? 'Bot' : (entry.guardianName || maskPhone(entry.phone))}
                     </span>
 
                     {/* Message preview */}
-                    <span className="flex-1 truncate text-xs text-gray-600">
+                    <span className={`flex-1 truncate text-xs ${entry.direction === 'out' ? 'text-emerald-700' : 'text-gray-600'}`}>
                       {entry.body || '(audio)'}
                     </span>
 

@@ -18,8 +18,13 @@ import {
 import { handleOnboarding } from "../services/whatsapp-onboarding.js";
 import { getBotTemplate } from "../services/whatsapp-templates.js";
 import { authMiddleware, requireRole } from "../auth.js";
+import { randomUUID } from "node:crypto";
 
 export const whatsappRouter = Router();
+
+function logOutbound(phone: string, body: string, action?: string): void {
+  logMessage(`out_${randomUUID()}`, phone, "out", body, action);
+}
 
 interface WAHAWebhookPayload {
   event: string;
@@ -105,7 +110,9 @@ function handleDisambiguation(
     index < 1 ||
     index > context.pendingPlayerIds.length
   ) {
-    sendMessage(phone, getBotTemplate("whatsapp_help", lang)).catch(() => {});
+    const helpMsg = getBotTemplate("whatsapp_help", lang);
+    sendMessage(phone, helpMsg).catch(() => {});
+    logOutbound(phone, helpMsg, "help_sent");
     return;
   }
 
@@ -144,10 +151,9 @@ function handleDisambiguation(
         ? "whatsapp_confirm_attending"
         : "whatsapp_confirm_absent";
 
-  sendMessage(
-    phone,
-    getBotTemplate(confirmKey, lang, { playerName, eventTitle, eventDate }),
-  ).catch(() => {});
+  const confirmMsg = getBotTemplate(confirmKey, lang, { playerName, eventTitle, eventDate });
+  sendMessage(phone, confirmMsg).catch(() => {});
+  logOutbound(phone, confirmMsg, `attendance_${finalStatus}`);
 
   resetSession(phone);
 }
@@ -279,6 +285,7 @@ whatsappRouter.post(
             "\n\n" +
             getBotTemplate("whatsapp_onboarding_ask_name", "de");
         await sendMessage(phone, welcomeMsg);
+        logOutbound(phone, welcomeMsg, "onboarding_started");
         if (messageId) updateMessageLog(messageId, { action: "onboarding_started", outboundBody: welcomeMsg });
         res.status(200).json({ status: "onboarding_started" });
         return;
@@ -310,6 +317,7 @@ whatsappRouter.post(
       if (parsed.intent === "unknown") {
         const helpMsg = getBotTemplate("whatsapp_help", lang);
         await sendMessage(phone, helpMsg);
+        logOutbound(phone, helpMsg, "help_sent");
         if (messageId) updateMessageLog(messageId, { intent: "unknown", action: "help_sent", outboundBody: helpMsg });
         if (isGroup && messageId) {
           reactToMessage(messageId, "\uD83D\uDC40").catch(() => {});
@@ -323,6 +331,7 @@ whatsappRouter.post(
       if (!event) {
         const noEventMsg = getBotTemplate("whatsapp_coach_no_event", lang);
         await sendMessage(phone, noEventMsg);
+        logOutbound(phone, noEventMsg, "no_event");
         if (messageId) updateMessageLog(messageId, { intent: parsed.intent, action: "no_event", outboundBody: noEventMsg });
         res.status(200).json({ status: "no_event" });
         return;
@@ -332,6 +341,7 @@ whatsappRouter.post(
       if (players.length === 0) {
         const noPlayerMsg = "Kein Spieler mit deinem Konto verknuepft.";
         await sendMessage(phone, noPlayerMsg);
+        logOutbound(phone, noPlayerMsg, "no_players");
         if (messageId) updateMessageLog(messageId, { intent: parsed.intent, action: "no_players", outboundBody: noPlayerMsg });
         res.status(200).json({ status: "no_players" });
         return;
@@ -360,6 +370,7 @@ whatsappRouter.post(
         });
         const disambigMsg = getBotTemplate("whatsapp_disambiguate", lang, { options });
         await sendMessage(phone, disambigMsg);
+        logOutbound(phone, disambigMsg, "disambiguating");
         if (messageId) updateMessageLog(messageId, { intent: parsed.intent, action: "disambiguating", eventId: event.id, outboundBody: disambigMsg });
         res.status(200).json({ status: "disambiguating" });
         return;
@@ -390,6 +401,7 @@ whatsappRouter.post(
         });
         confirmMessages.push(confirmMsg);
         await sendMessage(phone, confirmMsg);
+        logOutbound(phone, confirmMsg, `attendance_${finalStatus}`);
 
         if (messageId) {
           updateMessageLog(messageId, {

@@ -6,7 +6,7 @@ import {
   updateSessionState,
   resetSession,
 } from "./whatsapp-session.js";
-import { t } from "../utils/i18n.js";
+import { getBotTemplate } from "./whatsapp-templates.js";
 
 /**
  * Handle the multi-step WhatsApp onboarding flow for unknown phone numbers.
@@ -50,7 +50,7 @@ async function handleName(
 ): Promise<void> {
   context.guardianName = text;
   updateSessionState(phone, "onboarding_child", context);
-  await sendMessage(phone, t("whatsapp_onboarding_ask_child", lang));
+  await sendMessage(phone, getBotTemplate("whatsapp_onboarding_ask_child", lang));
 }
 
 // Step 2: Match the child name against the players table
@@ -67,7 +67,7 @@ async function handleChild(
   );
 
   if (result.length === 0 || result[0].values.length === 0) {
-    await sendMessage(phone, t("whatsapp_onboarding_no_match", lang));
+    await sendMessage(phone, getBotTemplate("whatsapp_onboarding_no_match", lang));
     resetSession(phone);
     return;
   }
@@ -81,7 +81,7 @@ async function handleChild(
   updateSessionState(phone, "onboarding_birthyear", context);
   await sendMessage(
     phone,
-    t("whatsapp_onboarding_ask_birthyear", lang, { childName }),
+    getBotTemplate("whatsapp_onboarding_ask_birthyear", lang, { childName }),
   );
 }
 
@@ -105,7 +105,7 @@ async function handleBirthYear(
 
   if (enteredYear === actualYear) {
     updateSessionState(phone, "onboarding_consent", context);
-    await sendMessage(phone, t("whatsapp_onboarding_ask_consent", lang));
+    await sendMessage(phone, getBotTemplate("whatsapp_onboarding_ask_consent", lang));
     return;
   }
 
@@ -114,13 +114,13 @@ async function handleBirthYear(
   context.birthYearAttempts = attempts;
 
   if (attempts >= 2) {
-    await sendMessage(phone, t("whatsapp_onboarding_birthyear_mismatch", lang));
+    await sendMessage(phone, getBotTemplate("whatsapp_onboarding_birthyear_mismatch", lang));
     resetSession(phone);
     return;
   }
 
   updateSessionState(phone, "onboarding_birthyear", context);
-  await sendMessage(phone, t("whatsapp_onboarding_birthyear_mismatch", lang));
+  await sendMessage(phone, getBotTemplate("whatsapp_onboarding_birthyear_mismatch", lang));
 }
 
 // Step 4: Collect consent and create guardian + link
@@ -155,10 +155,10 @@ async function handleConsent(
     resetSession(phone);
     await sendMessage(
       phone,
-      t("whatsapp_onboarding_complete", lang, { childName }),
+      getBotTemplate("whatsapp_onboarding_complete", lang, { childName }),
     );
   } else {
-    await sendMessage(phone, t("whatsapp_onboarding_consent_declined", lang));
+    await sendMessage(phone, getBotTemplate("whatsapp_onboarding_consent_declined", lang));
     resetSession(phone);
   }
 }

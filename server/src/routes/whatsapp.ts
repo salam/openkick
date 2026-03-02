@@ -15,7 +15,7 @@ import {
   logMessage,
 } from "../services/whatsapp-session.js";
 import { handleOnboarding } from "../services/whatsapp-onboarding.js";
-import { t } from "../utils/i18n.js";
+import { getBotTemplate } from "../services/whatsapp-templates.js";
 
 export const whatsappRouter = Router();
 
@@ -102,7 +102,7 @@ function handleDisambiguation(
     index < 1 ||
     index > context.pendingPlayerIds.length
   ) {
-    sendMessage(phone, t("whatsapp_help", lang)).catch(() => {});
+    sendMessage(phone, getBotTemplate("whatsapp_help", lang)).catch(() => {});
     return;
   }
 
@@ -143,7 +143,7 @@ function handleDisambiguation(
 
   sendMessage(
     phone,
-    t(confirmKey, lang, { playerName, eventTitle, eventDate }),
+    getBotTemplate(confirmKey, lang, { playerName, eventTitle, eventDate }),
   ).catch(() => {});
 
   resetSession(phone);
@@ -261,9 +261,9 @@ whatsappRouter.post(
         updateSessionState(phone, "onboarding_name", {});
         await sendMessage(
           phone,
-          t("whatsapp_welcome", "de") +
+          getBotTemplate("whatsapp_welcome", "de") +
             "\n\n" +
-            t("whatsapp_onboarding_ask_name", "de"),
+            getBotTemplate("whatsapp_onboarding_ask_name", "de"),
         );
         res.status(200).json({ status: "onboarding_started" });
         return;
@@ -276,7 +276,7 @@ whatsappRouter.post(
 
       // 13. Unknown intent: send help message
       if (parsed.intent === "unknown") {
-        await sendMessage(phone, t("whatsapp_help", lang));
+        await sendMessage(phone, getBotTemplate("whatsapp_help", lang));
         if (isGroup && messageId) {
           reactToMessage(messageId, "\uD83D\uDC40").catch(() => {});
         }
@@ -322,7 +322,7 @@ whatsappRouter.post(
         });
         await sendMessage(
           phone,
-          t("whatsapp_disambiguate", lang, { options }),
+          getBotTemplate("whatsapp_disambiguate", lang, { options }),
         );
         res.status(200).json({ status: "disambiguating" });
         return;
@@ -347,7 +347,7 @@ whatsappRouter.post(
 
         await sendMessage(
           phone,
-          t(confirmKey, lang, {
+          getBotTemplate(confirmKey, lang, {
             playerName: player.name,
             eventTitle: event.title,
             eventDate: event.date,

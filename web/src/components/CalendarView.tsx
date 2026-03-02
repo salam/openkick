@@ -13,6 +13,7 @@ export interface CalendarEvent {
   date: string; // YYYY-MM-DD
   time: string;
   attendingCount?: number;
+  absentCount?: number;
   totalPlayers?: number;
   cancelled?: boolean;
 }
@@ -80,13 +81,13 @@ function isToday(dateStr: string): boolean {
 }
 
 const typeDotColor: Record<string, string> = {
-  training: 'bg-emerald-500',
+  training: 'bg-primary-500',
   tournament: 'bg-blue-500',
   match: 'bg-orange-500',
 };
 
 const typeBadgeStyle: Record<string, string> = {
-  training: 'bg-emerald-100 text-emerald-700',
+  training: 'bg-primary-100 text-primary-700',
   tournament: 'bg-blue-100 text-blue-700',
   match: 'bg-orange-100 text-orange-700',
 };
@@ -165,7 +166,7 @@ function YearlyView({
                     key={day}
                     className={`relative flex flex-col items-center rounded text-[10px] leading-4 ${
                       vacation ? 'bg-purple-50' : ''
-                    } ${today ? 'font-bold text-emerald-700' : 'text-gray-700'} ${
+                    } ${today ? 'font-bold text-primary-700' : 'text-gray-700'} ${
                       cancelled && !vacation ? 'text-red-400 line-through' : ''
                     }`}
                   >
@@ -292,14 +293,14 @@ function MonthlyView({
               onClick={() => onDayClick?.(dateStr)}
               className={`min-h-[80px] p-1 text-left transition-colors sm:min-h-[100px] ${
                 vacation ? 'bg-purple-50' : 'bg-white'
-              } ${hasTraining ? 'border-l-[3px] border-l-emerald-500' : ''} ${
-                today ? 'ring-2 ring-inset ring-emerald-500' : ''
+              } ${hasTraining ? 'border-l-[3px] border-l-primary-500' : ''} ${
+                today ? 'ring-2 ring-inset ring-primary-500' : ''
               }`}
             >
               <span
                 className={`inline-block text-xs font-medium ${
                   today
-                    ? 'rounded-full bg-emerald-600 px-1.5 py-0.5 text-white'
+                    ? 'rounded-full bg-primary-600 px-1.5 py-0.5 text-white'
                     : 'text-gray-700'
                 }`}
               >
@@ -415,7 +416,7 @@ function ListView({
       <button
         type="button"
         onClick={scrollToToday}
-        className="sticky top-0 z-10 mb-4 rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-md transition-colors hover:bg-emerald-700"
+        className="sticky top-0 z-10 mb-4 rounded-full bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-md transition-colors hover:bg-primary-700"
       >
         {t('scroll_to_today')}
       </button>
@@ -464,7 +465,7 @@ function ListView({
                       className={`flex items-center gap-4 rounded-lg border p-4 transition-shadow hover:shadow-md ${
                         vacation ? 'border-purple-200 bg-purple-50' : 'border-gray-200 bg-white'
                       } ${ev.cancelled ? 'opacity-60' : ''} ${
-                        isTodayEvent ? 'ring-2 ring-emerald-500' : ''
+                        isTodayEvent ? 'ring-2 ring-primary-500' : ''
                       }`}
                     >
                       {/* Date */}
@@ -502,12 +503,17 @@ function ListView({
                         {ev.cancelled ? t('cancelled') : t(TYPE_KEYS[ev.type] || ev.type)}
                       </span>
 
-                      {/* Attendance */}
-                      {ev.attendingCount != null && ev.totalPlayers != null && (
-                        <span className="shrink-0 text-xs text-gray-500">
-                          {ev.attendingCount}/{ev.totalPlayers}
+                      {/* Compact attendance */}
+                      {(ev.attendingCount != null && ev.attendingCount > 0) || (ev.absentCount != null && ev.absentCount > 0) ? (
+                        <span className="flex shrink-0 items-center gap-2 text-xs">
+                          {ev.attendingCount != null && ev.attendingCount > 0 && (
+                            <span className="text-green-600">&#10003; {ev.attendingCount}</span>
+                          )}
+                          {ev.absentCount != null && ev.absentCount > 0 && (
+                            <span className="text-red-500">&#10007; {ev.absentCount}</span>
+                          )}
                         </span>
-                      )}
+                      ) : null}
                     </Link>
                   );
                 })}

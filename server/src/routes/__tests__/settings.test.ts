@@ -58,10 +58,11 @@ describe("Settings routes", () => {
     const body = await res.json();
     // Public settings should be present
     expect(body).toMatchObject({
-      llm_provider: "openai",
       bot_language: "de",
       club_name: "My Club",
     });
+    // Non-whitelisted keys must NOT be present without auth
+    expect(body).not.toHaveProperty("llm_provider");
     // Secret keys must NOT be present without auth
     expect(body).not.toHaveProperty("llm_api_key");
     expect(body).not.toHaveProperty("smtp_pass");
@@ -162,21 +163,21 @@ describe("Settings routes", () => {
   });
 
   it("GET after PUT — confirms the update persisted", async () => {
-    await fetch(`${baseUrl}/api/settings/llm_provider`, {
+    await fetch(`${baseUrl}/api/settings/club_name`, {
       method: "PUT",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
-      body: JSON.stringify({ value: "anthropic" }),
+      body: JSON.stringify({ value: "Updated Club" }),
     });
 
-    const res = await fetch(`${baseUrl}/api/settings/llm_provider`);
+    const res = await fetch(`${baseUrl}/api/settings/club_name`);
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body).toEqual({ key: "llm_provider", value: "anthropic" });
+    expect(body).toEqual({ key: "club_name", value: "Updated Club" });
 
     // Also verify in the full settings list
     const allRes = await fetch(`${baseUrl}/api/settings`);
     const allBody = await allRes.json();
-    expect(allBody.llm_provider).toBe("anthropic");
+    expect(allBody.club_name).toBe("Updated Club");
   });
 
   describe("POST /api/settings/upload-logo", () => {

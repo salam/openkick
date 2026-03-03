@@ -46,9 +46,9 @@ prompt_with_default() {
 
 # ─── Collect all values upfront ───────────────────
 
-prompt_with_default "SSH user (e.g. salach)" "$PREV_SSH_USER" SSH_USER
-prompt_with_default "SSH host (e.g. salach.cyon.ch or s056.cyon.net)" "$PREV_SSH_HOST" SSH_HOST
-prompt_with_default "Remote web root path (e.g. /home/salach/public_html/fluegelflitzer)" "$PREV_REMOTE_PATH" REMOTE_PATH
+prompt_with_default "SSH user (e.g. myuser)" "$PREV_SSH_USER" SSH_USER
+prompt_with_default "SSH host (e.g. s056.cyon.net)" "$PREV_SSH_HOST" SSH_HOST
+prompt_with_default "Remote web root path (e.g. /home/myuser/public_html/myclub)" "$PREV_REMOTE_PATH" REMOTE_PATH
 prompt_with_default "Subdomain URL (e.g. https://fluegelflitzer.sala.ch)" "$PREV_SITE_URL" SITE_URL
 prompt_with_default "Node.js port on cyon (e.g. 40001 — pick an unused high port)" "$PREV_NODE_PORT" NODE_PORT
 read -rp "JWT secret for production: " JWT_SECRET

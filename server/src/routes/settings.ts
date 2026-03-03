@@ -80,19 +80,8 @@ const PUBLIC_KEYS = new Set([
   "longitude",
   // Onboarding status
   "onboarding_completed",
-  // Bot language (used by public-facing translated content)
+  // Bot language (used by public-facing translated content in feeds)
   "bot_language",
-  // LLM provider name (non-secret, used by settings UI display)
-  "llm_provider",
-  "llm_model",
-  // WAHA URL (non-secret, used by setup wizard status checks)
-  "waha_url",
-  // Captcha provider name (non-secret, frontend needs to know which widget to show)
-  "captcha_provider",
-  // Holiday preset
-  "holiday_preset",
-  // Bot feature toggles
-  "bot_allow_onboarding",
   // Default country code (used by RSVP phone input)
   "default_country_code",
 ]);

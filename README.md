@@ -32,29 +32,143 @@ Existing tools (Spond, Teamy, TeamSnap) require app installs, accounts, and coll
 ## Features
 
 ### Attendance tracking
+
 - Understands free-form WhatsApp messages ("Luca is sick", "late today", "not coming")
-- One-click availability via quick-reply buttons or a mobile-friendly web page
-- Automatic reminders for parents who haven't responded
-- Attendance history and statistics for coaches
+- One-click RSVP via personalized deep links or a mobile-friendly web page
+- Anonymous name-search RSVP mode for shared links
+- Automatic reminders with personalized RSVP links for parents who haven't responded
+- Attendance history, statistics, and no-show tracking
 
 ### Tournament management
-- Create tournaments with deadlines, participant limits, and attached PDFs
+
+- Create tournaments with deadlines, participant limits, and team names
+- Import tournaments from PDF or URL via LLM
 - Registration via WhatsApp or web — share a link in the group chat
 - Automatic wait-list when slots fill up
-- Alerts when registrations are too few or too many
+- Threshold alerts when registrations are too few or too many
+- Public tournament view with privacy-preserving initials (no login required)
+- Tournament results with placement, achievements, and trophies
+- LLM-based results import from bracket/results URLs
+- Trophy cabinet page (public, chronological)
 
-### Team formation
-- Automatic team assignment based on age, position, or custom rules
-- Coaches can review and adjust before publishing
+### Live ticker & game history
+
+- Match-day live score polling (cheerio scraper + LLM fallback)
+- Turnieragenda.ch dedicated parser
+- Manual score entry for tournaments without online presence
+- Crawl scheduler with per-URL intervals
+- Public shareable live detail pages (no login)
+- Permanent game history storage
+
+### Event series
+
+- Weekly recurrence with date range and deadline offset
+- Vacation skipping via school holiday system
+- Lazy materialization (instances created on demand)
+- Per-instance editing, cancellation, and exclusion
+
+### Statistics & reporting
+
+- Semester-based training hours, person-hours, and coach hours
+- Attendance rate metrics per player and event
+- No-show detection and statistics
+- Tournament participation tracking
+- Interactive charts dashboard with semester picker
+- CSV/PDF export for club board reporting
+- Public homepage statistics bar (cached)
+
+### Surveys & questionnaires
+
+- Survey builder with 5 question types (single/multi choice, rating, text, size picker)
+- Anonymous vs. identified survey modes
+- Built-in templates (trikot order, end-of-semester feedback)
+- Shareable survey links with QR code generation
+- Deadlines with automatic enforcement
+- Results dashboard with aggregation, charts, and CSV export
+
+### Payments
+
+- Stripe and Datatrans PSP integration (tournament fees, merchandise, donations)
+- Twint support (CHF only, via PSP)
+- Webhook-driven payment confirmation
+- Receipt generation (PDF)
+- Refund functionality (full and partial)
+- Transaction log with filtering
+
+### Administrative checklists
+
+- Semester-based checklists with auto-reset (Feb 1 / Aug 1)
+- Per-training and per-tournament checklists (auto-created)
+- Templates with classification filtering (Sportamt, SFV, FVRZ)
+- Custom checklist items preserved across resets
 
 ### Communication
+
 - Confirmation messages after every sign-up or cancellation
 - Scheduled reminders before deadlines and match days
-- Broadcast messages to all parents
+- Half-automated broadcast system (training headsup, rain alert, cancellation, holiday)
+- Customizable bot text templates with live preview (26 templates, 5 categories)
+- Coach/admin WhatsApp commands (attendance overview, cancel event, reminders, match sheet)
 
 ### Onboarding
+
 - Parents join by scanning a QR code or clicking a link
-- The bot asks for the child's name — done
+- WhatsApp-based onboarding: the bot asks for name, child, birth year, consent — done
+- Admin onboarding stepper (5 steps: club profile, SMTP, LLM, WAHA, invite team)
+- Dashboard onboarding checklist (holidays, training, players, parents, feeds)
+
+### Weather
+
+- Weather forecasts via OpenMeteo (free, no API key)
+- Geocoded event locations (OpenStreetMap Nominatim with 30-day cache)
+- Weather display on event cards, navbar pill, and event detail pages
+
+### Calendar & scheduling
+
+- Yearly, monthly, and list views
+- Bidirectional infinite scroll in list mode
+- Compact attendance chips and type filter pills
+- School holiday system (10 preset regions, ICS import, URL extraction via LLM)
+- ICS calendar subscriptions (combined + per-type)
+
+### Feeds & discovery
+
+- RSS 2.0 and Atom 1.0 feeds for public events
+- ActivityPub read-only publisher (Mastodon/Fediverse)
+- AT Protocol feed generator (Bluesky)
+- Dedicated trophy feed endpoints
+- Dynamic sitemap with feed URLs and events
+- robots.txt with sitemap reference
+- llms.txt endpoint (club info, public API docs, live statistics)
+- MCP server at /mcp (read-only tools: club info, events, stats, trophies)
+- WebFinger + DID well-known discovery endpoints
+
+### Club branding & SEO
+
+- Club profile settings (name, description, contact info, logo upload)
+- Automatic favicon generation from club logo (ICO, PNG, apple-touch-icon, webmanifest)
+- Server-side HTML injection of branding, OG/Twitter meta tags
+- Homepage customization (background image, primary tint color)
+- Primary color theming across 57 UI components
+- SEO & Social Media settings (OG title/description/image, Twitter card, meta keywords)
+
+### Security & privacy
+
+- JWT auth for coaches/admins + passwordless token links for parents
+- Strong password enforcement (12+ chars, zxcvbn score 3+) with HIBP breach checking
+- PII masking middleware — zero-trust: only strong-password admins see unmasked data
+- Altcha proof-of-work captcha on login, attendance, and public RSVP
+- Dynamic security.txt endpoint (RFC 9116)
+- Security audit service (8 self-checks) with admin endpoint and settings widget
+- Rate limiting (general tier via express-rate-limit)
+- GDPR compliance: data export, data deletion, explicit consent tracking
+- Public /privacy and /imprint pages with dynamic legal information
+- Forgot password / reset password flow with email token
+
+### Internationalization
+
+- Full i18n for German, French, and English
+- Browser language detection with manual toggle
 
 ## Architecture
 
@@ -65,8 +179,8 @@ OpenKick is built from proven open-source components:
 | WhatsApp API | [WAHA](https://waha.devlike.pro/) | Send and receive WhatsApp messages via REST |
 | Chatbot | [BuilderBot](https://www.builderbot.app/) | Parse messages, manage conversation flows |
 | Workflows | [n8n](https://n8n.io/) | Orchestrate reminders, deadlines, notifications |
-| Web app | React / Vue + Node.js | Dashboard for coaches, event pages for parents |
-| Database | PostgreSQL / SQLite | Events, players, attendance records |
+| Web app | Next.js (static export) + Node.js | Dashboard for coaches, event pages for parents |
+| Database | sql.js (SQLite) | Events, players, attendance records |
 | Deployment | Docker Compose | Single command to run the full stack |
 
 ## Getting Started

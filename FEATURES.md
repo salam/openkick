@@ -31,6 +31,7 @@
 - [x] Rate limiting (general tier via express-rate-limit; auth + mutation limiters defined but not yet wired)
 - [x] Altcha proof-of-work captcha on login, attendance, and public RSVP (pluggable provider)
 - [x] Public RSVP API (resolve deep link, name search with CAPTCHA, confirm with opaque tokens)
+- [x] RSVP phone verification toggle (optional guardian phone match on anonymous search)
 - [x] RSS 2.0 feed for public events
 - [x] Atom 1.0 feed for public events
 - [x] ActivityPub read-only publisher (Mastodon/Fediverse)
@@ -69,6 +70,14 @@
 - [x] Homepage stats API (public, cached 1h, admin-configurable visibility)
 - [x] CSV/PDF export service (semicolon CSV with BOM, pdfmake PDF)
 - [x] Admin statistics endpoints (6 stat types + export, auth + role-gated)
+- [x] Geocoding service (OpenStreetMap Nominatim with 30-day cache)
+- [x] Weather forecasts enriched with geocoded event locations
+- [x] Next-event service (unified lookup across events, series, and training)
+- [x] Guardian CRUD (edit details, unlink from player, delete with cascade protection)
+- [x] Bot activity log (full processing lifecycle: inbound, intent, route, outbound)
+- [x] Phone number normalization (strips spaces, +, 00 prefix; duplicate rejection)
+- [x] Password strength check service (zxcvbn + HIBP k-anonymity)
+- [x] Forgot password / reset password flow with email token
 
 ## Frontend (Web)
 
@@ -117,11 +126,29 @@
 - [x] CSV/PDF export button with format picker
 - [x] Homepage stats bar (public, pill badges)
 - [x] Statistics link card on coach dashboard
+- [x] Weather display on event cards (temperature, icon, precipitation %)
+- [x] Compact weather pill in navbar header
+- [x] Event detail pages with full weather description
+- [x] Calendar list view with bidirectional infinite scroll
+- [x] Compact attendance chips in calendar list view
+- [x] Type filter pills in calendar list mode (All / Training / Tournament / Match)
+- [x] Events page merged into Calendar (unified view, /events redirects to calendar)
+- [x] Homepage customization (background image upload, primary tint color picker)
+- [x] Primary color theming across 57 UI components
+- [x] Guardian management on player edit (edit details, unlink, delete with confirmation)
+- [x] Bot activity log component (webhook processing lifecycle display)
+- [x] Forgot password page with email-based reset flow
+- [x] Reset password page with token validation
+- [x] Weak password warning banner on dashboard
+- [x] Password status widget in team members list
 
 ## Infrastructure
 
 - [x] Docker compose for WAHA
-- [x] ~476 server tests (Vitest)
+- [x] ~500+ server tests (Vitest)
+- [x] E2E test suite (Playwright, 64 tests across 11 specs: onboarding, users, events, tournament import/results, WhatsApp attendance, feeds, MCP, admin nav, surveys, unauthenticated pages)
+- [x] Deploy script for cyon.ch hosting (tools/deploy-cyon.sh)
+- [x] Security audit shell script (tools/security-audit.sh)
 
 ---
 
@@ -237,7 +264,7 @@
 - [x] Public live detail page (/live/:id, shareable, no login)
 - [ ] Brave Search API for results URL discovery
 
-## Remaining — Admin Security & PII Gating (blueprint: ADMIN_SECURITY.md)
+## Completed — Admin Security & PII Gating (blueprint: ADMIN_SECURITY.md)
 
 - [x] Strong password enforcement (12+ chars, zxcvbn score 3+)
 - [x] HIBP breach checking on admin login (k-anonymity)

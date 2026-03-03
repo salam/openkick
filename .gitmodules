@@ -1,0 +1,4 @@
+[submodule "waha"]
+	path = waha
+	url = https://github.com/salam/waha.git
+	branch = core

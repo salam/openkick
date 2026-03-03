@@ -61,34 +61,43 @@ describe("Weather routes", () => {
 
   // ── GET /api/weather/current ──────────────────────────────────────
 
-  it("GET /api/weather/current — returns 404 when no club coordinates are configured", async () => {
-    // No latitude/longitude settings inserted
+  it("GET /api/weather/current — returns 404 when no upcoming events", async () => {
     const res = await fetch(`${baseUrl}/api/weather/current`);
     expect(res.status).toBe(404);
     const body = await res.json();
-    expect(body.error).toBe("No club coordinates configured");
+    expect(body.error).toBe("No upcoming events");
   });
 
-  it("GET /api/weather/current — returns forecast when coordinates exist", async () => {
-    // Insert club coordinates into settings
+  it("GET /api/weather/current — returns forecast for next upcoming event", async () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const dateStr = tomorrow.toISOString().slice(0, 10);
+
+    // BUG15: insert a guardian so createdBy FK works
+    db.run("INSERT INTO guardians (id, phone, name, role) VALUES (1, '+41000', 'Coach', 'coach')");
+    db.run(
+      "INSERT INTO events (id, type, title, date, startTime, location, createdBy) VALUES (1, 'training', 'Wednesday Training', ?, '18:30', 'Sportplatz', 1)",
+      [dateStr],
+    );
+
     db.run("INSERT INTO settings (key, value) VALUES ('latitude', '47.38')");
     db.run("INSERT INTO settings (key, value) VALUES ('longitude', '8.54')");
 
+    vi.mocked(geocodeLocation).mockResolvedValue({ latitude: 47.39, longitude: 8.55 });
     vi.mocked(getWeatherForecast).mockResolvedValue(MOCK_FORECAST);
 
     const res = await fetch(`${baseUrl}/api/weather/current`);
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.temperature).toBe(18);
-    expect(body.precipitation).toBe(10);
-    expect(body.weatherCode).toBe(0);
-    expect(body.description).toBe("Sunny");
     expect(body.icon).toBe("☀️");
+    expect(body.eventTitle).toBe("Wednesday Training");
+    expect(body.eventDate).toBe(dateStr);
     expect(vi.mocked(getWeatherForecast)).toHaveBeenCalledWith(
-      47.38,
-      8.54,
-      expect.any(String),
-      expect.any(String),
+      47.39,
+      8.55,
+      dateStr,
+      "18:30",
     );
   });
 

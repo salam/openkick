@@ -5,11 +5,12 @@ import { ApiHelper } from "../helpers/api.js";
 test.use({ storageState: AUTH_FILE });
 
 test.describe("07 — Feeds & Footer Links", () => {
-  let api: ApiHelper;
+  let token: string;
 
   test.beforeAll(async ({ request }) => {
-    api = new ApiHelper(request);
-    const { token } = await api.login(ADMIN_EMAIL, ADMIN_PASSWORD);
+    const api = new ApiHelper(request);
+    const { token: t } = await api.login(ADMIN_EMAIL, ADMIN_PASSWORD);
+    token = t;
     api.setToken(token);
 
     for (const key of ["feeds_enabled", "feed_rss_enabled", "feed_atom_enabled", "feed_ics_enabled"]) {
@@ -17,7 +18,9 @@ test.describe("07 — Feeds & Footer Links", () => {
     }
   });
 
-  test("RSS feed returns valid XML with events", async () => {
+  test("RSS feed returns valid XML with events", async ({ request }) => {
+    const api = new ApiHelper(request);
+    api.setToken(token);
     const { status, text, headers } = await api.get("/api/feeds/rss");
     expect(status).toBe(200);
     expect(headers["content-type"]).toContain("xml");
@@ -27,7 +30,9 @@ test.describe("07 — Feeds & Footer Links", () => {
     expect(text).toContain("Monday Training");
   });
 
-  test("Atom feed returns valid XML", async () => {
+  test("Atom feed returns valid XML", async ({ request }) => {
+    const api = new ApiHelper(request);
+    api.setToken(token);
     const { status, text, headers } = await api.get("/api/feeds/atom");
     expect(status).toBe(200);
     expect(headers["content-type"]).toContain("xml");
@@ -35,7 +40,9 @@ test.describe("07 — Feeds & Footer Links", () => {
     expect(text).toContain("<entry>");
   });
 
-  test("sitemap.xml returns valid XML with URLs", async () => {
+  test("sitemap.xml returns valid XML with URLs", async ({ request }) => {
+    const api = new ApiHelper(request);
+    api.setToken(token);
     const { status, text } = await api.get("/api/sitemap.xml");
     expect(status).toBe(200);
     expect(text).toContain("<urlset");
@@ -43,20 +50,26 @@ test.describe("07 — Feeds & Footer Links", () => {
     expect(text).toContain("<loc>");
   });
 
-  test("llms.txt returns club info", async () => {
+  test("llms.txt returns club info", async ({ request }) => {
+    const api = new ApiHelper(request);
+    api.setToken(token);
     const { status, text } = await api.get("/llms.txt");
     expect(status).toBe(200);
     expect(text).toContain("FC Test E2E");
   });
 
-  test("robots.txt is accessible and allows feeds", async () => {
+  test("robots.txt is accessible and allows feeds", async ({ request }) => {
+    const api = new ApiHelper(request);
+    api.setToken(token);
     const { status, text } = await api.get("/robots.txt");
     expect(status).toBe(200);
     expect(text).toContain("User-agent:");
     expect(text.toLowerCase()).toContain("allow");
   });
 
-  test("security.txt is accessible", async () => {
+  test("security.txt is accessible", async ({ request }) => {
+    const api = new ApiHelper(request);
+    api.setToken(token);
     const { status, text } = await api.get("/.well-known/security.txt");
     expect(status).toBe(200);
     expect(text).toContain("Contact:");
@@ -74,7 +87,9 @@ test.describe("07 — Feeds & Footer Links", () => {
     await expect(page.locator("main")).toBeVisible();
   });
 
-  test("ICS calendar feed returns valid iCal", async () => {
+  test("ICS calendar feed returns valid iCal", async ({ request }) => {
+    const api = new ApiHelper(request);
+    api.setToken(token);
     const { status, text } = await api.get("/api/feeds/calendar.ics");
     expect(status).toBe(200);
     expect(text).toContain("BEGIN:VCALENDAR");
@@ -82,13 +97,17 @@ test.describe("07 — Feeds & Footer Links", () => {
     expect(text).toContain("END:VCALENDAR");
   });
 
-  test("feeds contain trophy data when trophies=only", async () => {
+  test("feeds contain trophy data when trophies=only", async ({ request }) => {
+    const api = new ApiHelper(request);
+    api.setToken(token);
     const { status, text } = await api.get("/api/feeds/rss?trophies=only");
     expect(status).toBe(200);
     expect(text).toContain("Kunstrassenturnier");
   });
 
-  test("RSS with empty filter returns no items gracefully", async () => {
+  test("RSS with empty filter returns no items gracefully", async ({ request }) => {
+    const api = new ApiHelper(request);
+    api.setToken(token);
     const { status, text } = await api.get("/api/feeds/rss?type=match");
     expect(status).toBe(200);
     expect(text).toContain("<rss");

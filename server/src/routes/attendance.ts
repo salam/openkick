@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from "express";
+import { authMiddleware, requireRole } from "../auth.js";
 import { getDB } from "../database.js";
 import {
   setAttendance,
@@ -138,7 +139,7 @@ attendanceRouter.get("/events/:eventId/attendance", (req: Request, res: Response
 });
 
 // DELETE /api/attendance/:id — remove a specific attendance record
-attendanceRouter.delete("/attendance/:id", (req: Request, res: Response) => {
+attendanceRouter.delete("/attendance/:id", authMiddleware, requireRole("admin", "coach"), (req: Request, res: Response) => {
   const id = Number(req.params.id);
   const db = getDB();
 

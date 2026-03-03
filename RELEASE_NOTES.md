@@ -1,5 +1,39 @@
 # OpenKick Release Notes
 
+## Version 1.28 (Tue, Mar 3 2026)
+
+* **Security fix**: API settings endpoint no longer exposes API keys, SMTP passwords, or other secrets to unauthenticated users
+* **Security fix**: All settings write operations (update, upload logo/background, test LLM/SMTP) now require admin authentication
+* **Security fix**: All data modification endpoints (create/update/delete players, events, attendance, broadcasts, etc.) now require admin or coach authentication
+* **Security fix**: Live ticker crawl configuration endpoints now require authentication (prevents SSRF by unauthenticated users)
+* **Security fix**: Broadcast sending (WhatsApp messages to all parents) now requires authentication
+* Public read-only endpoints (calendar, trophy cabinet, public events, feeds) remain accessible without login
+
+## Version 1.27 (Tue, Mar 3 2026)
+
+* New setting: optionally require guardian phone number verification during anonymous RSVP attendance reporting
+* Fixed: Calendar filter pills (All/Training/Tournament/Match) now work correctly in list view
+* Fixed: Events in the monthly calendar grid are now clickable — tap an event to open its detail page
+* Fixed: "Scroll to today" button now works even when there's no event scheduled today (shows a "today" marker)
+* Fixed: Training events no longer appear duplicated (gray + colored) in the calendar
+* Fixed: Sidebar legend no longer shows redundant entries for the same weekly training
+* Fixed: Calendar no longer shows both a standalone event and a series instance for the same date
+* Events tab is now fully functional within the Calendar (completing the events/calendar merge)
+* Events can now be cancelled without deleting them — cancelled status is preserved
+* Cancelled events show as `[CANCELLED]` in ICS calendar subscriptions (with proper `STATUS:CANCELLED`)
+* RSS and Atom feeds mark cancelled events with a `[CANCELLED]` prefix
+
+## Version 1.26 (Mon, Mar 2 2026)
+
+* Homepage and weather descriptions now fully localized (German, English, French)
+* Homepage stats bar labels ("Athletes", "Active", "Trophies", etc.) translated
+* Weather conditions ("Clear sky", "Rain", etc.) translated across all display locations
+* Fixed trophy count on homepage — now correctly counts tournament results
+* Admins can now change a user's role (admin/coach) directly from the user table via dropdown
+* Club address lookup in Settings — type an address and geocode to lat/lon via Nominatim
+* "My location" button in Settings to use browser geolocation for club coordinates
+* Weather forecast now shown on the homepage alongside the club description
+
 ## Version 1.25 (Mon, Mar 2 2026)
 
 * Calendar list view now supports infinite scroll — scroll down for future months, scroll up for past months

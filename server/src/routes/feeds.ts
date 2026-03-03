@@ -34,8 +34,12 @@ function isFeedEnabled(feedKey: string): boolean {
 function getBaseUrl(req: Request): string {
   // Use the public-facing origin instead of the internal host,
   // since requests may arrive via a reverse proxy (Next.js dev / Apache).
-  const cors = process.env.CORS_ORIGIN || "http://localhost:3000";
-  return cors.split(",")[0].trim();
+  if (process.env.CORS_ORIGIN) {
+    return process.env.CORS_ORIGIN.split(",")[0].trim();
+  }
+  // Fall back to the request's own protocol + host (works in tests too).
+  const proto = req.protocol;
+  return `${proto}://${req.get("host")}`;
 }
 
 function parseQuery(req: Request): FeedQuery & { trophiesOnly?: boolean } {

@@ -1,7 +1,29 @@
 import { Router, type Request, type Response } from "express";
 import { getDB } from "../database.js";
+import { findNextUpcomingEventAny } from "../services/next-event.js";
 
 export const publicEventsRouter = Router();
+
+/**
+ * GET /api/public/next-event
+ *
+ * Public (no auth) endpoint that returns the next upcoming event
+ * across all sources (events table, event series, training schedules).
+ */
+publicEventsRouter.get("/public/next-event", (_req: Request, res: Response) => {
+  const next = findNextUpcomingEventAny();
+  if (!next) {
+    res.status(404).json({ error: "No upcoming events" });
+    return;
+  }
+  res.json({
+    id: next.id,
+    title: next.title,
+    date: next.date,
+    startTime: next.startTime,
+    source: next.source,
+  });
+});
 
 /**
  * GET /api/public/events/:id

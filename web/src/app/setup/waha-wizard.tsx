@@ -113,12 +113,12 @@ function useSSE(authToken: string) {
               const payload = line.slice(6);
               try {
                 const parsed = JSON.parse(payload);
-                if (parsed.error) {
-                  setError(parsed.error);
-                } else if (parsed.line) {
-                  setLogs((prev) => [...prev, parsed.line]);
-                } else if (parsed.done) {
+                if (parsed.type === 'error') {
+                  setError(parsed.text || parsed.error || 'Unknown error');
+                } else if (parsed.type === 'done') {
                   // will be handled after loop
+                } else if (parsed.text || parsed.line) {
+                  setLogs((prev) => [...prev, parsed.text || parsed.line]);
                 }
               } catch {
                 setLogs((prev) => [...prev, payload]);
@@ -223,6 +223,9 @@ function StepDocker({
         <>
           <p className="mb-4 text-sm text-gray-600">
             {t('docker_not_found')}
+          </p>
+          <p className="mb-4 text-xs text-gray-400">
+            {t('docker_shared_hosting_hint')}
           </p>
           {sse.error && (
             <div className="mb-3 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">

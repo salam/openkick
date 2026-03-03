@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from "express";
+import { authMiddleware, requireRole } from "../auth.js";
 import { getDB, getLastInsertId } from "../database.js";
 import {
   parseICS,
@@ -39,7 +40,7 @@ function formatDate(d: Date): string {
 // ── Training Schedule CRUD ──────────────────────────────────────────
 
 // POST /api/training-schedule
-calendarRouter.post("/training-schedule", (req: Request, res: Response) => {
+calendarRouter.post("/training-schedule", authMiddleware, requireRole("admin", "coach"), (req: Request, res: Response) => {
   const { dayOfWeek, startTime, endTime, location, categoryFilter, validFrom, validTo } = req.body;
 
   if (dayOfWeek === undefined || !startTime || !endTime) {
@@ -67,7 +68,7 @@ calendarRouter.get("/training-schedule", (_req: Request, res: Response) => {
 });
 
 // PUT /api/training-schedule/:id
-calendarRouter.put("/training-schedule/:id", (req: Request, res: Response) => {
+calendarRouter.put("/training-schedule/:id", authMiddleware, requireRole("admin", "coach"), (req: Request, res: Response) => {
   const db = getDB();
   const id = Number(req.params.id);
 
@@ -98,7 +99,7 @@ calendarRouter.put("/training-schedule/:id", (req: Request, res: Response) => {
 });
 
 // DELETE /api/training-schedule/:id
-calendarRouter.delete("/training-schedule/:id", (req: Request, res: Response) => {
+calendarRouter.delete("/training-schedule/:id", authMiddleware, requireRole("admin", "coach"), (req: Request, res: Response) => {
   const db = getDB();
   const id = Number(req.params.id);
 
@@ -115,7 +116,7 @@ calendarRouter.delete("/training-schedule/:id", (req: Request, res: Response) =>
 // ── Vacation CRUD ───────────────────────────────────────────────────
 
 // POST /api/vacations
-calendarRouter.post("/vacations", (req: Request, res: Response) => {
+calendarRouter.post("/vacations", authMiddleware, requireRole("admin", "coach"), (req: Request, res: Response) => {
   const { name, startDate, endDate, source } = req.body;
 
   if (!name || !startDate || !endDate) {
@@ -142,7 +143,7 @@ calendarRouter.get("/vacations", (_req: Request, res: Response) => {
 });
 
 // DELETE /api/vacations/:id
-calendarRouter.delete("/vacations/:id", (req: Request, res: Response) => {
+calendarRouter.delete("/vacations/:id", authMiddleware, requireRole("admin", "coach"), (req: Request, res: Response) => {
   const db = getDB();
   const id = Number(req.params.id);
 
@@ -157,7 +158,7 @@ calendarRouter.delete("/vacations/:id", (req: Request, res: Response) => {
 });
 
 // POST /api/vacations/import-ics
-calendarRouter.post("/vacations/import-ics", (req: Request, res: Response) => {
+calendarRouter.post("/vacations/import-ics", authMiddleware, requireRole("admin", "coach"), (req: Request, res: Response) => {
   const { icsContent } = req.body;
 
   if (!icsContent) {
@@ -179,7 +180,7 @@ calendarRouter.post("/vacations/import-ics", (req: Request, res: Response) => {
 });
 
 // POST /api/vacations/import-url
-calendarRouter.post("/vacations/import-url", async (req: Request, res: Response) => {
+calendarRouter.post("/vacations/import-url", authMiddleware, requireRole("admin", "coach"), async (req: Request, res: Response) => {
   const { url } = req.body;
 
   if (!url) {
@@ -213,7 +214,7 @@ calendarRouter.get("/vacations/presets", (_req: Request, res: Response) => {
 });
 
 // POST /api/vacations/sync
-calendarRouter.post("/vacations/sync", (req: Request, res: Response) => {
+calendarRouter.post("/vacations/sync", authMiddleware, requireRole("admin", "coach"), (req: Request, res: Response) => {
   const { presetId, year } = req.body;
 
   if (!presetId) {
@@ -267,7 +268,9 @@ calendarRouter.get("/calendar", (req: Request, res: Response) => {
 
   const db = getDB();
 
-  // 1. Standalone events in the date range with attendance counts
+  // 1. All persisted events in the date range with attendance counts
+  //    (includes both standalone events and auto-materialized series/training
+  //    events created by the WhatsApp bot for attendance tracking)
   const events: Record<string, unknown>[] = rowsToObjects(
     db.exec(
       `SELECT e.*,
@@ -275,7 +278,7 @@ calendarRouter.get("/calendar", (req: Request, res: Response) => {
         COALESCE(SUM(CASE WHEN a.status = 'no' THEN 1 ELSE 0 END), 0) AS absentCount
       FROM events e
       LEFT JOIN attendance a ON a.eventId = e.id
-      WHERE e.seriesId IS NULL AND e.date >= ? AND e.date <= ?
+      WHERE e.date >= ? AND e.date <= ?
       GROUP BY e.id
       ORDER BY e.date ASC`,
       [startDate, endDate],
@@ -325,8 +328,12 @@ calendarRouter.get("/calendar", (req: Request, res: Response) => {
       });
 
       trainings.push({
-        scheduleId: schedule.id,
+        id: `ts-${schedule.id}-${dateStr}`,
+        title: "Training",
+        type: "training",
         date: dateStr,
+        time: schedule.startTime as string,
+        scheduleId: schedule.id,
         dayOfWeek: schedule.dayOfWeek,
         startTime: schedule.startTime,
         endTime: schedule.endTime,
@@ -340,13 +347,15 @@ calendarRouter.get("/calendar", (req: Request, res: Response) => {
     }
   }
 
-  // 5. Expand event series into individual instances for this date range
+  // 5. Expand event series — but skip dates already covered by persisted events
+  //    (handles both proper seriesId-linked events AND orphaned auto-materialized
+  //    events created by the WhatsApp bot without seriesId)
   const allSeries = rowsToObjects(
     db.exec("SELECT * FROM event_series"),
   ) as unknown as SeriesTemplate[];
-  const materializedEvents = rowsToObjects(
-    db.exec("SELECT * FROM events WHERE seriesId IS NOT NULL AND date >= ? AND date <= ?", [startDate, endDate]),
-  ) as unknown as MaterializedEvent[];
+
+  // Dates already covered by persisted events — skip virtual series instances
+  const coveredDates = new Set(events.map((e) => String(e.date)));
 
   for (const series of allSeries) {
     const instances = expandSeries(
@@ -354,9 +363,12 @@ calendarRouter.get("/calendar", (req: Request, res: Response) => {
       startDate,
       endDate,
       vacations as unknown as VacationPeriod[],
-      materializedEvents,
+      // Pass materialized events (with seriesId) so expandSeries uses their data
+      events.filter((e) => e.seriesId != null) as unknown as MaterializedEvent[],
     );
     for (const inst of instances) {
+      // Skip virtual instances for dates that already have a persisted event
+      if (!inst.materialized && coveredDates.has(inst.date)) continue;
       const rec = inst as unknown as Record<string, unknown>;
       rec.attendingCount = null;
       rec.absentCount = null;
@@ -365,33 +377,10 @@ calendarRouter.get("/calendar", (req: Request, res: Response) => {
     }
   }
 
-  // Merge attendance counts for materialized series events (those with real numeric IDs)
-  const seriesEventIds = events
-    .filter((e) => e.seriesId != null && typeof e.id === "number")
-    .map((e) => e.id as number);
-  if (seriesEventIds.length > 0) {
-    const placeholders = seriesEventIds.map(() => "?").join(",");
-    const attRows = rowsToObjects(
-      db.exec(
-        `SELECT eventId,
-          COALESCE(SUM(CASE WHEN status = 'yes' THEN 1 ELSE 0 END), 0) AS attendingCount,
-          COALESCE(SUM(CASE WHEN status = 'no' THEN 1 ELSE 0 END), 0) AS absentCount
-        FROM attendance
-        WHERE eventId IN (${placeholders})
-        GROUP BY eventId`,
-        seriesEventIds,
-      ),
-    );
-    const attMap = new Map(attRows.map((r) => [r.eventId as number, r]));
-    for (const ev of events) {
-      if (ev.seriesId != null && typeof ev.id === "number") {
-        const att = attMap.get(ev.id as number);
-        ev.attendingCount = att ? (att.attendingCount as number) : 0;
-        ev.absentCount = att ? (att.absentCount as number) : 0;
-        ev.totalPlayers = totalPlayers;
-      }
-    }
-  }
+  // Attendance counts are already included via the LEFT JOIN in the initial
+  // query for all persisted events (both standalone and series-linked).
+  // Virtual series instances (from expandSeries) have null attendance which
+  // is correct — they haven't been materialized yet.
 
   // Re-sort events by date after adding series instances
   events.sort((a, b) => String(a.date).localeCompare(String(b.date)));

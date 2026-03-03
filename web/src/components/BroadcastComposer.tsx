@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiFetch } from '@/lib/api';
 import { t, getLanguage } from '@/lib/i18n';
+import { formatDateTime } from '@/lib/date';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -380,13 +381,7 @@ export default function BroadcastComposer() {
                     {bc.recipientCount} {t('recipient_s')}
                     {bc.category ? ` \u00b7 ${bc.category}` : ''}
                     {' \u00b7 '}
-                    {new Date(bc.sentAt || bc.createdAt).toLocaleDateString(undefined, {
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
+                    {formatDateTime(bc.sentAt || bc.createdAt)}
                   </p>
                 </div>
                 <span

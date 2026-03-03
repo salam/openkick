@@ -219,9 +219,25 @@ export default function InviteTeamForm() {
                       {t('password_status')}
                     </span>
                   )}
-                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 capitalize">
-                      {u.role}
-                    </span>
+                    <select
+                      value={u.role}
+                      onChange={async (e) => {
+                        const newRole = e.target.value;
+                        try {
+                          await apiFetch(`/api/users/${u.id}/role`, {
+                            method: 'PUT',
+                            body: JSON.stringify({ role: newRole }),
+                          });
+                          setUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, role: newRole } : x));
+                        } catch {
+                          setMsg('Failed to update role');
+                        }
+                      }}
+                      className="rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-600 focus:border-primary-500 focus:outline-none"
+                    >
+                      <option value="coach">{t('coach')}</option>
+                      <option value="admin">{t('admin')}</option>
+                    </select>
                     <button
                       onClick={() => { setEditingPhoneId(editingPhoneId === u.id ? null : u.id); setEditPhoneValue(u.phone || ''); }}
                       className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-primary-600"

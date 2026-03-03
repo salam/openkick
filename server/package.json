@@ -38,6 +38,9 @@
     "stripe": "^20.4.0",
     "ws": "^8.18.3"
   },
+  "overrides": {
+    "undici": "^6.0.0"
+  },
   "devDependencies": {
     "@types/archiver": "^7.0.0",
     "@types/basic-auth": "^1.1.8",

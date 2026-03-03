@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from "express";
+import { authMiddleware, requireRole } from "../auth.js";
 import { getDB, getLastInsertId } from "../database.js";
 import {
   composeTrainingHeadsup,
@@ -28,7 +29,7 @@ function rowsToObjects(
 
 // ── POST /api/broadcasts — create draft broadcast ───────────────────
 
-broadcastsRouter.post("/broadcasts", (req: Request, res: Response) => {
+broadcastsRouter.post("/broadcasts", authMiddleware, requireRole("admin", "coach"), (req: Request, res: Response) => {
   const { type, message, scheduledFor, templateKey } = req.body;
 
   if (!type) {
@@ -52,7 +53,7 @@ broadcastsRouter.post("/broadcasts", (req: Request, res: Response) => {
 
 // ── GET /api/broadcasts — list all broadcasts ───────────────────────
 
-broadcastsRouter.get("/broadcasts", (_req: Request, res: Response) => {
+broadcastsRouter.get("/broadcasts", authMiddleware, requireRole("admin", "coach"), (_req: Request, res: Response) => {
   const db = getDB();
   const rows = rowsToObjects(
     db.exec("SELECT * FROM broadcasts ORDER BY id DESC"),
@@ -62,7 +63,7 @@ broadcastsRouter.get("/broadcasts", (_req: Request, res: Response) => {
 
 // ── PUT /api/broadcasts/:id — update broadcast before sending ───────
 
-broadcastsRouter.put("/broadcasts/:id", (req: Request, res: Response) => {
+broadcastsRouter.put("/broadcasts/:id", authMiddleware, requireRole("admin", "coach"), (req: Request, res: Response) => {
   const db = getDB();
   const id = Number(req.params.id);
 
@@ -94,6 +95,8 @@ broadcastsRouter.put("/broadcasts/:id", (req: Request, res: Response) => {
 
 broadcastsRouter.post(
   "/broadcasts/:id/send",
+  authMiddleware,
+  requireRole("admin", "coach"),
   async (req: Request, res: Response) => {
     const id = Number(req.params.id);
     try {
@@ -114,6 +117,8 @@ broadcastsRouter.post(
 
 broadcastsRouter.post(
   "/broadcasts/compose",
+  authMiddleware,
+  requireRole("admin", "coach"),
   async (req: Request, res: Response) => {
     const { template, eventId, vacationName, startDate, endDate } = req.body;
 

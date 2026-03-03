@@ -14,6 +14,7 @@ export default function DonateCard() {
   const [customAmount, setCustomAmount] = useState('');
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
   const [, setLang] = useState(() => getLanguage());
 
   useEffect(() => {
@@ -43,6 +44,7 @@ export default function DonateCard() {
   async function handleDonate() {
     if (!effectiveAmount || effectiveAmount <= 0) return;
     setSubmitting(true);
+    setError('');
     try {
       const res = await fetch(`${API_URL}/api/payments/checkout`, {
         method: 'POST',
@@ -57,11 +59,15 @@ export default function DonateCard() {
         }),
       });
       const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || t('donate_error'));
+        return;
+      }
       if (data.redirectUrl) {
         window.location.href = data.redirectUrl;
       }
     } catch {
-      // checkout failed silently
+      setError(t('donate_error'));
     } finally {
       setSubmitting(false);
     }
@@ -113,6 +119,10 @@ export default function DonateCard() {
           className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-primary-500"
         />
       </div>
+
+      {error && (
+        <p className="mb-3 text-sm text-red-600">{error}</p>
+      )}
 
       <button
         onClick={handleDonate}

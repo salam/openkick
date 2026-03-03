@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import LiveTickerBar from './LiveTickerBar';
+import { formatDateLong } from '@/lib/date';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
@@ -95,11 +96,7 @@ export default function TournamentWidget() {
           </p>
           <p className="font-medium text-gray-800">{nextTournament.title}</p>
           <p className="text-sm text-gray-500">
-            {new Date(nextTournament.date).toLocaleDateString('de-CH', {
-              day: 'numeric',
-              month: 'long',
-              year: 'numeric',
-            })}
+            {formatDateLong(nextTournament.date)}
           </p>
           {nextTournament.location && (
             <p className="text-sm text-gray-400">{nextTournament.location}</p>

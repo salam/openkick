@@ -548,6 +548,9 @@ export async function initDB(dbPath?: string): Promise<Database> {
     try { db.run('ALTER TABLE message_log ADD COLUMN outcomes TEXT'); } catch {}
   }
 
+  // Add cancelled column to events (for event cancellation without deletion)
+  try { db.run('ALTER TABLE events ADD COLUMN cancelled INTEGER NOT NULL DEFAULT 0'); } catch {}
+
   // Seed default settings (INSERT OR IGNORE to avoid duplicates)
   for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) {
     db.run("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", [key, value]);

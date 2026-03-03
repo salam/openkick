@@ -3,11 +3,16 @@ import express from "express";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { initDB, getDB, getLastInsertId } from "../../database.js";
+import { generateJWT } from "../../auth.js";
 import type { Database } from "sql.js";
 
 let db: Database;
 let server: Server;
 let baseUrl: string;
+const authHeaders = {
+  "Content-Type": "application/json",
+  Authorization: `Bearer ${generateJWT({ id: 1, role: "admin" })}`,
+};
 
 async function createTestApp() {
   db = await initDB();
@@ -72,7 +77,7 @@ describe("Game History routes", () => {
   it("POST /api/game-history creates entry and returns 201", async () => {
     const res = await fetch(`${baseUrl}/api/game-history`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({
         tournamentName: "Spring Cup",
         date: "2026-03-15",
@@ -94,7 +99,7 @@ describe("Game History routes", () => {
     // Create an entry first
     const createRes = await fetch(`${baseUrl}/api/game-history`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({
         tournamentName: "Detail Cup",
         date: "2026-04-01",
@@ -113,16 +118,24 @@ describe("Game History routes", () => {
     expect(body.matches[0].homeTeam).toBe("A");
   });
 
+  // BUG21: GET /api/game-history/latest — 200 with null when empty (no 404)
+  it("GET /api/game-history/latest returns 200 with null when no entries exist", async () => {
+    const res = await fetch(`${baseUrl}/api/game-history/latest`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toBeNull();
+  });
+
   // 4. GET /api/game-history/latest — 200, returns most recent
   it("GET /api/game-history/latest returns the most recent entry", async () => {
     await fetch(`${baseUrl}/api/game-history`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ tournamentName: "Old Cup", date: "2025-01-01" }),
     });
     await fetch(`${baseUrl}/api/game-history`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ tournamentName: "New Cup", date: "2026-06-01" }),
     });
 
@@ -136,14 +149,14 @@ describe("Game History routes", () => {
   it("PUT /api/game-history/:id/trophy sets trophy type", async () => {
     const createRes = await fetch(`${baseUrl}/api/game-history`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ tournamentName: "Trophy Cup", date: "2026-05-01" }),
     });
     const { id } = await createRes.json();
 
     const res = await fetch(`${baseUrl}/api/game-history/${id}/trophy`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ trophyType: "first_place" }),
     });
     expect(res.status).toBe(200);
@@ -162,6 +175,7 @@ describe("Game History routes", () => {
 
     const res = await fetch(`${baseUrl}/api/game-history/archive/${tid}`, {
       method: "POST",
+      headers: authHeaders,
     });
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -178,13 +192,14 @@ describe("Game History routes", () => {
   it("DELETE /api/game-history/:id deletes entry", async () => {
     const createRes = await fetch(`${baseUrl}/api/game-history`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ tournamentName: "Delete Cup", date: "2026-08-01" }),
     });
     const { id } = await createRes.json();
 
     const res = await fetch(`${baseUrl}/api/game-history/${id}`, {
       method: "DELETE",
+      headers: authHeaders,
     });
     expect(res.status).toBe(200);
 

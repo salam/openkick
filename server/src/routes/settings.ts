@@ -2,10 +2,10 @@ import { Router, type Request, type Response } from "express";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import sharp from "sharp";
+import type sharp from "sharp";
 import pngToIco from "png-to-ico";
 import { getDB } from "../database.js";
-import { authMiddleware, requireRole } from "../auth.js";
+import { authMiddleware, requireRole, verifyJWT } from "../auth.js";
 import { invalidateHomepageStatsCache } from "../services/statistics.service.js";
 import { geocodeLocation } from "../services/geocoding.js";
 import { sendEmail, buildTestEmail } from "../services/email.js";
@@ -13,18 +13,119 @@ import { chatCompletion } from "../services/llm.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+/** Resolve the static root, respecting STATIC_DIR for production. */
+function getStaticRoot(): string {
+  return process.env.STATIC_DIR
+    ? path.resolve(process.env.STATIC_DIR)
+    : path.resolve(__dirname, "../../../public");
+}
+
+/** Resolve the uploads directory within the static root. */
+function getUploadDir(): string {
+  return path.join(getStaticRoot(), "uploads");
+}
+
 export const settingsRouter = Router();
 
+// Whitelist: settings keys safe to return without authentication.
+// Everything NOT on this list requires admin/coach auth.
+const PUBLIC_KEYS = new Set([
+  // Branding & SEO (HTML injector + frontend components)
+  "club_name",
+  "club_description",
+  "club_logo",
+  "tint_color",
+  "homepage_bg_image",
+  "og_title",
+  "og_description",
+  "og_image",
+  "twitter_title",
+  "twitter_description",
+  "twitter_handle",
+  "meta_keywords",
+  // Homepage stats
+  "homepage_stats_settings",
+  // Feed toggles
+  "feeds_enabled",
+  "feed_rss_enabled",
+  "feed_atom_enabled",
+  "feed_ics_enabled",
+  "feed_activitypub_enabled",
+  "feed_atprotocol_enabled",
+  "feed_sitemap_enabled",
+  // llms.txt
+  "contact_info",
+  // security.txt
+  "security_contact_email",
+  "security_contact_url",
+  "security_pgp_key_url",
+  "security_acknowledgments_url",
+  "security_preferred_languages",
+  "security_canonical_url",
+  "security_policy_url",
+  // Legal / imprint (public footer)
+  "legal_org_name",
+  "legal_address",
+  "legal_email",
+  "legal_phone",
+  "legal_responsible",
+  "dpo_name",
+  "dpo_email",
+  "imprint_extra",
+  "privacy_extra",
+  // RSVP
+  "rsvp_require_phone",
+  // Weather
+  "latitude",
+  "longitude",
+  // Onboarding status
+  "onboarding_completed",
+  // Bot language (used by public-facing translated content)
+  "bot_language",
+  // LLM provider name (non-secret, used by settings UI display)
+  "llm_provider",
+  "llm_model",
+  // WAHA URL (non-secret, used by setup wizard status checks)
+  "waha_url",
+  // Captcha provider name (non-secret, frontend needs to know which widget to show)
+  "captcha_provider",
+  // Holiday preset
+  "holiday_preset",
+  // Bot feature toggles
+  "bot_allow_onboarding",
+  // Default country code (used by RSVP phone input)
+  "default_country_code",
+]);
+
+/** Returns true if a settings key is safe to return without authentication. */
+export function isPublicKey(key: string): boolean {
+  return PUBLIC_KEYS.has(key);
+}
+
+/** Soft auth: extract user from JWT without rejecting unauthenticated requests. */
+function getOptionalUser(req: Request): { id: number; role: string } | null {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith("Bearer ")) return null;
+  return verifyJWT(authHeader.slice(7));
+}
+
 // GET /api/settings — return all settings as { key: value } object
-settingsRouter.get("/settings", (_req: Request, res: Response) => {
+// Unauthenticated: returns only non-secret settings.
+// Authenticated admin/coach: returns all settings.
+settingsRouter.get("/settings", (req: Request, res: Response) => {
   const db = getDB();
   const result = db.exec("SELECT key, value FROM settings ORDER BY key");
+
+  const user = getOptionalUser(req);
+  const isPrivileged = user?.role === "admin" || user?.role === "coach";
 
   const settings: Record<string, string> = {};
   if (result.length > 0) {
     const { values } = result[0];
     for (const [key, value] of values) {
-      settings[key as string] = value as string;
+      const k = key as string;
+      if (!isPrivileged && !isPublicKey(k)) continue;
+      settings[k] = value as string;
     }
   }
 
@@ -41,10 +142,18 @@ settingsRouter.get("/settings", (_req: Request, res: Response) => {
   res.json(settings);
 });
 
-// GET /api/settings/:key — return single setting
+// GET /api/settings/:key — return single setting (secret keys require auth)
 settingsRouter.get("/settings/:key", (req: Request, res: Response) => {
   const db = getDB();
   const { key } = req.params;
+
+  if (!isPublicKey(key as string)) {
+    const user = getOptionalUser(req);
+    if (!user || (user.role !== "admin" && user.role !== "coach")) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+  }
 
   const result = db.exec("SELECT key, value FROM settings WHERE key = ?", [key as string]);
   if (result.length === 0 || result[0].values.length === 0) {
@@ -56,8 +165,8 @@ settingsRouter.get("/settings/:key", (req: Request, res: Response) => {
   res.json({ key: k, value: v });
 });
 
-// PUT /api/settings/:key — create or update a setting
-settingsRouter.put("/settings/:key", (req: Request, res: Response) => {
+// PUT /api/settings/:key — create or update a setting (admin only)
+settingsRouter.put("/settings/:key", authMiddleware, requireRole("admin"), (req: Request, res: Response) => {
   const db = getDB();
   const { key } = req.params;
   const { value } = req.body;
@@ -89,8 +198,8 @@ settingsRouter.post("/settings/geocode", authMiddleware, requireRole("admin"), a
   res.json(coords);
 });
 
-// POST /api/settings/upload-logo — accept base64-encoded image, save to public/uploads/
-settingsRouter.post("/settings/upload-logo", async (req: Request, res: Response) => {
+// POST /api/settings/upload-logo — accept base64-encoded image, save to public/uploads/ (admin only)
+settingsRouter.post("/settings/upload-logo", authMiddleware, requireRole("admin"), async (req: Request, res: Response) => {
   const { data, filename } = req.body;
 
   if (!data || !filename) {
@@ -111,7 +220,7 @@ settingsRouter.post("/settings/upload-logo", async (req: Request, res: Response)
     return;
   }
 
-  const uploadDir = path.resolve(__dirname, "../../../public/uploads");
+  const uploadDir = getUploadDir();
   if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
   }
@@ -120,8 +229,10 @@ settingsRouter.post("/settings/upload-logo", async (req: Request, res: Response)
   fs.writeFileSync(path.join(uploadDir, savedName), buffer);
 
   // Generate favicon variants from the uploaded logo
+  const logoPath = path.join(uploadDir, savedName);
   try {
-    const logoBuffer = fs.readFileSync(path.join(uploadDir, savedName));
+    const { default: sharp } = await import("sharp");
+    const logoBuffer = fs.readFileSync(logoPath);
     const sharpInput = sharp(logoBuffer);
 
     await Promise.all([
@@ -134,22 +245,29 @@ settingsRouter.post("/settings/upload-logo", async (req: Request, res: Response)
 
     const icoBuffer = await pngToIco(path.join(uploadDir, "favicon-32x32.png"));
     fs.writeFileSync(path.join(uploadDir, "favicon.ico"), icoBuffer);
-
-    const manifest = {
-      name: "",
-      short_name: "",
-      icons: [
-        { src: "/uploads/android-chrome-192x192.png", sizes: "192x192", type: "image/png" },
-        { src: "/uploads/android-chrome-512x512.png", sizes: "512x512", type: "image/png" },
-      ],
-      theme_color: "#10b981",
-      background_color: "#ffffff",
-      display: "standalone",
-    };
-    fs.writeFileSync(path.join(uploadDir, "site.webmanifest"), JSON.stringify(manifest, null, 2));
   } catch (err) {
-    console.error("Favicon generation failed:", err);
+    // Fallback: copy the original logo as each favicon variant (unresized but functional)
+    console.warn("sharp unavailable, using original logo as favicon fallback:", (err as Error).message);
+    const origBuf = fs.readFileSync(logoPath);
+    for (const name of ["favicon-16x16.png", "favicon-32x32.png", "apple-touch-icon.png", "android-chrome-192x192.png", "android-chrome-512x512.png"]) {
+      fs.writeFileSync(path.join(uploadDir, name), origBuf);
+    }
+    fs.writeFileSync(path.join(uploadDir, "favicon.ico"), origBuf);
   }
+
+  // Write web app manifest
+  const manifest = {
+    name: "",
+    short_name: "",
+    icons: [
+      { src: "/uploads/android-chrome-192x192.png", sizes: "192x192", type: "image/png" },
+      { src: "/uploads/android-chrome-512x512.png", sizes: "512x512", type: "image/png" },
+    ],
+    theme_color: "#10b981",
+    background_color: "#ffffff",
+    display: "standalone",
+  };
+  fs.writeFileSync(path.join(uploadDir, "site.webmanifest"), JSON.stringify(manifest, null, 2));
 
   const publicPath = `/uploads/${savedName}`;
   const db = getDB();
@@ -158,8 +276,8 @@ settingsRouter.post("/settings/upload-logo", async (req: Request, res: Response)
   res.json({ key: "club_logo", value: publicPath });
 });
 
-// DELETE /api/settings/remove-logo — delete the uploaded club logo
-settingsRouter.delete("/settings/remove-logo", (_req: Request, res: Response) => {
+// DELETE /api/settings/remove-logo — delete the uploaded club logo (admin only)
+settingsRouter.delete("/settings/remove-logo", authMiddleware, requireRole("admin"), (_req: Request, res: Response) => {
   const db = getDB();
   const result = db.exec("SELECT value FROM settings WHERE key = ?", ["club_logo"]);
   const row = result.length > 0 && result[0].values.length > 0
@@ -167,7 +285,7 @@ settingsRouter.delete("/settings/remove-logo", (_req: Request, res: Response) =>
     : undefined;
 
   if (row?.value) {
-    const filePath = path.resolve(__dirname, "../../../public", row.value.replace(/^\//, ""));
+    const filePath = path.join(getStaticRoot(), row.value.replace(/^\//, ""));
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
     }
@@ -179,7 +297,7 @@ settingsRouter.delete("/settings/remove-logo", (_req: Request, res: Response) =>
     "apple-touch-icon.png", "android-chrome-192x192.png",
     "android-chrome-512x512.png", "site.webmanifest",
   ]) {
-    const fp = path.join(path.resolve(__dirname, "../../../public/uploads"), f);
+    const fp = path.join(getUploadDir(), f);
     if (fs.existsSync(fp)) fs.unlinkSync(fp);
   }
 
@@ -187,8 +305,8 @@ settingsRouter.delete("/settings/remove-logo", (_req: Request, res: Response) =>
   res.json({ key: "club_logo", value: "" });
 });
 
-// POST /api/settings/upload-bg — accept base64-encoded background image
-settingsRouter.post("/settings/upload-bg", async (req: Request, res: Response) => {
+// POST /api/settings/upload-bg — accept base64-encoded background image (admin only)
+settingsRouter.post("/settings/upload-bg", authMiddleware, requireRole("admin"), async (req: Request, res: Response) => {
   const { data, filename } = req.body;
   if (!data || !filename) {
     res.status(400).json({ error: "data and filename are required" });
@@ -205,7 +323,7 @@ settingsRouter.post("/settings/upload-bg", async (req: Request, res: Response) =
     res.status(400).json({ error: "File too large. Maximum 10MB." });
     return;
   }
-  const uploadDir = path.resolve(__dirname, "../../../public/uploads");
+  const uploadDir = getUploadDir();
   if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
   const savedName = `hero-bg${ext}`;
   fs.writeFileSync(path.join(uploadDir, savedName), buffer);
@@ -215,23 +333,23 @@ settingsRouter.post("/settings/upload-bg", async (req: Request, res: Response) =
   res.json({ key: "homepage_bg_image", value: publicPath });
 });
 
-// DELETE /api/settings/remove-bg — delete the uploaded background image
-settingsRouter.delete("/settings/remove-bg", (_req: Request, res: Response) => {
+// DELETE /api/settings/remove-bg — delete the uploaded background image (admin only)
+settingsRouter.delete("/settings/remove-bg", authMiddleware, requireRole("admin"), (_req: Request, res: Response) => {
   const db = getDB();
   const bgResult = db.exec("SELECT value FROM settings WHERE key = ?", ["homepage_bg_image"]);
   const row = bgResult.length > 0 && bgResult[0].values.length > 0
     ? { value: bgResult[0].values[0][0] as string }
     : undefined;
   if (row?.value) {
-    const filePath = path.resolve(__dirname, "../../../public", row.value.replace(/^\//, ""));
+    const filePath = path.join(getStaticRoot(), row.value.replace(/^\//, ""));
     if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
   }
   db.run("DELETE FROM settings WHERE key = ?", ["homepage_bg_image"]);
   res.json({ key: "homepage_bg_image", value: "" });
 });
 
-// POST /api/settings/test-llm — verify LLM API key and model work
-settingsRouter.post("/settings/test-llm", async (_req: Request, res: Response) => {
+// POST /api/settings/test-llm — verify LLM API key and model work (admin only)
+settingsRouter.post("/settings/test-llm", authMiddleware, requireRole("admin"), async (_req: Request, res: Response) => {
   try {
     const result = await chatCompletion([
       { role: "user", content: "Reply with exactly: OK" },
@@ -243,8 +361,8 @@ settingsRouter.post("/settings/test-llm", async (_req: Request, res: Response) =
   }
 });
 
-// POST /api/settings/test-smtp — send a test email to verify SMTP config
-settingsRouter.post("/settings/test-smtp", async (req: Request, res: Response) => {
+// POST /api/settings/test-smtp — send a test email to verify SMTP config (admin only)
+settingsRouter.post("/settings/test-smtp", authMiddleware, requireRole("admin"), async (req: Request, res: Response) => {
   const { to } = req.body;
   if (!to) {
     res.status(400).json({ success: false, message: "to address is required" });

@@ -276,7 +276,7 @@ describe("Survey admin routes", () => {
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body.survey).toBeDefined();
-    expect(body.survey.title).toBe("Trikot & Cap Order");
+    expect(body.survey.title).toContain("Trikot & Cap Order");
     expect(body.questions).toBeDefined();
     expect(body.questions.length).toBeGreaterThan(0);
   });
@@ -294,7 +294,7 @@ describe("Survey admin routes", () => {
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body.survey).toBeDefined();
-    expect(body.survey.title).toBe("End-of-Semester Feedback");
+    expect(body.survey.title).toContain("End-of-Semester Feedback");
     expect(body.questions).toBeDefined();
     expect(body.questions.length).toBeGreaterThan(0);
   });

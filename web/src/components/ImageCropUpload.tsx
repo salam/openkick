@@ -1,10 +1,60 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
-import Cropper from 'react-easy-crop';
+import { useState, useCallback, useEffect, lazy, Suspense } from 'react';
 import type { Area } from 'react-easy-crop';
 import { getCroppedImg } from '@/lib/crop-image';
 import { t, getLanguage } from '@/lib/i18n';
+
+import { Component, type ErrorInfo, type ReactNode } from 'react';
+
+const Cropper = lazy(() => import('react-easy-crop'));
+
+/** Error boundary that renders a fallback image preview when Cropper fails */
+class CropperErrorBoundary extends Component<
+  { fallback: ReactNode; onError: () => void; children: ReactNode },
+  { hasError: boolean }
+> {
+  state = { hasError: false };
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch(_: Error, __: ErrorInfo) { this.props.onError(); }
+  render() { return this.state.hasError ? this.props.fallback : this.props.children; }
+}
+
+function CropperWithFallback({
+  imageSrc, crop, zoom, shape, onCropChange, onZoomChange, onCropComplete, onLoadError,
+}: {
+  imageSrc: string;
+  crop: { x: number; y: number };
+  zoom: number;
+  shape: 'round' | 'rect';
+  onCropChange: (c: { x: number; y: number }) => void;
+  onZoomChange: (z: number) => void;
+  onCropComplete: (area: Area, pixels: Area) => void;
+  onLoadError: () => void;
+}) {
+  return (
+    <CropperErrorBoundary
+      onError={onLoadError}
+      fallback={
+        <div className="flex h-full items-center justify-center">
+          <img src={imageSrc} alt="Preview" className="max-h-full max-w-full object-contain" />
+        </div>
+      }
+    >
+      <Cropper
+        image={imageSrc}
+        crop={crop}
+        zoom={zoom}
+        aspect={1}
+        cropShape={shape}
+        showGrid={false}
+        onCropChange={onCropChange}
+        onZoomChange={onZoomChange}
+        onCropComplete={onCropComplete}
+      />
+    </CropperErrorBoundary>
+  );
+}
 
 interface ImageCropUploadProps {
   /** Crop mask shape */
@@ -47,6 +97,7 @@ export default function ImageCropUpload({
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
   const [error, setError] = useState('');
+  const [cropperAvailable, setCropperAvailable] = useState(true);
 
   const onCropComplete = useCallback((_: Area, croppedPixels: Area) => {
     setCroppedAreaPixels(croppedPixels);
@@ -71,20 +122,45 @@ export default function ImageCropUpload({
     }
 
     const reader = new FileReader();
-    reader.onload = () => setImageSrc(reader.result as string);
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      if (!cropperAvailable) {
+        // Cropper not available — upload original image directly
+        const base64 = dataUrl.split(',')[1];
+        onCrop(base64);
+      } else {
+        setImageSrc(dataUrl);
+      }
+    };
     reader.onerror = () => setError(t('failed_read_file'));
     reader.readAsDataURL(file);
   }
 
   async function handleConfirm() {
-    if (!imageSrc || !croppedAreaPixels) return;
-    try {
-      const base64 = await getCroppedImg(imageSrc, croppedAreaPixels, outputSize);
+    if (!imageSrc) return;
+
+    // Try canvas crop first, fall back to uploading original if it fails
+    if (croppedAreaPixels) {
+      try {
+        const base64 = await getCroppedImg(imageSrc, croppedAreaPixels, outputSize);
+        onCrop(base64);
+        setImageSrc(null);
+        setCrop({ x: 0, y: 0 });
+        setZoom(1);
+        return;
+      } catch {
+        // Canvas crop failed — fall through to upload original
+      }
+    }
+
+    // Fallback: upload original image without cropping
+    const base64 = imageSrc.split(',')[1];
+    if (base64) {
       onCrop(base64);
       setImageSrc(null);
       setCrop({ x: 0, y: 0 });
       setZoom(1);
-    } catch {
+    } else {
       setError(t('failed_crop'));
     }
   }
@@ -101,37 +177,44 @@ export default function ImageCropUpload({
     return (
       <div className="space-y-3">
         <div className="relative h-64 w-full rounded-lg border border-gray-200 bg-gray-900 overflow-hidden">
-          <Cropper
-            image={imageSrc}
-            crop={crop}
-            zoom={zoom}
-            aspect={1}
-            cropShape={shape}
-            showGrid={false}
-            onCropChange={setCrop}
-            onZoomChange={setZoom}
-            onCropComplete={onCropComplete}
-          />
+          <Suspense fallback={
+            <div className="flex h-full items-center justify-center">
+              <img src={imageSrc} alt="Preview" className="max-h-full max-w-full object-contain" />
+            </div>
+          }>
+            <CropperWithFallback
+              imageSrc={imageSrc}
+              crop={crop}
+              zoom={zoom}
+              shape={shape}
+              onCropChange={setCrop}
+              onZoomChange={setZoom}
+              onCropComplete={onCropComplete}
+              onLoadError={() => setCropperAvailable(false)}
+            />
+          </Suspense>
         </div>
-        <div className="flex items-center gap-3">
-          <label className="text-xs text-gray-500 whitespace-nowrap">{t('zoom')}</label>
-          <input
-            type="range"
-            min={1}
-            max={3}
-            step={0.05}
-            value={zoom}
-            onChange={(e) => setZoom(Number(e.target.value))}
-            className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-gray-200 accent-blue-600"
-          />
-        </div>
+        {cropperAvailable && (
+          <div className="flex items-center gap-3">
+            <label className="text-xs text-gray-500 whitespace-nowrap">{t('zoom')}</label>
+            <input
+              type="range"
+              min={1}
+              max={3}
+              step={0.05}
+              value={zoom}
+              onChange={(e) => setZoom(Number(e.target.value))}
+              className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-gray-200 accent-blue-600"
+            />
+          </div>
+        )}
         <div className="flex gap-2">
           <button
             type="button"
             onClick={handleConfirm}
             className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
           >
-            {t('crop_upload')}
+            {cropperAvailable ? t('crop_upload') : t('upload')}
           </button>
           <button
             type="button"

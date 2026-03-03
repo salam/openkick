@@ -4,11 +4,13 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { initDB } from "../../database.js";
 import { attendanceRouter } from "../attendance.js";
+import { generateJWT } from "../../auth.js";
 import type { Database } from "sql.js";
 
 let db: Database;
 let server: Server;
 let baseUrl: string;
+const adminToken = generateJWT({ id: 1, role: "admin" });
 
 async function createTestApp() {
   db = await initDB();
@@ -314,6 +316,7 @@ describe("Attendance routes", () => {
 
     const res = await fetch(`${baseUrl}/api/attendance/${recordId}`, {
       method: "DELETE",
+      headers: { Authorization: `Bearer ${adminToken}` },
     });
     expect(res.status).toBe(204);
 

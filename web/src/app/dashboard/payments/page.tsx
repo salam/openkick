@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
 import { t, getLanguage } from '@/lib/i18n';
+import { formatDate } from '@/lib/date';
 
 interface Transaction {
   id: number;
@@ -137,7 +138,7 @@ export default function PaymentsPage() {
                 {transactions.map((tx) => (
                   <tr key={tx.id}>
                     <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
-                      {new Date(tx.createdAt).toLocaleDateString(getLanguage())}
+                      {formatDate(tx.createdAt)}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
                       {t(USE_CASE_LABELS[tx.useCase] || tx.useCase)}

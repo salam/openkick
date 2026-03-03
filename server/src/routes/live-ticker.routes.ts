@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { authMiddleware, requireRole } from "../auth.js";
 import {
   getTickerEntries,
   upsertTickerEntry,
@@ -30,7 +31,7 @@ liveTickerRouter.get("/live-ticker/:tournamentId", (req, res) => {
 });
 
 // POST /live-ticker/:tournamentId/manual — add manual score
-liveTickerRouter.post("/live-ticker/:tournamentId/manual", (req, res) => {
+liveTickerRouter.post("/live-ticker/:tournamentId/manual", authMiddleware, requireRole("admin", "coach"), (req, res) => {
   const tournamentId = Number(req.params.tournamentId);
   if (isNaN(tournamentId)) {
     res.status(400).json({ error: "Invalid tournamentId" });
@@ -59,7 +60,7 @@ liveTickerRouter.post("/live-ticker/:tournamentId/manual", (req, res) => {
 });
 
 // PUT /live-ticker/:tournamentId/crawl-config — set crawl URL
-liveTickerRouter.put("/live-ticker/:tournamentId/crawl-config", (req, res) => {
+liveTickerRouter.put("/live-ticker/:tournamentId/crawl-config", authMiddleware, requireRole("admin", "coach"), (req, res) => {
   const tournamentId = Number(req.params.tournamentId);
   if (isNaN(tournamentId)) {
     res.status(400).json({ error: "Invalid tournamentId" });
@@ -92,7 +93,7 @@ liveTickerRouter.get(
 );
 
 // DELETE /live-ticker/crawl-config/:id — deactivate crawl config
-liveTickerRouter.delete("/live-ticker/crawl-config/:id", (req, res) => {
+liveTickerRouter.delete("/live-ticker/crawl-config/:id", authMiddleware, requireRole("admin", "coach"), (req, res) => {
   const id = Number(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid config id" });
@@ -106,6 +107,7 @@ liveTickerRouter.delete("/live-ticker/crawl-config/:id", (req, res) => {
 // POST /live-ticker/:tournamentId/crawl-now — trigger immediate crawl
 liveTickerRouter.post(
   "/live-ticker/:tournamentId/crawl-now",
+  authMiddleware, requireRole("admin", "coach"),
   async (req, res) => {
     const tournamentId = Number(req.params.tournamentId);
     if (isNaN(tournamentId)) {

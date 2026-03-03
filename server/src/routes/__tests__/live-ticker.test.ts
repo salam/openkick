@@ -3,14 +3,20 @@ import express from "express";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { initDB, getDB, getLastInsertId } from "../../database.js";
+import { generateJWT } from "../../auth.js";
 import type { Database } from "sql.js";
 
 let db: Database;
 let server: Server;
 let baseUrl: string;
+const authHeaders = {
+  "Content-Type": "application/json",
+  Authorization: `Bearer ${generateJWT({ id: 1, role: "admin" })}`,
+};
 
 async function createTestApp() {
   db = await initDB();
+  db.run("INSERT INTO guardians (id, phone, name, role, passwordHash) VALUES (1, '+41790000000', 'Admin', 'admin', 'hash')");
   const { liveTickerRouter } = await import("../live-ticker.routes.js");
   const app = express();
   app.use(express.json());
@@ -66,7 +72,7 @@ describe("Live Ticker routes", () => {
     const tid = seedTournament("2026-03-01");
     const res = await fetch(`${baseUrl}/api/live-ticker/${tid}/manual`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({
         home: "FC Blue",
         away: "FC Red",
@@ -92,7 +98,7 @@ describe("Live Ticker routes", () => {
     const tid = seedTournament("2026-03-01");
     const res = await fetch(`${baseUrl}/api/live-ticker/${tid}/manual`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ home: "FC Blue" }),
     });
     expect(res.status).toBe(400);
@@ -104,7 +110,7 @@ describe("Live Ticker routes", () => {
       `${baseUrl}/api/live-ticker/${tid}/crawl-config`,
       {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders,
         body: JSON.stringify({
           url: "https://example.com/results",
           intervalMin: 5,
@@ -122,7 +128,7 @@ describe("Live Ticker routes", () => {
       `${baseUrl}/api/live-ticker/${tid}/crawl-config`,
       {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders,
         body: JSON.stringify({}),
       },
     );
@@ -135,7 +141,7 @@ describe("Live Ticker routes", () => {
     // Set a config first
     await fetch(`${baseUrl}/api/live-ticker/${tid}/crawl-config`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ url: "https://example.com/results" }),
     });
 
@@ -155,7 +161,7 @@ describe("Live Ticker routes", () => {
     // Set a config first
     await fetch(`${baseUrl}/api/live-ticker/${tid}/crawl-config`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ url: "https://example.com/results" }),
     });
 
@@ -168,7 +174,7 @@ describe("Live Ticker routes", () => {
 
     const res = await fetch(
       `${baseUrl}/api/live-ticker/crawl-config/${configId}`,
-      { method: "DELETE" },
+      { method: "DELETE", headers: authHeaders },
     );
     expect(res.status).toBe(200);
 

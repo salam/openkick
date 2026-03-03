@@ -41,9 +41,10 @@ export function toRss(items: FeedItem[], baseUrl: string, clubName: string): str
     .map((item) => {
       const link = `${baseUrl}/events/${item.id}`;
       const trophy = formatTrophyText(item);
+      const cancelNote = item.cancelled ? "[CANCELLED] " : "";
       const desc = [item.description || `${item.type}: ${item.title}`, trophy].filter(Boolean).join("\n");
       return `    <item>
-      <title>${xmlEscape(item.title)}</title>
+      <title>${xmlEscape(cancelNote + item.title)}</title>
       <link>${xmlEscape(link)}</link>
       <description>${xmlEscape(desc)}</description>
       <pubDate>${toRfc822(item.date, item.startTime)}</pubDate>
@@ -69,9 +70,10 @@ export function toAtom(items: FeedItem[], baseUrl: string, clubName: string): st
     .map((item) => {
       const link = `${baseUrl}/events/${item.id}`;
       const trophy = formatTrophyText(item);
+      const cancelNote = item.cancelled ? "[CANCELLED] " : "";
       const desc = [item.description || `${item.type}: ${item.title}`, trophy].filter(Boolean).join("\n");
       return `  <entry>
-    <title>${xmlEscape(item.title)}</title>
+    <title>${xmlEscape(cancelNote + item.title)}</title>
     <link href="${xmlEscape(link)}" />
     <id>${xmlEscape(link)}</id>
     <updated>${toIso(item.date, item.startTime)}</updated>
@@ -116,8 +118,11 @@ export function toIcs(items: FeedItem[], clubName: string): string {
         "BEGIN:VEVENT",
         `UID:event-${item.id}@openkick`,
         icsDate(item.date, item.startTime),
-        foldLine(`SUMMARY:${item.title}`),
+        foldLine(`SUMMARY:${item.cancelled ? "[CANCELLED] " : ""}${item.title}`),
       ];
+      if (item.cancelled) {
+        lines.push("STATUS:CANCELLED");
+      }
       const trophy = formatTrophyText(item);
       if (item.description || trophy) {
         const parts = [item.description, trophy].filter(Boolean).join("\\n");

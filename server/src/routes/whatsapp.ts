@@ -102,7 +102,7 @@ function handleDisambiguation(
     index > context.pendingPlayerIds.length
   ) {
     const baseUrl = process.env.BASE_URL ?? "http://localhost:3000";
-    const helpMsg = getBotTemplate("whatsapp_help", lang, { url: `${baseUrl}/rsvp` });
+    const helpMsg = getBotTemplate("whatsapp_help", lang, { url: `${baseUrl}/rsvp?event=${context.pendingEventId}` });
     sendMessage(phone, helpMsg).catch(() => {});
     logOutbound(phone, helpMsg, "help_sent");
     return;
@@ -308,7 +308,9 @@ whatsappRouter.post(
       // 13. Unknown intent: send help message
       if (parsed.intent === "unknown") {
         const baseUrl = process.env.BASE_URL ?? "http://localhost:3000";
-        const helpMsg = getBotTemplate("whatsapp_help", lang, { url: `${baseUrl}/rsvp` });
+        const nextEvt = findNextUpcomingEventAny();
+        const rsvpUrl = nextEvt ? `${baseUrl}/rsvp?event=${nextEvt.id}` : `${baseUrl}/rsvp`;
+        const helpMsg = getBotTemplate("whatsapp_help", lang, { url: rsvpUrl });
         await sendMessage(phone, helpMsg);
         logOutbound(phone, helpMsg, "help_sent");
         if (messageId) updateMessageLog(messageId, { intent: "unknown", action: "help_sent", outboundBody: helpMsg });

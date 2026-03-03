@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import { t, getLanguage } from '@/lib/i18n';
+import { formatDate, formatDateTime } from '@/lib/date';
+import AuthGuard from '@/components/AuthGuard';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
@@ -70,6 +72,10 @@ const STATUS_LABEL: Record<SurveyDetail['status'], string> = {
 /* ── Component ─────────────────────────────────────────────────────── */
 
 export default function SurveyDetailClient() {
+  return <AuthGuard><SurveyDetailContent /></AuthGuard>;
+}
+
+function SurveyDetailContent() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
 
@@ -321,7 +327,7 @@ export default function SurveyDetailClient() {
                   <td className="px-3 py-2 text-gray-700">{r.player_nickname || '—'}</td>
                 )}
                 <td className="px-3 py-2 text-gray-500 whitespace-nowrap">
-                  {new Date(r.submitted_at).toLocaleString()}
+                  {formatDateTime(r.submitted_at)}
                 </td>
                 {sortedQuestions.map((q) => (
                   <td key={q.id} className="px-3 py-2 text-gray-700 max-w-xs truncate">
@@ -431,7 +437,7 @@ export default function SurveyDetailClient() {
       <div className="mb-6 flex flex-wrap gap-4 text-sm text-gray-500">
         <span>{survey.anonymous ? t('survey_anonymous') : t('survey_identified')}</span>
         {survey.deadline && (
-          <span>{t('survey_deadline')}: {new Date(survey.deadline).toLocaleDateString()}</span>
+          <span>{t('survey_deadline')}: {formatDate(survey.deadline)}</span>
         )}
       </div>
 

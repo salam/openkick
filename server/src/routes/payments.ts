@@ -10,14 +10,25 @@ export function createPaymentsRouter(paymentService: PaymentService) {
   // --- Public: Payment status (which use cases are enabled) ---
   router.get("/public/payment-status", (_req: Request, res: Response) => {
     const db = getDB();
-    const rows = db.exec("SELECT id, enabled, currency FROM payment_use_cases");
+    // BUG21b: join with payment_providers to only report enabled when provider is also configured and enabled
+    const rows = db.exec(
+      `SELECT uc.id, uc.enabled, uc.currency, uc.providerId, pp.enabled AS providerEnabled
+       FROM payment_use_cases uc
+       LEFT JOIN payment_providers pp ON pp.id = uc.providerId`
+    );
     if (rows.length === 0) {
       res.json({ useCases: {} });
       return;
     }
     const useCases: Record<string, { enabled: boolean; currency: string }> = {};
     for (const row of rows[0].values) {
-      useCases[row[0] as string] = { enabled: !!(row[1] as number), currency: (row[2] as string) || "CHF" };
+      const ucEnabled = !!(row[1] as number);
+      const hasProvider = !!(row[3]);
+      const providerEnabled = !!(row[4] as number);
+      useCases[row[0] as string] = {
+        enabled: ucEnabled && hasProvider && providerEnabled,
+        currency: (row[2] as string) || "CHF",
+      };
     }
     res.json({ useCases });
   });
@@ -146,7 +157,7 @@ export function createPaymentsRouter(paymentService: PaymentService) {
       });
 
       const useCaseRows = (useCases[0]?.values || []).map((row) => ({
-        id: row[0], enabled: row[1], providerId: row[2], currency: row[3], updatedAt: row[4],
+        id: row[0], enabled: row[1], provider: row[2], currency: row[3], updatedAt: row[4],
       }));
 
       res.json({ providers: providerRows, useCases: useCaseRows });
@@ -175,7 +186,7 @@ export function createPaymentsRouter(paymentService: PaymentService) {
         for (const uc of useCases) {
           db.run(
             "UPDATE payment_use_cases SET enabled = ?, providerId = ?, currency = ?, updatedAt = datetime('now') WHERE id = ?",
-            [uc.enabled ? 1 : 0, uc.providerId || null, uc.currency || "CHF", uc.id]
+            [uc.enabled ? 1 : 0, uc.provider || uc.providerId || null, uc.currency || "CHF", uc.id]
           );
         }
       }
@@ -188,7 +199,7 @@ export function createPaymentsRouter(paymentService: PaymentService) {
           id: row[0], enabled: row[1], config: row[2], testMode: row[3], createdAt: row[4], updatedAt: row[5],
         })),
         useCases: (updatedUseCases[0]?.values || []).map((row) => ({
-          id: row[0], enabled: row[1], providerId: row[2], currency: row[3], updatedAt: row[4],
+          id: row[0], enabled: row[1], provider: row[2], currency: row[3], updatedAt: row[4],
         })),
       });
     }

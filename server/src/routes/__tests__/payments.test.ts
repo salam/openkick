@@ -130,6 +130,38 @@ describe("Payment Routes", () => {
     });
   });
 
+  describe("GET /api/public/payment-status", () => {
+    // BUG21b — payment-status should not report use case as enabled when provider is missing/disabled
+    it("reports use case as disabled when providerId is NULL", async () => {
+      db.run("UPDATE payment_use_cases SET enabled = 1, providerId = NULL WHERE id = 'donation'");
+
+      const res = await fetch(`${baseUrl}/api/public/payment-status`);
+      const body = await res.json();
+
+      expect(body.useCases.donation?.enabled).toBeFalsy();
+    });
+
+    it("reports use case as disabled when provider is not enabled", async () => {
+      db.run("UPDATE payment_use_cases SET enabled = 1, providerId = 'stripe' WHERE id = 'donation'");
+      db.run("UPDATE payment_providers SET enabled = 0 WHERE id = 'stripe'");
+
+      const res = await fetch(`${baseUrl}/api/public/payment-status`);
+      const body = await res.json();
+
+      expect(body.useCases.donation?.enabled).toBeFalsy();
+    });
+
+    it("reports use case as enabled when provider is configured and enabled", async () => {
+      db.run("UPDATE payment_use_cases SET enabled = 1, providerId = 'stripe' WHERE id = 'donation'");
+      db.run("UPDATE payment_providers SET enabled = 1 WHERE id = 'stripe'");
+
+      const res = await fetch(`${baseUrl}/api/public/payment-status`);
+      const body = await res.json();
+
+      expect(body.useCases.donation?.enabled).toBe(true);
+    });
+  });
+
   describe("POST /api/payments/checkout", () => {
     it("returns 400 when no provider is configured", async () => {
       const res = await fetch(`${baseUrl}/api/payments/checkout`, {

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import { t } from '@/lib/i18n';
+import { formatDate } from '@/lib/date';
 
 interface TrophyCabinetEntry {
   id: number;
@@ -43,15 +44,6 @@ function placementColor(placement: number): string {
     default:
       return 'bg-gradient-to-r from-primary-50 to-primary-100 text-primary-800';
   }
-}
-
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
 }
 
 export default function RecentTrophies() {

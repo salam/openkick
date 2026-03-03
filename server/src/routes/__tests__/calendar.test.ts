@@ -4,11 +4,16 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { initDB } from "../../database.js";
 import { calendarRouter } from "../calendar.js";
+import { generateJWT } from "../../auth.js";
 import type { Database } from "sql.js";
 
 let db: Database;
 let server: Server;
 let baseUrl: string;
+const authHeaders = {
+  "Content-Type": "application/json",
+  Authorization: `Bearer ${generateJWT({ id: 1, role: "admin" })}`,
+};
 
 async function createTestApp() {
   db = await initDB();
@@ -42,7 +47,7 @@ describe("Training Schedule routes", () => {
   it("POST /api/training-schedule — creates recurring training day", async () => {
     const res = await fetch(`${baseUrl}/api/training-schedule`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({
         dayOfWeek: 1,
         startTime: "18:00",
@@ -68,7 +73,7 @@ describe("Training Schedule routes", () => {
   it("POST /api/training-schedule — returns 400 if required fields missing", async () => {
     const res = await fetch(`${baseUrl}/api/training-schedule`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ dayOfWeek: 1 }),
     });
     expect(res.status).toBe(400);
@@ -78,12 +83,12 @@ describe("Training Schedule routes", () => {
     // Create two schedules
     await fetch(`${baseUrl}/api/training-schedule`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ dayOfWeek: 1, startTime: "18:00", endTime: "19:30" }),
     });
     await fetch(`${baseUrl}/api/training-schedule`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ dayOfWeek: 3, startTime: "17:30", endTime: "19:00" }),
     });
 
@@ -97,14 +102,14 @@ describe("Training Schedule routes", () => {
   it("PUT /api/training-schedule/:id — updates training schedule", async () => {
     const createRes = await fetch(`${baseUrl}/api/training-schedule`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ dayOfWeek: 1, startTime: "18:00", endTime: "19:30" }),
     });
     const { id } = await createRes.json();
 
     const res = await fetch(`${baseUrl}/api/training-schedule/${id}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ startTime: "17:00", location: "Halle B" }),
     });
     expect(res.status).toBe(200);
@@ -119,7 +124,7 @@ describe("Training Schedule routes", () => {
   it("PUT /api/training-schedule/:id — returns 404 for non-existent schedule", async () => {
     const res = await fetch(`${baseUrl}/api/training-schedule/999`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ startTime: "17:00" }),
     });
     expect(res.status).toBe(404);
@@ -128,12 +133,12 @@ describe("Training Schedule routes", () => {
   it("DELETE /api/training-schedule/:id — removes training schedule", async () => {
     const createRes = await fetch(`${baseUrl}/api/training-schedule`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ dayOfWeek: 1, startTime: "18:00", endTime: "19:30" }),
     });
     const { id } = await createRes.json();
 
-    const delRes = await fetch(`${baseUrl}/api/training-schedule/${id}`, { method: "DELETE" });
+    const delRes = await fetch(`${baseUrl}/api/training-schedule/${id}`, { method: "DELETE", headers: authHeaders });
     expect(delRes.status).toBe(204);
 
     // Should be gone
@@ -143,7 +148,7 @@ describe("Training Schedule routes", () => {
   });
 
   it("DELETE /api/training-schedule/:id — returns 404 for non-existent schedule", async () => {
-    const res = await fetch(`${baseUrl}/api/training-schedule/999`, { method: "DELETE" });
+    const res = await fetch(`${baseUrl}/api/training-schedule/999`, { method: "DELETE", headers: authHeaders });
     expect(res.status).toBe(404);
   });
 });
@@ -162,7 +167,7 @@ describe("Vacation routes", () => {
   it("POST /api/vacations — creates custom vacation period", async () => {
     const res = await fetch(`${baseUrl}/api/vacations`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({
         name: "Sportferien",
         startDate: "2026-02-09",
@@ -182,7 +187,7 @@ describe("Vacation routes", () => {
   it("POST /api/vacations — returns 400 if required fields missing", async () => {
     const res = await fetch(`${baseUrl}/api/vacations`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ name: "Test" }),
     });
     expect(res.status).toBe(400);
@@ -191,12 +196,12 @@ describe("Vacation routes", () => {
   it("GET /api/vacations — returns all vacation periods", async () => {
     await fetch(`${baseUrl}/api/vacations`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ name: "Sportferien", startDate: "2026-02-09", endDate: "2026-02-22", source: "manual" }),
     });
     await fetch(`${baseUrl}/api/vacations`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ name: "Herbstferien", startDate: "2026-10-05", endDate: "2026-10-18", source: "manual" }),
     });
 
@@ -210,12 +215,12 @@ describe("Vacation routes", () => {
   it("DELETE /api/vacations/:id — removes vacation period", async () => {
     const createRes = await fetch(`${baseUrl}/api/vacations`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ name: "Sportferien", startDate: "2026-02-09", endDate: "2026-02-22", source: "manual" }),
     });
     const { id } = await createRes.json();
 
-    const delRes = await fetch(`${baseUrl}/api/vacations/${id}`, { method: "DELETE" });
+    const delRes = await fetch(`${baseUrl}/api/vacations/${id}`, { method: "DELETE", headers: authHeaders });
     expect(delRes.status).toBe(204);
 
     const getRes = await fetch(`${baseUrl}/api/vacations`);
@@ -224,7 +229,7 @@ describe("Vacation routes", () => {
   });
 
   it("DELETE /api/vacations/:id — returns 404 for non-existent vacation", async () => {
-    const res = await fetch(`${baseUrl}/api/vacations/999`, { method: "DELETE" });
+    const res = await fetch(`${baseUrl}/api/vacations/999`, { method: "DELETE", headers: authHeaders });
     expect(res.status).toBe(404);
   });
 
@@ -244,7 +249,7 @@ END:VCALENDAR`;
 
     const res = await fetch(`${baseUrl}/api/vacations/import-ics`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ icsContent }),
     });
     expect(res.status).toBe(201);
@@ -268,7 +273,7 @@ END:VCALENDAR`;
 
     const res = await fetch(`${baseUrl}/api/vacations/import-url`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ url: "https://example.com/holidays" }),
     });
     expect(res.status).toBe(201);
@@ -292,7 +297,7 @@ END:VCALENDAR`;
   it("POST /api/vacations/sync — syncs a preset by id", async () => {
     const res = await fetch(`${baseUrl}/api/vacations/sync`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ presetId: "ch-zurich" }),
     });
     expect(res.status).toBe(200);
@@ -317,7 +322,7 @@ END:VCALENDAR`;
   it("POST /api/vacations/sync — returns 400 for unknown preset", async () => {
     const res = await fetch(`${baseUrl}/api/vacations/sync`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ presetId: "xx-unknown" }),
     });
     expect(res.status).toBe(400);
@@ -326,7 +331,7 @@ END:VCALENDAR`;
   it("POST /api/vacations/sync — returns 400 if presetId missing", async () => {
     const res = await fetch(`${baseUrl}/api/vacations/sync`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({}),
     });
     expect(res.status).toBe(400);
@@ -348,7 +353,7 @@ describe("Calendar endpoint", () => {
     // Create a training schedule: Monday (1)
     await fetch(`${baseUrl}/api/training-schedule`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({
         dayOfWeek: 1,
         startTime: "18:00",
@@ -385,7 +390,7 @@ describe("Calendar endpoint", () => {
     // Create a training schedule: Wednesday (3)
     await fetch(`${baseUrl}/api/training-schedule`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({
         dayOfWeek: 3,
         startTime: "17:30",
@@ -419,7 +424,7 @@ describe("Calendar endpoint", () => {
     // Create a training schedule: Monday (1)
     await fetch(`${baseUrl}/api/training-schedule`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({
         dayOfWeek: 1,
         startTime: "18:00",
@@ -432,7 +437,7 @@ describe("Calendar endpoint", () => {
     // Create a vacation period covering some Mondays in March
     await fetch(`${baseUrl}/api/vacations`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({
         name: "Test Vacation",
         startDate: "2026-03-09",
@@ -503,7 +508,7 @@ describe("Calendar endpoint", () => {
   it("GET /api/calendar — training instances have null attendance counts", async () => {
     await fetch(`${baseUrl}/api/training-schedule`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({
         dayOfWeek: 3,
         startTime: "17:30",
@@ -596,7 +601,7 @@ describe("Calendar endpoint", () => {
     // Schedule valid only in February
     await fetch(`${baseUrl}/api/training-schedule`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({
         dayOfWeek: 1,
         startTime: "18:00",

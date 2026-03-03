@@ -24,7 +24,7 @@ homepageStatsRouter.get("/public/homepage-stats", (_req: Request, res: Response)
 
   const filtered: Record<string, unknown> = { computedAt: stats.computedAt };
   for (const [key, visible] of Object.entries(settings)) {
-    filtered[key] = visible ? (stats as Record<string, unknown>)[key] : null;
+    filtered[key] = visible ? (stats as unknown as Record<string, unknown>)[key] : null;
   }
 
   res.json(filtered);

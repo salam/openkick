@@ -2,6 +2,8 @@ import { Router, type Request, type Response } from "express";
 import { getDB, getLastInsertId } from "../database.js";
 import { getCategoryForBirthYear } from "../services/categories.js";
 import {
+  authMiddleware,
+  requireRole,
   hashPassword,
   verifyPassword,
   generateJWT,
@@ -43,7 +45,7 @@ function withCategory(player: Record<string, unknown>): Record<string, unknown> 
 // ── Players CRUD ─────────────────────────────────────────────────────
 
 // POST /api/players
-playersRouter.post("/players", (req: Request, res: Response) => {
+playersRouter.post("/players", authMiddleware, requireRole("admin", "coach"), (req: Request, res: Response) => {
   const { name, yearOfBirth, position, notes, category, lastNameInitial } = req.body;
   if (!name) {
     res.status(400).json({ error: "name is required" });
@@ -65,7 +67,7 @@ playersRouter.post("/players", (req: Request, res: Response) => {
 });
 
 // GET /api/players
-playersRouter.get("/players", (_req: Request, res: Response) => {
+playersRouter.get("/players", authMiddleware, requireRole("admin", "coach"), (_req: Request, res: Response) => {
   const db = getDB();
   const rows = rowsToObjects(db.exec("SELECT * FROM players ORDER BY name"));
   const players = rows.map((row) => {
@@ -85,7 +87,7 @@ playersRouter.get("/players", (_req: Request, res: Response) => {
 });
 
 // GET /api/players/:id
-playersRouter.get("/players/:id", (req: Request, res: Response) => {
+playersRouter.get("/players/:id", authMiddleware, requireRole("admin", "coach"), (req: Request, res: Response) => {
   const db = getDB();
   const id = Number(req.params.id);
 
@@ -112,7 +114,7 @@ playersRouter.get("/players/:id", (req: Request, res: Response) => {
 });
 
 // PUT /api/players/:id
-playersRouter.put("/players/:id", (req: Request, res: Response) => {
+playersRouter.put("/players/:id", authMiddleware, requireRole("admin", "coach"), (req: Request, res: Response) => {
   const db = getDB();
   const id = Number(req.params.id);
 
@@ -142,7 +144,7 @@ playersRouter.put("/players/:id", (req: Request, res: Response) => {
 });
 
 // DELETE /api/players/:id
-playersRouter.delete("/players/:id", (req: Request, res: Response) => {
+playersRouter.delete("/players/:id", authMiddleware, requireRole("admin", "coach"), (req: Request, res: Response) => {
   const db = getDB();
   const id = Number(req.params.id);
 
@@ -162,7 +164,7 @@ playersRouter.delete("/players/:id", (req: Request, res: Response) => {
 // ── Guardians CRUD ───────────────────────────────────────────────────
 
 // POST /api/guardians
-playersRouter.post("/guardians", async (req: Request, res: Response) => {
+playersRouter.post("/guardians", authMiddleware, requireRole("admin", "coach"), async (req: Request, res: Response) => {
   const { phone, name, email, password, role, language, consentGiven } = req.body;
   if (!phone) {
     res.status(400).json({ error: "phone is required" });
@@ -225,7 +227,7 @@ playersRouter.post("/guardians", async (req: Request, res: Response) => {
 });
 
 // GET /api/guardians
-playersRouter.get("/guardians", (_req: Request, res: Response) => {
+playersRouter.get("/guardians", authMiddleware, requireRole("admin", "coach"), (_req: Request, res: Response) => {
   const db = getDB();
   const rows = rowsToObjects(
     db.exec(
@@ -236,7 +238,7 @@ playersRouter.get("/guardians", (_req: Request, res: Response) => {
 });
 
 // GET /api/guardians/:id
-playersRouter.get("/guardians/:id", (req: Request, res: Response) => {
+playersRouter.get("/guardians/:id", authMiddleware, requireRole("admin", "coach"), (req: Request, res: Response) => {
   const db = getDB();
   const id = Number(req.params.id);
 
@@ -268,7 +270,7 @@ playersRouter.get("/guardians/:id", (req: Request, res: Response) => {
 });
 
 // POST /api/guardians/:id/players — link guardian to player
-playersRouter.post("/guardians/:id/players", (req: Request, res: Response) => {
+playersRouter.post("/guardians/:id/players", authMiddleware, requireRole("admin", "coach"), (req: Request, res: Response) => {
   const db = getDB();
   const guardianId = Number(req.params.id);
   const { playerId } = req.body;
@@ -301,7 +303,7 @@ playersRouter.post("/guardians/:id/players", (req: Request, res: Response) => {
 });
 
 // PUT /api/guardians/:id — update guardian details
-playersRouter.put("/guardians/:id", (req: Request, res: Response) => {
+playersRouter.put("/guardians/:id", authMiddleware, requireRole("admin", "coach"), (req: Request, res: Response) => {
   const db = getDB();
   const id = Number(req.params.id);
 
@@ -347,7 +349,7 @@ playersRouter.put("/guardians/:id", (req: Request, res: Response) => {
 });
 
 // DELETE /api/guardians/:guardianId/players/:playerId — unlink guardian from player
-playersRouter.delete("/guardians/:guardianId/players/:playerId", (req: Request, res: Response) => {
+playersRouter.delete("/guardians/:guardianId/players/:playerId", authMiddleware, requireRole("admin", "coach"), (req: Request, res: Response) => {
   const db = getDB();
   const guardianId = Number(req.params.guardianId);
   const playerId = Number(req.params.playerId);
@@ -371,7 +373,7 @@ playersRouter.delete("/guardians/:guardianId/players/:playerId", (req: Request, 
 });
 
 // DELETE /api/guardians/:id — delete guardian entirely
-playersRouter.delete("/guardians/:id", (req: Request, res: Response) => {
+playersRouter.delete("/guardians/:id", authMiddleware, requireRole("admin", "coach"), (req: Request, res: Response) => {
   const db = getDB();
   const id = Number(req.params.id);
 

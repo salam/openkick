@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiFetch } from '@/lib/api';
 import { t } from '@/lib/i18n';
+import { formatDate, formatDateTime } from '@/lib/date';
 
 interface OutcomeEntry {
   action: string;
@@ -122,7 +123,7 @@ function OutcomeStrip({ outcome }: { outcome: OutcomeEntry; }) {
           {outcome.eventTitle}
           {outcome.eventDate && (
             <span className="text-gray-400 text-[10px]">
-              {new Date(outcome.eventDate + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+              {formatDate(outcome.eventDate)}
             </span>
           )}
         </a>
@@ -132,7 +133,7 @@ function OutcomeStrip({ outcome }: { outcome: OutcomeEntry; }) {
           {outcome.eventTitle}
           {outcome.eventDate && (
             <span className="text-gray-400 text-[10px]">
-              {new Date(outcome.eventDate + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+              {formatDate(outcome.eventDate)}
             </span>
           )}
         </span>
@@ -190,10 +191,7 @@ export default function BotActivityLog() {
 
   function formatTimeFull(iso: string): string {
     const d = new Date(iso + 'Z');
-    return d.toLocaleString(undefined, {
-      month: 'short', day: 'numeric',
-      hour: '2-digit', minute: '2-digit',
-    });
+    return formatDateTime(d.toISOString());
   }
 
   function maskPhone(phone: string): string {

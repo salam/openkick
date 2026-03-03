@@ -3,6 +3,7 @@ import express from "express";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { initDB } from "../../database.js";
+import { generateJWT } from "../../auth.js";
 import type { Database } from "sql.js";
 
 // Mock the broadcasts service
@@ -21,9 +22,14 @@ vi.mock("../../services/weather.js", () => ({
 let db: Database;
 let server: Server;
 let baseUrl: string;
+const authHeaders = {
+  "Content-Type": "application/json",
+  Authorization: `Bearer ${generateJWT({ id: 1, role: "admin" })}`,
+};
 
 async function createTestApp() {
   db = await initDB();
+  db.run("INSERT INTO guardians (id, phone, name, role, passwordHash) VALUES (1, '+41790000000', 'Admin', 'admin', 'hash')");
   const { broadcastsRouter } = await import("../broadcasts.js");
   const app = express();
   app.use(express.json());
@@ -54,7 +60,7 @@ describe("Broadcasts routes", () => {
   it("POST /api/broadcasts — creates draft broadcast", async () => {
     const res = await fetch(`${baseUrl}/api/broadcasts`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({
         type: "training_headsup",
         message: "Morgen Training um 18:00!",
@@ -73,7 +79,7 @@ describe("Broadcasts routes", () => {
   it("POST /api/broadcasts — returns 400 without type", async () => {
     const res = await fetch(`${baseUrl}/api/broadcasts`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ message: "No type" }),
     });
     expect(res.status).toBe(400);
@@ -89,7 +95,9 @@ describe("Broadcasts routes", () => {
       ["rain_alert", "Message 2", "sent"],
     );
 
-    const res = await fetch(`${baseUrl}/api/broadcasts`);
+    const res = await fetch(`${baseUrl}/api/broadcasts`, {
+      headers: authHeaders,
+    });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(Array.isArray(body)).toBe(true);
@@ -105,7 +113,7 @@ describe("Broadcasts routes", () => {
 
     const res = await fetch(`${baseUrl}/api/broadcasts/${id}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ message: "Updated message" }),
     });
     expect(res.status).toBe(200);
@@ -117,7 +125,7 @@ describe("Broadcasts routes", () => {
   it("PUT /api/broadcasts/:id — returns 404 for non-existent broadcast", async () => {
     const res = await fetch(`${baseUrl}/api/broadcasts/999`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ message: "Nope" }),
     });
     expect(res.status).toBe(404);
@@ -136,6 +144,7 @@ describe("Broadcasts routes", () => {
 
     const res = await fetch(`${baseUrl}/api/broadcasts/${id}/send`, {
       method: "POST",
+      headers: authHeaders,
     });
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -166,7 +175,7 @@ describe("Broadcasts routes", () => {
 
     const res = await fetch(`${baseUrl}/api/broadcasts/compose`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ template: "training_headsup", eventId }),
     });
     expect(res.status).toBe(200);
@@ -187,7 +196,7 @@ describe("Broadcasts routes", () => {
 
     const res = await fetch(`${baseUrl}/api/broadcasts/compose`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ template: "rain_alert", eventId }),
     });
     expect(res.status).toBe(200);
@@ -202,7 +211,7 @@ describe("Broadcasts routes", () => {
 
     const res = await fetch(`${baseUrl}/api/broadcasts/compose`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({
         template: "holiday_announcement",
         vacationName: "Frühlingsferien",
@@ -218,7 +227,7 @@ describe("Broadcasts routes", () => {
   it("POST /api/broadcasts/compose — returns 400 for unknown template", async () => {
     const res = await fetch(`${baseUrl}/api/broadcasts/compose`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ template: "unknown_template" }),
     });
     expect(res.status).toBe(400);

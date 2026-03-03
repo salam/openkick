@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from "express";
+import { authMiddleware, requireRole } from "../auth.js";
 import { getDB, getLastInsertId } from "../database.js";
 import { expandSeries, type SeriesTemplate, type VacationPeriod, type MaterializedEvent } from "../services/event-series.js";
 import { getResults } from "../services/tournament-results.js";
@@ -27,7 +28,7 @@ function rowsToObjects(
 // ── Events CRUD ─────────────────────────────────────────────────────
 
 // POST /api/events
-eventsRouter.post("/events", (req: Request, res: Response) => {
+eventsRouter.post("/events", authMiddleware, requireRole("admin", "coach"), (req: Request, res: Response) => {
   const {
     type,
     title,
@@ -84,7 +85,7 @@ eventsRouter.post("/events", (req: Request, res: Response) => {
 });
 
 // GET /api/events
-eventsRouter.get("/events", (req: Request, res: Response) => {
+eventsRouter.get("/events", authMiddleware, requireRole("admin", "coach"), (req: Request, res: Response) => {
   const db = getDB();
   const { type, category, upcoming } = req.query;
 
@@ -165,7 +166,7 @@ eventsRouter.get("/events", (req: Request, res: Response) => {
 });
 
 // GET /api/events/:id
-eventsRouter.get("/events/:id", (req: Request, res: Response) => {
+eventsRouter.get("/events/:id", authMiddleware, requireRole("admin", "coach"), (req: Request, res: Response) => {
   const db = getDB();
   const id = Number(req.params.id);
 
@@ -206,7 +207,7 @@ eventsRouter.get("/events/:id", (req: Request, res: Response) => {
 });
 
 // PUT /api/events/:id
-eventsRouter.put("/events/:id", (req: Request, res: Response) => {
+eventsRouter.put("/events/:id", authMiddleware, requireRole("admin", "coach"), (req: Request, res: Response) => {
   const db = getDB();
   const id = Number(req.params.id);
 
@@ -232,16 +233,18 @@ eventsRouter.put("/events/:id", (req: Request, res: Response) => {
   const recurrenceRule = req.body.recurrenceRule ?? current.recurrenceRule;
   const teamName = req.body.teamName ?? current.teamName;
   const fee = req.body.fee !== undefined ? req.body.fee : current.fee;
+  const cancelled = req.body.cancelled !== undefined ? (req.body.cancelled ? 1 : 0) : current.cancelled;
 
   db.run(
     `UPDATE events SET type = ?, title = ?, description = ?, date = ?, startTime = ?,
       attendanceTime = ?, deadline = ?, maxParticipants = ?, minParticipants = ?,
-      location = ?, categoryRequirement = ?, recurring = ?, recurrenceRule = ?, teamName = ?, fee = ?
+      location = ?, categoryRequirement = ?, recurring = ?, recurrenceRule = ?, teamName = ?, fee = ?,
+      cancelled = ?
      WHERE id = ?`,
     [
       type, title, description, date, startTime, attendanceTime, deadline,
       maxParticipants, minParticipants, location, categoryRequirement,
-      recurring, recurrenceRule, teamName, fee ?? null, id,
+      recurring, recurrenceRule, teamName, fee ?? null, cancelled ?? 0, id,
     ],
   );
 
@@ -250,7 +253,7 @@ eventsRouter.put("/events/:id", (req: Request, res: Response) => {
 });
 
 // DELETE /api/events/:id
-eventsRouter.delete("/events/:id", (req: Request, res: Response) => {
+eventsRouter.delete("/events/:id", authMiddleware, requireRole("admin", "coach"), (req: Request, res: Response) => {
   const db = getDB();
   const id = Number(req.params.id);
 
@@ -260,8 +263,12 @@ eventsRouter.delete("/events/:id", (req: Request, res: Response) => {
     return;
   }
 
-  // Cascade-delete attendance records first
+  // Cascade-delete related records first (tables referencing events without ON DELETE CASCADE)
   db.run("DELETE FROM attendance WHERE eventId = ?", [id]);
+  db.run("DELETE FROM team_players WHERE teamId IN (SELECT id FROM teams WHERE eventId = ?)", [id]);
+  db.run("DELETE FROM teams WHERE eventId = ?", [id]);
+  db.run("DELETE FROM rsvp_tokens WHERE eventId = ?", [id]);
+  db.run("DELETE FROM checklist_instances WHERE event_id = ?", [id]);
   db.run("DELETE FROM events WHERE id = ?", [id]);
   res.status(204).end();
 });
@@ -269,7 +276,7 @@ eventsRouter.delete("/events/:id", (req: Request, res: Response) => {
 // ── Tournament Import ───────────────────────────────────────────────
 
 // POST /api/events/import-url
-eventsRouter.post("/events/import-url", async (req: Request, res: Response) => {
+eventsRouter.post("/events/import-url", authMiddleware, requireRole("admin", "coach"), async (req: Request, res: Response) => {
   const { url } = req.body;
   if (!url) {
     res.status(400).json({ error: "url is required" });
@@ -286,7 +293,7 @@ eventsRouter.post("/events/import-url", async (req: Request, res: Response) => {
 });
 
 // POST /api/events/import-pdf
-eventsRouter.post("/events/import-pdf", async (req: Request, res: Response) => {
+eventsRouter.post("/events/import-pdf", authMiddleware, requireRole("admin", "coach"), async (req: Request, res: Response) => {
   const body = req.body as Buffer;
   if (!body || body.length === 0) {
     res.status(400).json({ error: "PDF body is required" });

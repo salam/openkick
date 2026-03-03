@@ -3,9 +3,21 @@ import { getDB } from "../database.js";
 import { setAttendance } from "../services/attendance.js";
 import { randomBytes } from "crypto";
 import type { CaptchaProvider } from "../middleware/captcha.js";
+import { normalizePhone } from "../utils/phone.js";
 
 export function createRsvpRouter(captchaProvider: CaptchaProvider) {
   const router = Router();
+
+  // GET /settings - public RSVP settings
+  router.get("/settings", (_req: Request, res: Response): void => {
+    const db = getDB();
+    const rows = db.exec(
+      "SELECT value FROM settings WHERE key = 'rsvp_require_phone'"
+    );
+    const requirePhone = rows.length > 0 && rows[0].values.length > 0
+      && rows[0].values[0][0] === 'true';
+    res.json({ requirePhone });
+  });
 
   // GET /resolve?token=X&event=Y
   router.get("/resolve", (req: Request, res: Response): void => {
@@ -62,7 +74,7 @@ export function createRsvpRouter(captchaProvider: CaptchaProvider) {
   router.post(
     "/search",
     async (req: Request, res: Response): Promise<void> => {
-      const { name, eventId, captcha } = req.body;
+      const { name, eventId, captcha, phone } = req.body;
 
       if (!captcha) {
         res.status(400).json({ error: "Captcha required" });
@@ -77,9 +89,9 @@ export function createRsvpRouter(captchaProvider: CaptchaProvider) {
 
       const db = getDB();
 
-      // Fuzzy match player by name
+      // Exact full name match
       const playerRows = db.exec(
-        "SELECT id, name FROM players WHERE LOWER(name) LIKE LOWER('%' || ? || '%')",
+        "SELECT id, name FROM players WHERE LOWER(name) = LOWER(?)",
         [name]
       );
       if (!playerRows.length || !playerRows[0].values.length) {
@@ -90,6 +102,34 @@ export function createRsvpRouter(captchaProvider: CaptchaProvider) {
       const player = playerRows[0].values[0];
       const playerId = player[0] as number;
       const fullName = player[1] as string;
+
+      // Phone verification (if enabled)
+      const phoneSettingRows = db.exec(
+        "SELECT value FROM settings WHERE key = 'rsvp_require_phone'"
+      );
+      const requirePhone = phoneSettingRows.length > 0 && phoneSettingRows[0].values.length > 0
+        && phoneSettingRows[0].values[0][0] === 'true';
+
+      if (requirePhone) {
+        if (!phone) {
+          res.status(400).json({ error: "Phone required" });
+          return;
+        }
+        const guardianRows2 = db.exec(
+          `SELECT g.phone FROM guardians g
+           JOIN guardian_players gp ON g.id = gp.guardianId
+           WHERE gp.playerId = ?`,
+          [playerId]
+        );
+        const normalizedInput = normalizePhone(phone);
+        const guardianPhones = (guardianRows2[0]?.values || []).map(
+          (row) => normalizePhone(row[0] as string)
+        );
+        if (!guardianPhones.includes(normalizedInput)) {
+          res.status(403).json({ error: "Phone mismatch" });
+          return;
+        }
+      }
 
       // Generate initials: "Luca Mueller" -> "L. M."
       const initials = fullName

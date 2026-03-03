@@ -5,52 +5,34 @@ import fs from "node:fs";
 import path from "node:path";
 
 test.describe("01 — Onboarding & Setup", () => {
-  test("setup or login depending on server state", async ({ page, context }) => {
+  test("create admin account via API setup", async ({ page, context }) => {
     const api = new ApiHelper(context.request);
 
-    // Check if setup is needed
-    const status = await api.setupStatus();
-
-    if (status.needsSetup) {
-      // Fresh server — complete the setup wizard via UI
-      await page.goto("/setup");
-      await page.waitForLoadState("networkidle");
-
-      // Fill admin form (labels from i18n: Name, Email, Password, Confirm password)
-      await page.locator('input[type="text"][autocomplete="name"]').fill(ADMIN_NAME);
-      await page.locator('input[type="email"]').fill(ADMIN_EMAIL);
-      await page.locator('input[type="password"][autocomplete="new-password"]').first().fill(ADMIN_PASSWORD);
-      await page.locator('input[type="password"][autocomplete="new-password"]').last().fill(ADMIN_PASSWORD);
-
-      await page.getByRole("button", { name: /create|erstellen|créer/i }).click();
-
-      // After setup, shows WAHA wizard — skip it
-      await page.waitForTimeout(2_000);
-      const skipBtn = page.getByRole("button", { name: /skip|überspringen|passer/i });
-      if (await skipBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
-        await skipBtn.click();
+    // Wait for backend to be ready by polling setup status
+    let ready = false;
+    for (let i = 0; i < 20; i++) {
+      try {
+        const status = await api.setupStatus();
+        if (status.needsSetup) {
+          ready = true;
+          break;
+        }
+      } catch {
+        // Server not ready yet
       }
-
-      await page.waitForURL(/\/(onboarding|dashboard)/, { timeout: 15_000 });
-    } else {
-      // Server already set up — try to login
-      const loginRes = await api.login(ADMIN_EMAIL, ADMIN_PASSWORD);
-
-      if (loginRes.token) {
-        // Admin exists with our credentials
-        await page.goto("/");
-        await page.evaluate((token: string) => {
-          localStorage.setItem("openkick_token", token);
-        }, loginRes.token);
-      } else {
-        // Different admin credentials — create via setup API won't work.
-        // Try the setup endpoint anyway (it's idempotent if DB exists)
-        test.skip(true, "Server already set up with different credentials");
-        return;
-      }
+      await page.waitForTimeout(500);
     }
+    expect(ready).toBeTruthy();
 
-    // Verify we can access the app
+    // Create admin via API (more reliable than UI form)
+    const setupResult = await api.setup({
+      name: ADMIN_NAME,
+      email: ADMIN_EMAIL,
+      password: ADMIN_PASSWORD,
+    });
+    expect(setupResult.token).toBeTruthy();
+
+    // Verify login works
     const loginCheck = await api.login(ADMIN_EMAIL, ADMIN_PASSWORD);
     expect(loginCheck.token).toBeTruthy();
   });
@@ -60,7 +42,7 @@ test.describe("01 — Onboarding & Setup", () => {
     const loginRes = await api.login(ADMIN_EMAIL, ADMIN_PASSWORD);
     expect(loginRes.token).toBeTruthy();
 
-    // Set club name via API (reliable, avoids flaky form interactions)
+    // Set club name via API
     await api.setToken(loginRes.token);
     await api.putSetting("club_name", "FC Test E2E");
 
@@ -76,7 +58,6 @@ test.describe("01 — Onboarding & Setup", () => {
 
     // If we're on the onboarding page, click through steps
     if (page.url().includes("/onboarding")) {
-      // Try to skip through steps (up to 5)
       for (let i = 0; i < 5; i++) {
         const skipBtn = page.getByRole("button", { name: /skip|überspringen|next|weiter|passer|complete|abschliessen|finish|fertig/i });
         if (await skipBtn.isVisible({ timeout: 2_000 }).catch(() => false)) {
@@ -87,8 +68,7 @@ test.describe("01 — Onboarding & Setup", () => {
     }
 
     // Try to complete onboarding via API
-    const completeRes = await api.post("/api/onboarding/complete", {});
-    // Accept both 200 (success) and 400/403 (already completed or missing steps)
+    await api.post("/api/onboarding/complete", {});
 
     // Verify dashboard is accessible
     await page.goto("/dashboard");
@@ -103,7 +83,6 @@ test.describe("01 — Onboarding & Setup", () => {
   test("dashboard is accessible after onboarding", async ({ page }) => {
     await page.goto("/dashboard");
     await page.waitForLoadState("networkidle");
-    // Should be on dashboard (authenticated) or redirect to login (if auth state wasn't saved)
     const url = page.url();
     expect(url).toMatch(/\/(dashboard|login|onboarding)/);
   });

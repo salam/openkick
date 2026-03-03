@@ -4,12 +4,14 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { initDB } from "../../database.js";
 import { playersRouter } from "../players.js";
+import { generateJWT } from "../../auth.js";
 import { getCategoryForBirthYear, getSeasonYear } from "../../services/categories.js";
 import type { Database } from "sql.js";
 
 let db: Database;
 let server: Server;
 let baseUrl: string;
+let authHeaders: Record<string, string>;
 
 async function createTestApp() {
   db = await initDB();
@@ -20,6 +22,8 @@ async function createTestApp() {
   await new Promise<void>((resolve) => server.listen(0, resolve));
   const { port } = server.address() as AddressInfo;
   baseUrl = `http://localhost:${port}`;
+  const token = generateJWT({ id: 1, role: "admin" });
+  authHeaders = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
 }
 
 async function teardown() {
@@ -43,7 +47,7 @@ describe("Players routes", () => {
   it("POST /api/players — creates a player with name, yearOfBirth; returns { id, name, yearOfBirth, category }", async () => {
     const res = await fetch(`${baseUrl}/api/players`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ name: "Max Müller", yearOfBirth: 2016 }),
     });
     expect(res.status).toBe(201);
@@ -60,7 +64,7 @@ describe("Players routes", () => {
 
     const res = await fetch(`${baseUrl}/api/players`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ name: "Anna Schmidt", yearOfBirth }),
     });
     expect(res.status).toBe(201);
@@ -72,16 +76,16 @@ describe("Players routes", () => {
     // Create two players
     await fetch(`${baseUrl}/api/players`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ name: "Player One", yearOfBirth: 2015 }),
     });
     await fetch(`${baseUrl}/api/players`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ name: "Player Two", yearOfBirth: 2018 }),
     });
 
-    const res = await fetch(`${baseUrl}/api/players`);
+    const res = await fetch(`${baseUrl}/api/players`, { headers: authHeaders });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(Array.isArray(body)).toBe(true);
@@ -94,7 +98,7 @@ describe("Players routes", () => {
     // Create a player
     const createRes = await fetch(`${baseUrl}/api/players`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ name: "Solo Player", yearOfBirth: 2014 }),
     });
     const { id: playerId } = await createRes.json();
@@ -102,18 +106,18 @@ describe("Players routes", () => {
     // Create a guardian and link them
     const gRes = await fetch(`${baseUrl}/api/guardians`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ phone: "+41791234567", name: "Papa Solo", role: "parent" }),
     });
     const { id: guardianId } = await gRes.json();
 
     await fetch(`${baseUrl}/api/guardians/${guardianId}/players`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ playerId }),
     });
 
-    const res = await fetch(`${baseUrl}/api/players/${playerId}`);
+    const res = await fetch(`${baseUrl}/api/players/${playerId}`, { headers: authHeaders });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.name).toBe("Solo Player");
@@ -126,14 +130,14 @@ describe("Players routes", () => {
   it("PUT /api/players/:id — updates player name, yearOfBirth, position, notes", async () => {
     const createRes = await fetch(`${baseUrl}/api/players`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ name: "Old Name", yearOfBirth: 2015 }),
     });
     const { id } = await createRes.json();
 
     const res = await fetch(`${baseUrl}/api/players/${id}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({
         name: "New Name",
         yearOfBirth: 2014,
@@ -152,14 +156,14 @@ describe("Players routes", () => {
   it("PUT /api/players/:id with category field — allows manual category override", async () => {
     const createRes = await fetch(`${baseUrl}/api/players`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ name: "Override Kid", yearOfBirth: 2016 }),
     });
     const { id } = await createRes.json();
 
     const res = await fetch(`${baseUrl}/api/players/${id}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ category: "D-9" }),
     });
     expect(res.status).toBe(200);
@@ -167,7 +171,7 @@ describe("Players routes", () => {
     expect(body.category).toBe("D-9");
 
     // Verify it persists on GET
-    const getRes = await fetch(`${baseUrl}/api/players/${id}`);
+    const getRes = await fetch(`${baseUrl}/api/players/${id}`, { headers: authHeaders });
     const getBody = await getRes.json();
     expect(getBody.category).toBe("D-9");
   });
@@ -175,7 +179,7 @@ describe("Players routes", () => {
   it("POST /api/players — accepts and returns lastNameInitial", async () => {
     const res = await fetch(`${baseUrl}/api/players`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ name: "Jonas", yearOfBirth: 2015, lastNameInitial: "M" }),
     });
     expect(res.status).toBe(201);
@@ -186,14 +190,14 @@ describe("Players routes", () => {
   it("PUT /api/players/:id — updates lastNameInitial", async () => {
     const createRes = await fetch(`${baseUrl}/api/players`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ name: "Jonas", yearOfBirth: 2015 }),
     });
     const { id } = await createRes.json();
 
     const res = await fetch(`${baseUrl}/api/players/${id}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ lastNameInitial: "S" }),
     });
     expect(res.status).toBe(200);
@@ -201,7 +205,7 @@ describe("Players routes", () => {
     expect(body.lastNameInitial).toBe("S");
 
     // Verify it persists on GET
-    const getRes = await fetch(`${baseUrl}/api/players/${id}`);
+    const getRes = await fetch(`${baseUrl}/api/players/${id}`, { headers: authHeaders });
     const getBody = await getRes.json();
     expect(getBody.lastNameInitial).toBe("S");
   });
@@ -209,15 +213,15 @@ describe("Players routes", () => {
   it("DELETE /api/players/:id — removes player", async () => {
     const createRes = await fetch(`${baseUrl}/api/players`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ name: "To Delete", yearOfBirth: 2015 }),
     });
     const { id } = await createRes.json();
 
-    const res = await fetch(`${baseUrl}/api/players/${id}`, { method: "DELETE" });
+    const res = await fetch(`${baseUrl}/api/players/${id}`, { method: "DELETE", headers: authHeaders });
     expect(res.status).toBe(204);
 
-    const getRes = await fetch(`${baseUrl}/api/players/${id}`);
+    const getRes = await fetch(`${baseUrl}/api/players/${id}`, { headers: authHeaders });
     expect(getRes.status).toBe(404);
   });
 });
@@ -236,7 +240,7 @@ describe("Guardians routes", () => {
   it("POST /api/guardians — creates guardian with phone, name, role", async () => {
     const res = await fetch(`${baseUrl}/api/guardians`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ phone: "+41791234567", name: "Mama Test", role: "parent" }),
     });
     expect(res.status).toBe(201);
@@ -250,16 +254,16 @@ describe("Guardians routes", () => {
   it("GET /api/guardians — returns all guardians", async () => {
     await fetch(`${baseUrl}/api/guardians`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ phone: "+41791111111", name: "G1", role: "parent" }),
     });
     await fetch(`${baseUrl}/api/guardians`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ phone: "+41792222222", name: "G2", role: "parent" }),
     });
 
-    const res = await fetch(`${baseUrl}/api/guardians`);
+    const res = await fetch(`${baseUrl}/api/guardians`, { headers: authHeaders });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(Array.isArray(body)).toBe(true);
@@ -269,21 +273,21 @@ describe("Guardians routes", () => {
   it("POST /api/guardians/:id/players — links guardian to player", async () => {
     const playerRes = await fetch(`${baseUrl}/api/players`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ name: "Linked Kid", yearOfBirth: 2015 }),
     });
     const { id: playerId } = await playerRes.json();
 
     const guardianRes = await fetch(`${baseUrl}/api/guardians`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ phone: "+41793333333", name: "Linker", role: "parent" }),
     });
     const { id: guardianId } = await guardianRes.json();
 
     const res = await fetch(`${baseUrl}/api/guardians/${guardianId}/players`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ playerId }),
     });
     expect(res.status).toBe(201);
@@ -295,25 +299,25 @@ describe("Guardians routes", () => {
   it("GET /api/guardians/:id — returns guardian with linked players", async () => {
     const playerRes = await fetch(`${baseUrl}/api/players`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ name: "Child A", yearOfBirth: 2016 }),
     });
     const { id: playerId } = await playerRes.json();
 
     const guardianRes = await fetch(`${baseUrl}/api/guardians`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ phone: "+41794444444", name: "Parent A", role: "parent" }),
     });
     const { id: guardianId } = await guardianRes.json();
 
     await fetch(`${baseUrl}/api/guardians/${guardianId}/players`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ playerId }),
     });
 
-    const res = await fetch(`${baseUrl}/api/guardians/${guardianId}`);
+    const res = await fetch(`${baseUrl}/api/guardians/${guardianId}`, { headers: authHeaders });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.name).toBe("Parent A");
@@ -325,14 +329,14 @@ describe("Guardians routes", () => {
   it("PUT /api/guardians/:id — updates guardian name, phone, email", async () => {
     const createRes = await fetch(`${baseUrl}/api/guardians`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ phone: "+41791000000", name: "Old Name", role: "parent" }),
     });
     const { id } = await createRes.json();
 
     const res = await fetch(`${baseUrl}/api/guardians/${id}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ name: "New Name", email: "new@test.com" }),
     });
     expect(res.status).toBe(200);
@@ -345,7 +349,7 @@ describe("Guardians routes", () => {
   it("PUT /api/guardians/:id — returns 404 for nonexistent guardian", async () => {
     const res = await fetch(`${baseUrl}/api/guardians/9999`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ name: "Nobody" }),
     });
     expect(res.status).toBe(404);
@@ -354,36 +358,37 @@ describe("Guardians routes", () => {
   it("DELETE /api/guardians/:guardianId/players/:playerId — unlinks guardian from player", async () => {
     const playerRes = await fetch(`${baseUrl}/api/players`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ name: "Unlink Kid", yearOfBirth: 2015 }),
     });
     const { id: playerId } = await playerRes.json();
 
     const guardianRes = await fetch(`${baseUrl}/api/guardians`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ phone: "+41792000000", name: "Unlinker", role: "parent" }),
     });
     const { id: guardianId } = await guardianRes.json();
 
     await fetch(`${baseUrl}/api/guardians/${guardianId}/players`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ playerId }),
     });
 
     // Unlink
     const res = await fetch(`${baseUrl}/api/guardians/${guardianId}/players/${playerId}`, {
       method: "DELETE",
+      headers: authHeaders,
     });
     expect(res.status).toBe(204);
 
     // Guardian still exists
-    const gRes = await fetch(`${baseUrl}/api/guardians/${guardianId}`);
+    const gRes = await fetch(`${baseUrl}/api/guardians/${guardianId}`, { headers: authHeaders });
     expect(gRes.status).toBe(200);
 
     // Player has no guardians
-    const pRes = await fetch(`${baseUrl}/api/players/${playerId}`);
+    const pRes = await fetch(`${baseUrl}/api/players/${playerId}`, { headers: authHeaders });
     const player = await pRes.json();
     expect(player.guardians).toHaveLength(0);
   });
@@ -392,7 +397,7 @@ describe("Guardians routes", () => {
     // Create first guardian
     const res1 = await fetch(`${baseUrl}/api/guardians`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ phone: "+41791234567", name: "Mama Test", role: "parent" }),
     });
     expect(res1.status).toBe(201);
@@ -401,7 +406,7 @@ describe("Guardians routes", () => {
     // Create second guardian with same phone — should return existing, not crash
     const res2 = await fetch(`${baseUrl}/api/guardians`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ phone: "+41791234567", name: "Mama Test", role: "parent" }),
     });
     expect(res2.status).toBe(200);
@@ -415,6 +420,7 @@ describe("Guardians routes", () => {
   it("DELETE /api/guardians/:guardianId/players/:playerId — returns 404 for nonexistent link", async () => {
     const res = await fetch(`${baseUrl}/api/guardians/9999/players/9999`, {
       method: "DELETE",
+      headers: authHeaders,
     });
     expect(res.status).toBe(404);
   });
@@ -422,34 +428,34 @@ describe("Guardians routes", () => {
   it("DELETE /api/guardians/:id — deletes guardian and all links", async () => {
     const playerRes = await fetch(`${baseUrl}/api/players`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ name: "Orphan Kid", yearOfBirth: 2016 }),
     });
     const { id: playerId } = await playerRes.json();
 
     const guardianRes = await fetch(`${baseUrl}/api/guardians`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ phone: "+41793000000", name: "Deletable", role: "parent" }),
     });
     const { id: guardianId } = await guardianRes.json();
 
     await fetch(`${baseUrl}/api/guardians/${guardianId}/players`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ playerId }),
     });
 
     // Delete guardian
-    const res = await fetch(`${baseUrl}/api/guardians/${guardianId}`, { method: "DELETE" });
+    const res = await fetch(`${baseUrl}/api/guardians/${guardianId}`, { method: "DELETE", headers: authHeaders });
     expect(res.status).toBe(204);
 
     // Guardian gone
-    const gRes = await fetch(`${baseUrl}/api/guardians/${guardianId}`);
+    const gRes = await fetch(`${baseUrl}/api/guardians/${guardianId}`, { headers: authHeaders });
     expect(gRes.status).toBe(404);
 
     // Player has no guardians
-    const pRes = await fetch(`${baseUrl}/api/players/${playerId}`);
+    const pRes = await fetch(`${baseUrl}/api/players/${playerId}`, { headers: authHeaders });
     const player = await pRes.json();
     expect(player.guardians).toHaveLength(0);
   });
@@ -457,7 +463,7 @@ describe("Guardians routes", () => {
   it("DELETE /api/guardians/:id — rejects deletion of coach/admin role", async () => {
     const guardianRes = await fetch(`${baseUrl}/api/guardians`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({
         phone: "+41794000000",
         name: "Coach Protected",
@@ -468,11 +474,11 @@ describe("Guardians routes", () => {
     });
     const { id: guardianId } = await guardianRes.json();
 
-    const res = await fetch(`${baseUrl}/api/guardians/${guardianId}`, { method: "DELETE" });
+    const res = await fetch(`${baseUrl}/api/guardians/${guardianId}`, { method: "DELETE", headers: authHeaders });
     expect(res.status).toBe(403);
 
     // Guardian still exists
-    const gRes = await fetch(`${baseUrl}/api/guardians/${guardianId}`);
+    const gRes = await fetch(`${baseUrl}/api/guardians/${guardianId}`, { headers: authHeaders });
     expect(gRes.status).toBe(200);
   });
 
@@ -480,7 +486,7 @@ describe("Guardians routes", () => {
     // Create a coach with email and password
     await fetch(`${baseUrl}/api/guardians`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({
         phone: "+41795555555",
         name: "Coach Test",
@@ -492,7 +498,7 @@ describe("Guardians routes", () => {
 
     const res = await fetch(`${baseUrl}/api/guardians/login`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ email: "coach@test.com", password: "securepass123" }),
     });
     expect(res.status).toBe(200);
@@ -505,7 +511,7 @@ describe("Guardians routes", () => {
   it("POST /api/guardians with role=coach and password — hashes password on creation", async () => {
     const res = await fetch(`${baseUrl}/api/guardians`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({
         phone: "+41796666666",
         name: "Coach Secure",
@@ -524,7 +530,7 @@ describe("Guardians routes", () => {
     // Verify the password is hashed in DB (login should work)
     const loginRes = await fetch(`${baseUrl}/api/guardians/login`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ email: "secure@test.com", password: "mypassword" }),
     });
     expect(loginRes.status).toBe(200);

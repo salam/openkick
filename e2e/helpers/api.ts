@@ -1,6 +1,6 @@
 import { type APIRequestContext } from "@playwright/test";
 
-const API = "http://localhost:3001";
+const API = "http://localhost:4001";
 
 export class ApiHelper {
   constructor(private request: APIRequestContext, private token?: string) {}

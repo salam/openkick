@@ -47,7 +47,7 @@ import { publicEventsRouter } from "./routes/public-events.js";
 import { gameHistoryRouter } from "./routes/game-history.routes.js";
 import { createRsvpRouter } from "./routes/rsvp.js";
 import { securityTxtRouter } from "./routes/security-txt.js";
-import { htmlInjector } from "./middleware/html-injector.js";
+import { createHtmlInjector } from "./middleware/html-injector.js";
 import { piiGateMiddleware } from "./middleware/pii-gate.middleware.js";
 import { checklistsRouter } from "./routes/checklists.routes.js";
 import { resetAdminChecklists } from "./services/checklist.service.js";
@@ -80,8 +80,11 @@ app.use("/api", createPaymentsRouter(paymentService));
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 app.use(securityTxtRouter);
-app.use(htmlInjector);
-app.use(express.static(path.resolve(__dirname, "../../public")));
+const staticDir = process.env.STATIC_DIR
+  ? path.resolve(process.env.STATIC_DIR)
+  : path.resolve(__dirname, "../../public");
+app.use(createHtmlInjector(staticDir));
+app.use(express.static(staticDir));
 
 app.use("/", llmsRouter);
 
@@ -204,6 +207,8 @@ async function main() {
   });
 }
 
-main().catch(console.error);
+if (!process.env.VITEST) {
+  main().catch(console.error);
+}
 
 export default app;

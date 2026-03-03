@@ -225,7 +225,7 @@ async function handleSendReminder(phone: string, lang: string): Promise<void> {
         getBotTemplate("whatsapp_reminder_with_link", guardianLang, {
           eventTitle: event.title,
           eventDate: event.date,
-          url: "/rsvp",
+          url: `${process.env.BASE_URL ?? "http://localhost:3000"}/rsvp?event=${event.id}`,
         }),
       );
       reminderCount++;
@@ -263,8 +263,8 @@ async function handleMarkAttendance(
 
   const db = getDB();
   const playerResult = db.exec(
-    "SELECT id, name FROM players WHERE LOWER(name) LIKE ?",
-    [`%${intent.playerName.toLowerCase()}%`],
+    "SELECT id, name FROM players WHERE LOWER(name) = LOWER(?)",
+    [intent.playerName],
   );
 
   if (playerResult.length === 0 || playerResult[0].values.length === 0) {

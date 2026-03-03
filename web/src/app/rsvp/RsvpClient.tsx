@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useState, useEffect, Suspense } from "react";
 import AltchaWidget from "@/components/AltchaWidget";
 import { t, getLanguage } from "@/lib/i18n";
+import { formatDateLong } from "@/lib/date";
 
 /* ── Types ──────────────────────────────────────────────────────────── */
 
@@ -37,18 +38,6 @@ interface ConfirmResponse {
 type PageState = "loading" | "name_search" | "select_player" | "confirm" | "done" | "error";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
-
-/* ── Helpers ─────────────────────────────────────────────────────────── */
-
-function formatDate(dateStr: string): string {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString("de-DE", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-}
 
 /* ── Loading skeleton ────────────────────────────────────────────────── */
 
@@ -94,22 +83,44 @@ function RsvpInner() {
   const [anonEventTitle, setAnonEventTitle] = useState("");
   const [anonEventDate, setAnonEventDate] = useState("");
   const [searchLoading, setSearchLoading] = useState(false);
+  const [phone, setPhone] = useState("");
+  const [requirePhone, setRequirePhone] = useState(false);
 
   // Confirm state
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [finalStatus, setFinalStatus] = useState("");
 
-  /* ── Personalized mode: resolve token on mount ── */
+  // Resolved event ID — either from URL or auto-detected
+  const [resolvedEventId, setResolvedEventId] = useState<string | null>(eventId);
+
+  /* ── Auto-resolve next event when no event param provided ── */
   useEffect(() => {
-    if (!eventId) {
-      setErrorMsg(t("rsvp_link_invalid"));
-      setState("error");
+    if (eventId) {
+      setResolvedEventId(eventId);
       return;
     }
+    // No event param — fetch the next upcoming event
+    fetch(`${API_URL}/api/public/next-event`)
+      .then((res) => {
+        if (!res.ok) throw new Error("no_event");
+        return res.json();
+      })
+      .then((data) => {
+        setResolvedEventId(String(data.id));
+      })
+      .catch(() => {
+        setErrorMsg(t("rsvp_link_invalid"));
+        setState("error");
+      });
+  }, [eventId]);
+
+  /* ── Personalized mode: resolve token on mount ── */
+  useEffect(() => {
+    if (!resolvedEventId) return; // wait for auto-resolution
 
     if (token) {
       // Personalized mode
-      fetch(`${API_URL}/api/rsvp/resolve?token=${encodeURIComponent(token)}&event=${encodeURIComponent(eventId)}`)
+      fetch(`${API_URL}/api/rsvp/resolve?token=${encodeURIComponent(token)}&event=${encodeURIComponent(resolvedEventId)}`)
         .then((res) => {
           if (!res.ok) throw new Error("invalid");
           return res.json() as Promise<ResolveResponse>;
@@ -132,12 +143,20 @@ function RsvpInner() {
       // Anonymous mode
       setState("name_search");
     }
-  }, [token, eventId]);
+  }, [token, resolvedEventId]);
+
+  /* ── Fetch RSVP settings (phone requirement) ── */
+  useEffect(() => {
+    fetch(`${API_URL}/api/rsvp/settings`)
+      .then((res) => res.ok ? res.json() : { requirePhone: false })
+      .then((data) => setRequirePhone(data.requirePhone))
+      .catch(() => {});
+  }, []);
 
   /* ── Anonymous: search by name ── */
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
-    if (!childName.trim() || !captchaPayload || !eventId) return;
+    if (!childName.trim() || !captchaPayload || !resolvedEventId) return;
 
     setSearchLoading(true);
     try {
@@ -146,8 +165,9 @@ function RsvpInner() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: childName.trim(),
-          eventId,
+          eventId: resolvedEventId,
           captcha: captchaPayload,
+          ...(requirePhone && phone.trim() ? { phone: phone.trim() } : {}),
         }),
       });
       if (!res.ok) {
@@ -164,6 +184,8 @@ function RsvpInner() {
       const msg = err instanceof Error ? err.message : "";
       if (msg.includes("not_found") || msg.includes("No player") || msg.includes("404")) {
         setErrorMsg(t("rsvp_no_player_found"));
+      } else if (msg.includes("Phone mismatch") || msg.includes("Phone required")) {
+        setErrorMsg(t("rsvp_phone_mismatch"));
       } else {
         setErrorMsg(t("rsvp_error_generic"));
       }
@@ -177,8 +199,8 @@ function RsvpInner() {
   async function handleConfirm(status: "attending" | "absent") {
     setConfirmLoading(true);
     try {
-      const body = token && selectedPlayer && eventId
-        ? { accessToken: token, playerId: selectedPlayer.id, eventId, status }
+      const body = token && selectedPlayer && resolvedEventId
+        ? { accessToken: token, playerId: selectedPlayer.id, eventId: resolvedEventId, status }
         : { rsvpToken, status };
 
       const res = await fetch(`${API_URL}/api/rsvp/confirm`, {
@@ -262,11 +284,31 @@ function RsvpInner() {
               />
             </div>
 
+            {requirePhone && (
+              <div>
+                <label
+                  htmlFor="phone"
+                  className="mb-1 block text-sm font-medium text-gray-700"
+                >
+                  {t("rsvp_phone_label")}
+                </label>
+                <input
+                  id="phone"
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder={t("rsvp_phone_placeholder")}
+                  required
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                />
+              </div>
+            )}
+
             <AltchaWidget onVerify={setCaptchaPayload} />
 
             <button
               type="submit"
-              disabled={searchLoading || !captchaPayload || !childName.trim()}
+              disabled={searchLoading || !captchaPayload || !childName.trim() || (requirePhone && !phone.trim())}
               className="w-full rounded-xl bg-primary-500 px-6 py-3 text-sm font-bold text-white shadow transition hover:bg-primary-600 disabled:opacity-50"
             >
               {searchLoading ? t("rsvp_searching") : t("rsvp_continue")}
@@ -316,7 +358,7 @@ function RsvpInner() {
           </h1>
           {displayEventDate && (
             <p className="mb-6 text-sm text-gray-500">
-              {formatDate(displayEventDate)}
+              {formatDateLong(displayEventDate)}
             </p>
           )}
 

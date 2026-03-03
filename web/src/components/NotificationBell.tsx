@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { apiFetch } from '@/lib/api';
 import { t, getLanguage } from '@/lib/i18n';
+import { formatDate } from '@/lib/date';
 
 interface Notification {
   id: number;
@@ -88,7 +89,7 @@ export default function NotificationBell() {
               <p className="text-sm text-gray-800">{n.message}</p>
               <div className="flex items-center justify-between mt-2">
                 <span className="text-xs text-gray-400">
-                  {new Date(n.createdAt).toLocaleDateString('de-CH')}
+                  {formatDate(n.createdAt)}
                 </span>
                 <button
                   onClick={() => markRead(n.id)}

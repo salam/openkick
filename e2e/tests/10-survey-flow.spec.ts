@@ -5,16 +5,18 @@ import { ApiHelper } from "../helpers/api.js";
 test.use({ storageState: AUTH_FILE });
 
 test.describe("10 — Survey Flow", () => {
-  let api: ApiHelper;
+  let token: string;
   let surveyId: number;
 
   test.beforeAll(async ({ request }) => {
-    api = new ApiHelper(request);
-    const { token } = await api.login(ADMIN_EMAIL, ADMIN_PASSWORD);
-    api.setToken(token);
+    const api = new ApiHelper(request);
+    const { token: t } = await api.login(ADMIN_EMAIL, ADMIN_PASSWORD);
+    token = t;
   });
 
-  test("create a custom survey via API", async () => {
+  test("create a custom survey via API", async ({ request }) => {
+    const api = new ApiHelper(request);
+    api.setToken(token);
     const { status, body } = await api.createSurvey({
       title: "Post-Tournament Feedback",
       questions: [
@@ -36,7 +38,7 @@ test.describe("10 — Survey Flow", () => {
     const context = await browser.newContext();
     const page = await context.newPage();
 
-    await page.goto(`/surveys/${surveyId}/respond`);
+    await page.goto(`/surveys/respond/${surveyId}`);
     await expect(page.getByText("Post-Tournament Feedback")).toBeVisible({ timeout: 10_000 });
 
     const textInput = page.getByRole("textbox").first();
@@ -56,12 +58,16 @@ test.describe("10 — Survey Flow", () => {
     await context.close();
   });
 
-  test("admin sees submitted response", async () => {
+  test("admin sees submitted response", async ({ request }) => {
+    const api = new ApiHelper(request);
+    api.setToken(token);
     const results = await api.getSurveyResults(surveyId);
     expect(results).toBeTruthy();
   });
 
-  test("close survey prevents new responses", async () => {
+  test("close survey prevents new responses", async ({ request }) => {
+    const api = new ApiHelper(request);
+    api.setToken(token);
     const status = await api.closeSurvey(surveyId);
     expect(status).toBe(200);
   });
@@ -71,7 +77,9 @@ test.describe("10 — Survey Flow", () => {
     await expect(page.getByText(/closed|geschlossen/i)).toBeVisible({ timeout: 10_000 });
   });
 
-  test("archive survey", async () => {
+  test("archive survey", async ({ request }) => {
+    const api = new ApiHelper(request);
+    api.setToken(token);
     const status = await api.archiveSurvey(surveyId);
     expect(status).toBe(200);
   });

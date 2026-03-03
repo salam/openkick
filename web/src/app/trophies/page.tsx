@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import { t, getLanguage } from '@/lib/i18n';
+import { formatDate } from '@/lib/date';
 
 interface TrophyCabinetEntry {
   id: number;
@@ -15,11 +16,6 @@ interface TrophyCabinetEntry {
   summary: string | null;
   resultsUrl: string | null;
   achievements: { type: string; label: string }[];
-}
-
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 function placementLabel(placement: number, totalTeams: number | null): string {

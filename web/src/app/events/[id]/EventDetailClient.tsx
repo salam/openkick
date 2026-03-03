@@ -5,6 +5,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { apiFetch } from '@/lib/api';
 import { isAuthenticated } from '@/lib/auth';
 import { t, getLanguage } from '@/lib/i18n';
+import { formatDateLong } from '@/lib/date';
+import { weatherDescription } from '@/lib/weather';
 import AltchaWidget from '@/components/AltchaWidget';
 import TournamentResultsForm from '@/components/TournamentResultsForm';
 import EventChecklist from '@/components/EventChecklist';
@@ -103,16 +105,6 @@ function decodeToken(): TokenPayload | null {
   } catch {
     return null;
   }
-}
-
-function formatDate(dateStr: string): string {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString(undefined, {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
 }
 
 function deadlineCountdown(deadline: string): string {
@@ -284,7 +276,7 @@ export default function EventDetailClient() {
   const [rsvpError, setRsvpError] = useState<string | null>(null);
 
   // Weather
-  const [weather, setWeather] = useState<{ temperature: number; precipitation: number; icon: string; description: string } | null>(null);
+  const [weather, setWeather] = useState<{ temperature: number; precipitation: number; weatherCode: number; icon: string; description: string } | null>(null);
 
   // Language reactivity
   const [, setLang] = useState(() => getLanguage());
@@ -396,7 +388,7 @@ export default function EventDetailClient() {
     const diffDays = (eventDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
     if (diffDays > 7 || diffDays < -1) return;
 
-    apiFetch<{ temperature: number; precipitation: number; icon: string; description: string }>(`/api/events/${id}/weather`)
+    apiFetch<{ temperature: number; precipitation: number; weatherCode: number; icon: string; description: string }>(`/api/events/${id}/weather`)
       .then(setWeather)
       .catch(() => {});
   }, [id, event?.date]);
@@ -534,14 +526,14 @@ export default function EventDetailClient() {
     setRsvpSearching(true);
     setRsvpError(null);
     try {
-      const res = await apiFetch<{ token: string; playerInitials: string; eventTitle: string }>(
+      const res = await apiFetch<{ rsvpToken: string; playerInitials: string; eventTitle: string }>(
         '/api/rsvp/search',
         {
           method: 'POST',
           body: JSON.stringify({ name: rsvpName, eventId: id, captcha: rsvpCaptcha }),
         },
       );
-      setRsvpToken(res.token);
+      setRsvpToken(res.rsvpToken);
       setRsvpPlayerInitials(res.playerInitials);
       setRsvpEventTitle(res.eventTitle);
       setRsvpStep('confirm');
@@ -558,7 +550,7 @@ export default function EventDetailClient() {
     try {
       await apiFetch('/api/rsvp/confirm', {
         method: 'POST',
-        body: JSON.stringify({ token: rsvpToken, status }),
+        body: JSON.stringify({ rsvpToken, status }),
       });
       setRsvpResult(status === 'attending' ? t('rsvp_registered') : t('rsvp_unregistered'));
       setRsvpStep('done');
@@ -613,7 +605,7 @@ export default function EventDetailClient() {
 
         {/* ── Info grid ── */}
         <section className="grid gap-4 sm:grid-cols-2">
-          <InfoItem label={t('date')} value={formatDate(event.date)} />
+          <InfoItem label={t('date')} value={formatDateLong(event.date)} />
           {event.startTime && (
             <InfoItem label={t('start_time')} value={event.startTime} />
           )}
@@ -624,7 +616,7 @@ export default function EventDetailClient() {
             <InfoItem label={t('location')} value={event.location} />
           )}
           {event.deadline && (
-            <InfoItem label={t('deadline')} value={formatDate(event.deadline)} />
+            <InfoItem label={t('deadline')} value={formatDateLong(event.deadline)} />
           )}
           {event.maxParticipants != null && (
             <InfoItem
@@ -644,7 +636,7 @@ export default function EventDetailClient() {
                 {t('weather_precipitation')}
               </p>
               <p className="text-sm text-gray-700">
-                {weather.icon} {Math.round(weather.temperature)}&deg;C &middot; {weather.description}
+                {weather.icon} {Math.round(weather.temperature)}&deg;C &middot; {weatherDescription(weather.weatherCode)}
                 {weather.precipitation > 0 && (
                   <span className="text-gray-400"> &middot; {weather.precipitation}% {t('weather_precipitation')}</span>
                 )}
@@ -859,7 +851,7 @@ export default function EventDetailClient() {
 
       {/* ── Info grid ── */}
       <section className="grid gap-4 sm:grid-cols-2">
-        <InfoItem label={t('date')} value={formatDate(event.date)} />
+        <InfoItem label={t('date')} value={formatDateLong(event.date)} />
         {event.startTime && (
           <InfoItem label={t('start_time')} value={event.startTime} />
         )}
@@ -870,7 +862,7 @@ export default function EventDetailClient() {
           <InfoItem label={t('location')} value={event.location} />
         )}
         {event.deadline && (
-          <InfoItem label={t('deadline')} value={formatDate(event.deadline)} />
+          <InfoItem label={t('deadline')} value={formatDateLong(event.deadline)} />
         )}
         {event.maxParticipants != null && (
           <InfoItem
@@ -890,7 +882,7 @@ export default function EventDetailClient() {
               {t('weather_precipitation')}
             </p>
             <p className="text-sm text-gray-700">
-              {weather.icon} {Math.round(weather.temperature)}&deg;C &middot; {weather.description}
+              {weather.icon} {Math.round(weather.temperature)}&deg;C &middot; {weatherDescription(weather.weatherCode)}
               {weather.precipitation > 0 && (
                 <span className="text-gray-400"> &middot; {weather.precipitation}% {t('weather_precipitation')}</span>
               )}

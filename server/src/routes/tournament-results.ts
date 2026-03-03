@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from "express";
+import { authMiddleware, requireRole } from "../auth.js";
 import {
   getResults,
   createResults,
@@ -19,7 +20,7 @@ tournamentResultsRouter.get("/events/:eventId/results", (req: Request, res: Resp
 });
 
 // POST /api/events/:eventId/results
-tournamentResultsRouter.post("/events/:eventId/results", (req: Request, res: Response) => {
+tournamentResultsRouter.post("/events/:eventId/results", authMiddleware, requireRole("admin", "coach"), (req: Request, res: Response) => {
   const eventId = Number(req.params.eventId);
   try {
     const result = createResults(eventId, req.body);
@@ -31,7 +32,7 @@ tournamentResultsRouter.post("/events/:eventId/results", (req: Request, res: Res
 });
 
 // PUT /api/events/:eventId/results
-tournamentResultsRouter.put("/events/:eventId/results", (req: Request, res: Response) => {
+tournamentResultsRouter.put("/events/:eventId/results", authMiddleware, requireRole("admin", "coach"), (req: Request, res: Response) => {
   const eventId = Number(req.params.eventId);
   try {
     const result = updateResults(eventId, req.body);
@@ -44,14 +45,14 @@ tournamentResultsRouter.put("/events/:eventId/results", (req: Request, res: Resp
 });
 
 // DELETE /api/events/:eventId/results
-tournamentResultsRouter.delete("/events/:eventId/results", (req: Request, res: Response) => {
+tournamentResultsRouter.delete("/events/:eventId/results", authMiddleware, requireRole("admin", "coach"), (req: Request, res: Response) => {
   const eventId = Number(req.params.eventId);
   deleteResults(eventId);
   res.status(204).end();
 });
 
 // POST /api/events/:eventId/results/import — LLM extraction (returns data, does NOT save)
-tournamentResultsRouter.post("/events/:eventId/results/import", async (req: Request, res: Response) => {
+tournamentResultsRouter.post("/events/:eventId/results/import", authMiddleware, requireRole("admin", "coach"), async (req: Request, res: Response) => {
   const eventId = Number(req.params.eventId);
   const { url } = req.body;
   if (!url || typeof url !== "string") { res.status(400).json({ error: "url is required" }); return; }

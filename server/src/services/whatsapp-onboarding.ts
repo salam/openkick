@@ -61,10 +61,18 @@ async function handleChild(
   context: Record<string, unknown>,
 ): Promise<void> {
   const db = getDB();
-  const result = db.exec(
-    "SELECT id, name, yearOfBirth FROM players WHERE LOWER(name) LIKE LOWER('%' || ? || '%')",
+  // Try exact match first, then partial (first name) match
+  let result = db.exec(
+    "SELECT id, name, yearOfBirth FROM players WHERE LOWER(name) = LOWER(?)",
     [text],
   );
+
+  if (result.length === 0 || result[0].values.length === 0) {
+    result = db.exec(
+      "SELECT id, name, yearOfBirth FROM players WHERE LOWER(name) LIKE LOWER(?) || ' %'",
+      [text],
+    );
+  }
 
   if (result.length === 0 || result[0].values.length === 0) {
     await sendMessage(phone, getBotTemplate("whatsapp_onboarding_no_match", lang));

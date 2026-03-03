@@ -43,7 +43,7 @@ const fr: Record<string, string> = {
     "{{playerName}} est sur la liste d'attente pour {{eventTitle}} le {{eventDate}}.",
   whatsapp_disambiguate: "Pour quel enfant ?\n{{options}}",
   whatsapp_help:
-    "Envoie le nom de ton enfant avec 'present' ou 'absent', par ex. 'Luca est la' ou 'Luca est malade'.\n\nTu peux aussi utiliser le portail web : {{url}}\n\n(by OpenKick)",
+    "Envoie le nom de ton enfant avec 'present' ou 'absent', par ex. 'Luca est la' ou 'Luca est malade'.\n\nTu peux aussi utiliser le portail web : {{url}}",
   whatsapp_reminder_with_link:
     "Rappel : {{eventTitle}} le {{eventDate}}. Merci de repondre !\n\nRepondre en ligne : {{url}}",
   whatsapp_coach_attendance_overview:

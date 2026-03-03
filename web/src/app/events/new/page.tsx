@@ -4,6 +4,7 @@ import { useState, type FormEvent, type ChangeEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import { getToken } from '@/lib/auth';
+import AuthGuard from '@/components/AuthGuard';
 
 /* ── Constants ──────────────────────────────────────────────────────── */
 
@@ -78,6 +79,10 @@ interface EventFormData {
 /* ── Component ─────────────────────────────────────────────────────── */
 
 export default function NewEventPage() {
+  return <AuthGuard><NewEventForm /></AuthGuard>;
+}
+
+function NewEventForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
 

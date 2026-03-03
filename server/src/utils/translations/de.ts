@@ -43,7 +43,7 @@ const de: Record<string, string> = {
     "{{playerName}} steht auf der Warteliste fuer {{eventTitle}} am {{eventDate}}.",
   whatsapp_disambiguate: "Fuer welches Kind?\n{{options}}",
   whatsapp_help:
-    "Sende den Namen deines Kindes mit 'kommt' oder 'kommt nicht', z.B. 'Luca kommt' oder 'Luca ist krank'.\n\nAlternativ kannst du auch das Web-Frontend nutzen: {{url}}\n\n(by OpenKick)",
+    "Sende den Namen deines Kindes mit 'kommt' oder 'kommt nicht', z.B. 'Luca kommt' oder 'Luca ist krank'.\n\nAlternativ kannst du auch das Web-Frontend nutzen: {{url}}",
   whatsapp_reminder_with_link:
     "Erinnerung: {{eventTitle}} am {{eventDate}}. Bitte gib Bescheid!\n\nOnline antworten: {{url}}",
   whatsapp_coach_attendance_overview:

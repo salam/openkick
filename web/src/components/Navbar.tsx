@@ -7,13 +7,17 @@ import { t, getLanguage } from '@/lib/i18n';
 import { apiFetch } from '@/lib/api';
 import LanguageToggle from '@/components/LanguageToggle';
 import { useClubSettings } from '@/hooks/useClubSettings';
+import { weatherDescription } from '@/lib/weather';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 interface WeatherData {
   temperature: number;
+  weatherCode: number;
   icon: string;
   description: string;
+  eventTitle?: string;
+  eventDate?: string;
 }
 
 const navLinks = [
@@ -101,7 +105,7 @@ export default function Navbar() {
             {weather && (
               <span
                 className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600"
-                title={weather.description}
+                title={`${weather.eventTitle ?? ''} — ${weatherDescription(weather.weatherCode)}`}
               >
                 {weather.icon} {Math.round(weather.temperature)}&deg;
               </span>
@@ -156,7 +160,7 @@ export default function Navbar() {
             <div className="border-t border-gray-200 pt-2 mt-2 flex items-center gap-2">
               {weather && (
                 <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600">
-                  {weather.icon} {Math.round(weather.temperature)}&deg; &middot; {weather.description}
+                  {weather.icon} {Math.round(weather.temperature)}&deg; &middot; {weatherDescription(weather.weatherCode)}
                 </span>
               )}
               <LanguageToggle />

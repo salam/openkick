@@ -5,11 +5,16 @@ import type { AddressInfo } from "node:net";
 import { initDB } from "../../database.js";
 import { eventSeriesRouter } from "../event-series.js";
 import { eventsRouter } from "../events.js";
+import { generateJWT } from "../../auth.js";
 import type { Database } from "sql.js";
 
 let db: Database;
 let server: Server;
 let baseUrl: string;
+const authHeaders = {
+  "Content-Type": "application/json",
+  Authorization: `Bearer ${generateJWT({ id: 1, role: "admin" })}`,
+};
 
 async function createTestApp() {
   db = await initDB();
@@ -49,7 +54,7 @@ const SERIES_PAYLOAD = {
 async function createSeries(payload = SERIES_PAYLOAD) {
   const res = await fetch(`${baseUrl}/api/event-series`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders,
     body: JSON.stringify(payload),
   });
   return res;
@@ -83,7 +88,7 @@ describe("Event Series routes", () => {
   it("POST /api/event-series — rejects missing title with 400", async () => {
     const res = await fetch(`${baseUrl}/api/event-series`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({
         type: "training",
         recurrenceDay: 1,
@@ -141,7 +146,7 @@ describe("Event Series routes", () => {
 
     const res = await fetch(`${baseUrl}/api/event-series/${id}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ title: "Updated Training", location: "Field B" }),
     });
     expect(res.status).toBe(200);
@@ -157,7 +162,7 @@ describe("Event Series routes", () => {
   it("PUT /api/event-series/:id — returns 404 for non-existent series", async () => {
     const res = await fetch(`${baseUrl}/api/event-series/999`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ title: "Nope" }),
     });
     expect(res.status).toBe(404);
@@ -171,11 +176,11 @@ describe("Event Series routes", () => {
     // Materialize an event first
     await fetch(`${baseUrl}/api/event-series/${id}/materialize`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ date: "2026-03-02" }),
     });
 
-    const delRes = await fetch(`${baseUrl}/api/event-series/${id}`, { method: "DELETE" });
+    const delRes = await fetch(`${baseUrl}/api/event-series/${id}`, { method: "DELETE", headers: authHeaders });
     expect(delRes.status).toBe(204);
 
     // Series should be gone
@@ -189,7 +194,7 @@ describe("Event Series routes", () => {
 
   // 6b. DELETE /api/event-series/:id — returns 404 for non-existent
   it("DELETE /api/event-series/:id — returns 404 for non-existent series", async () => {
-    const res = await fetch(`${baseUrl}/api/event-series/999`, { method: "DELETE" });
+    const res = await fetch(`${baseUrl}/api/event-series/999`, { method: "DELETE", headers: authHeaders });
     expect(res.status).toBe(404);
   });
 
@@ -201,7 +206,7 @@ describe("Event Series routes", () => {
     // Exclude March 9
     const excludeRes = await fetch(`${baseUrl}/api/event-series/${id}/exclude`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ date: "2026-03-09" }),
     });
     expect(excludeRes.status).toBe(200);
@@ -219,7 +224,7 @@ describe("Event Series routes", () => {
   it("POST /api/event-series/:id/exclude — returns 404 for non-existent series", async () => {
     const res = await fetch(`${baseUrl}/api/event-series/999/exclude`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ date: "2026-03-09" }),
     });
     expect(res.status).toBe(404);
@@ -232,7 +237,7 @@ describe("Event Series routes", () => {
 
     const matRes = await fetch(`${baseUrl}/api/event-series/${seriesId}/materialize`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ date: "2026-03-02" }),
     });
     expect(matRes.status).toBe(201);
@@ -256,14 +261,14 @@ describe("Event Series routes", () => {
     // First materialization
     await fetch(`${baseUrl}/api/event-series/${seriesId}/materialize`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ date: "2026-03-02" }),
     });
 
     // Second materialization — should be conflict
     const matRes = await fetch(`${baseUrl}/api/event-series/${seriesId}/materialize`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ date: "2026-03-02" }),
     });
     expect(matRes.status).toBe(409);
@@ -277,7 +282,7 @@ describe("Event Series routes", () => {
     // Materialize March 9
     await fetch(`${baseUrl}/api/event-series/${seriesId}/materialize`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ date: "2026-03-09" }),
     });
 

@@ -81,10 +81,10 @@ function seedTeamWithPlayers(
   return teamId;
 }
 
-function seedTrophy(): void {
+function seedTrophy(eventId: number): void {
   db.run(
-    "INSERT INTO game_history (tournamentName, date, isTrophy, trophyType) VALUES (?, ?, ?, ?)",
-    ["Spring Cup", "2026-03-15", 1, "gold"],
+    "INSERT INTO tournament_results (eventId, placement, totalTeams, summary) VALUES (?, ?, ?, ?)",
+    [eventId, 1, 8, "Won the Spring Cup"],
   );
 }
 
@@ -126,7 +126,7 @@ describe("statistics service", () => {
     seedTeamWithPlayers(tournamentId, [lucaId, noahId]);
 
     // Trophy
-    seedTrophy();
+    seedTrophy(tournamentId);
   });
 
   afterEach(() => {

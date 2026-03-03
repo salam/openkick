@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { apiFetch } from '@/lib/api';
 import { getUserRole } from '@/lib/auth';
 import { t, getLanguage } from '@/lib/i18n';
+import { formatDateTime } from '@/lib/date';
 import ClubProfileForm from '@/components/settings/ClubProfileForm';
 import SmtpForm from '@/components/settings/SmtpForm';
 import LlmConfigForm from '@/components/settings/LlmConfigForm';
@@ -70,6 +71,7 @@ const SETTING_KEYS = [
   'imprint_extra', 'privacy_extra',
   'tint_color', 'homepage_bg_image',
   'latitude', 'longitude',
+  'rsvp_require_phone',
 ] as const;
 
 type SettingsMap = Record<string, string>;
@@ -549,6 +551,35 @@ export default function SettingsPage() {
                   />
                   <HomepageAppearanceCard settings={settings} onUpdate={update} />
 
+                  {/* RSVP phone requirement */}
+                  <div className={cardClass}>
+                    <label className="flex items-center justify-between cursor-pointer">
+                      <div>
+                        <span className="text-sm font-medium text-gray-700">
+                          {t('rsvp_require_phone_label')}
+                        </span>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          {t('rsvp_require_phone_desc')}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={settings.rsvp_require_phone === 'true'}
+                        onClick={() => update('rsvp_require_phone', settings.rsvp_require_phone === 'true' ? 'false' : 'true')}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                          settings.rsvp_require_phone === 'true' ? 'bg-primary-500' : 'bg-gray-300'
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            settings.rsvp_require_phone === 'true' ? 'translate-x-6' : 'translate-x-1'
+                          }`}
+                        />
+                      </button>
+                    </label>
+                  </div>
+
                   {/* Bot Language */}
                   <div className={cardClass}>
                     <h2 className="mb-4 text-lg font-semibold text-gray-900">
@@ -841,7 +872,7 @@ export default function SettingsPage() {
                         )}
 
                         <p className="mt-3 text-xs text-gray-400">
-                          {t('last_run')}: {new Date(auditResult.timestamp).toLocaleString()}
+                          {t('last_run')}: {formatDateTime(auditResult.timestamp)}
                         </p>
                       </>
                     )}

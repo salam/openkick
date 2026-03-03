@@ -3,6 +3,7 @@ import express from "express";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { initDB } from "../../database.js";
+import { generateJWT } from "../../auth.js";
 import { notificationsRouter } from "../notifications.js";
 import { createNotification } from "../../services/notifications.js";
 import type { Database } from "sql.js";
@@ -10,9 +11,13 @@ import type { Database } from "sql.js";
 let db: Database;
 let server: Server;
 let baseUrl: string;
+const authHeaders = {
+  Authorization: `Bearer ${generateJWT({ id: 1, role: "parent" })}`,
+};
 
 async function createTestApp() {
   db = await initDB();
+  db.run("INSERT INTO guardians (id, phone, name, role, passwordHash) VALUES (1, '+41790000000', 'Admin', 'admin', 'hash')");
   const app = express();
   app.use(express.json());
   app.use("/api", notificationsRouter);
@@ -43,7 +48,9 @@ describe("Notifications routes", () => {
     createNotification({ userId: 1, type: "alert", message: "Deadline soon" });
     createNotification({ userId: 2, type: "info", message: "Other user msg" });
 
-    const res = await fetch(`${baseUrl}/api/notifications?userId=1`);
+    const res = await fetch(`${baseUrl}/api/notifications?userId=1`, {
+      headers: authHeaders,
+    });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(Array.isArray(body)).toBe(true);
@@ -53,7 +60,9 @@ describe("Notifications routes", () => {
   });
 
   it("GET /api/notifications — returns empty array when no unread", async () => {
-    const res = await fetch(`${baseUrl}/api/notifications?userId=99`);
+    const res = await fetch(`${baseUrl}/api/notifications?userId=99`, {
+      headers: authHeaders,
+    });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toEqual([]);
@@ -68,13 +77,16 @@ describe("Notifications routes", () => {
 
     const res = await fetch(`${baseUrl}/api/notifications/${notification.id}/read`, {
       method: "PUT",
+      headers: authHeaders,
     });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.success).toBe(true);
 
     // Verify it no longer appears in unread list
-    const listRes = await fetch(`${baseUrl}/api/notifications?userId=1`);
+    const listRes = await fetch(`${baseUrl}/api/notifications?userId=1`, {
+      headers: authHeaders,
+    });
     const listBody = await listRes.json();
     expect(listBody).toHaveLength(0);
   });
@@ -82,6 +94,7 @@ describe("Notifications routes", () => {
   it("PUT /api/notifications/:id/read — returns 400 for invalid id", async () => {
     const res = await fetch(`${baseUrl}/api/notifications/abc/read`, {
       method: "PUT",
+      headers: authHeaders,
     });
     expect(res.status).toBe(400);
   });

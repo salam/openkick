@@ -265,6 +265,7 @@ function CalendarPageContent() {
               month={month}
               events={events}
               vacations={vacations}
+              filter={filter}
               onMonthClick={handleMonthClick}
               onDayClick={(date) => {
                 // Could open a detail modal -- for now just log
@@ -277,7 +278,7 @@ function CalendarPageContent() {
         </div>
 
         {/* Sidebar */}
-        {(trainingDays.length > 0 || vacations.length > 0 || eventSeries.length > 0) && (
+        {(trainingDays.length > 0 || vacations.length > 0 || eventSeries.some(s => s.type !== 'training')) && (
           <aside className="w-full shrink-0 lg:w-64">
             {/* Training schedule */}
             {trainingDays.length > 0 && (
@@ -317,28 +318,32 @@ function CalendarPageContent() {
               </div>
             )}
 
-            {/* Event Series */}
-            <div className="mt-4 rounded-lg border border-gray-200 bg-white p-4">
-              <h3 className="mb-3 text-sm font-semibold text-gray-900">
-                {t('event_series')}
-              </h3>
-              {eventSeries.length === 0 ? (
-                <p className="text-sm text-gray-400">{t('no_event_series')}</p>
-              ) : (
-                <ul className="space-y-2">
-                  {eventSeries.map((s) => (
-                    <li key={s.id} className="text-sm text-gray-700">
-                      <span className="mr-2 inline-block h-2 w-2 rounded-full bg-blue-400" />
-                      <span className="font-medium">{s.title}</span>
-                      <br />
-                      <span className="ml-4 text-xs text-gray-500">
-                        {t(ISO_DAY_KEYS[s.recurrenceDay])} &middot; {s.startDate} &ndash; {s.endDate}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+            {/* Event Series (exclude training-type since those are shown in Training Schedule above) */}
+            {(() => {
+              const nonTrainingSeries = eventSeries.filter((s) => s.type !== 'training');
+              if (nonTrainingSeries.length === 0) return null;
+              return (
+                <div className="mt-4 rounded-lg border border-gray-200 bg-white p-4">
+                  <h3 className="mb-3 text-sm font-semibold text-gray-900">
+                    {t('event_series')}
+                  </h3>
+                  <ul className="space-y-2">
+                    {nonTrainingSeries.map((s) => (
+                      <li key={s.id} className="text-sm text-gray-700">
+                        <span className={`mr-2 inline-block h-2 w-2 rounded-full ${
+                          s.type === 'tournament' ? 'bg-blue-400' : s.type === 'match' ? 'bg-orange-400' : 'bg-gray-400'
+                        }`} />
+                        <span className="font-medium">{s.title}</span>
+                        <br />
+                        <span className="ml-4 text-xs text-gray-500">
+                          {t(ISO_DAY_KEYS[s.recurrenceDay])} &middot; {s.startDate} &ndash; {s.endDate}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })()}
           </aside>
         )}
       </div>

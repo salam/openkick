@@ -409,9 +409,9 @@ export function getHomepageStats(): HomepageStats {
   const tournamentsPlayed =
     (tournamentRows[0]?.values[0]?.[0] as number) ?? 0;
 
-  // Trophies won
+  // Trophies won (count from tournament_results, the authoritative source)
   const trophyRows = db.exec(
-    "SELECT COUNT(*) AS cnt FROM game_history WHERE isTrophy = 1",
+    "SELECT COUNT(*) AS cnt FROM tournament_results",
   );
   const trophiesWon =
     (trophyRows[0]?.values[0]?.[0] as number) ?? 0;

@@ -192,7 +192,7 @@ describe("POST /api/users/invite", () => {
   it("admin invites a new coach", async () => {
     const { sendEmail } = await import("../services/email.js");
     const adminId = insertUser("Admin", "admin@test.com", "admin");
-    const token = generateJWT({ id: adminId, role: "admin" });
+    const token = generateJWT({ id: adminId, role: "admin", piiAccessLevel: "full" });
 
     const res = await request(app)
       .post("/api/users/invite")

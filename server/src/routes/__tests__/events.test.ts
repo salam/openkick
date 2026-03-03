@@ -3,15 +3,23 @@ import express from "express";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { initDB } from "../../database.js";
+import { generateJWT } from "../../auth.js";
 import { eventsRouter } from "../events.js";
 import type { Database } from "sql.js";
 
 let db: Database;
 let server: Server;
 let baseUrl: string;
+let adminToken: string;
 
 async function createTestApp() {
   db = await initDB();
+
+  db.run(
+    "INSERT INTO guardians (id, phone, name, role, passwordHash) VALUES (1, '+41790000000', 'Admin', 'admin', 'hash')"
+  );
+  adminToken = generateJWT({ id: 1, role: "admin" });
+
   const app = express();
   app.use(express.json());
   app.use("/api", eventsRouter);
@@ -40,7 +48,7 @@ describe("Events routes", () => {
   it("POST /api/events — creates event and returns 201", async () => {
     const res = await fetch(`${baseUrl}/api/events`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
       body: JSON.stringify({
         type: "training",
         title: "Monday Training",
@@ -76,16 +84,16 @@ describe("Events routes", () => {
     // Create events with different dates
     await fetch(`${baseUrl}/api/events`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
       body: JSON.stringify({ type: "training", title: "Later", date: "2026-04-10" }),
     });
     await fetch(`${baseUrl}/api/events`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
       body: JSON.stringify({ type: "training", title: "Earlier", date: "2026-03-05" }),
     });
 
-    const res = await fetch(`${baseUrl}/api/events`);
+    const res = await fetch(`${baseUrl}/api/events`, { headers: { Authorization: `Bearer ${adminToken}` } });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(Array.isArray(body)).toBe(true);
@@ -97,21 +105,21 @@ describe("Events routes", () => {
   it("GET /api/events?type=tournament — filters by type", async () => {
     await fetch(`${baseUrl}/api/events`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
       body: JSON.stringify({ type: "training", title: "Training A", date: "2026-03-01" }),
     });
     await fetch(`${baseUrl}/api/events`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
       body: JSON.stringify({ type: "tournament", title: "Cup B", date: "2026-03-02" }),
     });
     await fetch(`${baseUrl}/api/events`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
       body: JSON.stringify({ type: "tournament", title: "Cup C", date: "2026-03-03" }),
     });
 
-    const res = await fetch(`${baseUrl}/api/events?type=tournament`);
+    const res = await fetch(`${baseUrl}/api/events?type=tournament`, { headers: { Authorization: `Bearer ${adminToken}` } });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toHaveLength(2);
@@ -121,21 +129,21 @@ describe("Events routes", () => {
   it("GET /api/events?category=E — filters by categoryRequirement containing E", async () => {
     await fetch(`${baseUrl}/api/events`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
       body: JSON.stringify({ type: "training", title: "E+F Training", date: "2026-03-01", categoryRequirement: "E,F" }),
     });
     await fetch(`${baseUrl}/api/events`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
       body: JSON.stringify({ type: "training", title: "D Training", date: "2026-03-02", categoryRequirement: "D" }),
     });
     await fetch(`${baseUrl}/api/events`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
       body: JSON.stringify({ type: "training", title: "E Only", date: "2026-03-03", categoryRequirement: "E" }),
     });
 
-    const res = await fetch(`${baseUrl}/api/events?category=E`);
+    const res = await fetch(`${baseUrl}/api/events?category=E`, { headers: { Authorization: `Bearer ${adminToken}` } });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toHaveLength(2);
@@ -148,7 +156,7 @@ describe("Events routes", () => {
     // Create event
     const createRes = await fetch(`${baseUrl}/api/events`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
       body: JSON.stringify({ type: "training", title: "Detail Event", date: "2026-03-10" }),
     });
     const { id: eventId } = await createRes.json();
@@ -164,7 +172,7 @@ describe("Events routes", () => {
     db.run("INSERT INTO attendance (eventId, playerId, status) VALUES (?, ?, ?)", [eventId, 3, "absent"]);
     db.run("INSERT INTO attendance (eventId, playerId, status) VALUES (?, ?, ?)", [eventId, 4, "waitlist"]);
 
-    const res = await fetch(`${baseUrl}/api/events/${eventId}`);
+    const res = await fetch(`${baseUrl}/api/events/${eventId}`, { headers: { Authorization: `Bearer ${adminToken}` } });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.title).toBe("Detail Event");
@@ -177,21 +185,21 @@ describe("Events routes", () => {
   });
 
   it("GET /api/events/:id — returns 404 for non-existent event", async () => {
-    const res = await fetch(`${baseUrl}/api/events/999`);
+    const res = await fetch(`${baseUrl}/api/events/999`, { headers: { Authorization: `Bearer ${adminToken}` } });
     expect(res.status).toBe(404);
   });
 
   it("PUT /api/events/:id — updates event fields", async () => {
     const createRes = await fetch(`${baseUrl}/api/events`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
       body: JSON.stringify({ type: "training", title: "Old Title", date: "2026-03-01" }),
     });
     const { id } = await createRes.json();
 
     const res = await fetch(`${baseUrl}/api/events/${id}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
       body: JSON.stringify({ title: "New Title", location: "New Field", maxParticipants: 15 }),
     });
     expect(res.status).toBe(200);
@@ -207,7 +215,7 @@ describe("Events routes", () => {
   it("PUT /api/events/:id — returns 404 for non-existent event", async () => {
     const res = await fetch(`${baseUrl}/api/events/999`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
       body: JSON.stringify({ title: "Nope" }),
     });
     expect(res.status).toBe(404);
@@ -217,7 +225,7 @@ describe("Events routes", () => {
     // Create event
     const createRes = await fetch(`${baseUrl}/api/events`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
       body: JSON.stringify({ type: "training", title: "To Delete", date: "2026-03-15" }),
     });
     const { id: eventId } = await createRes.json();
@@ -226,11 +234,11 @@ describe("Events routes", () => {
     db.run("INSERT INTO players (name, yearOfBirth) VALUES (?, ?)", ["P1", 2015]);
     db.run("INSERT INTO attendance (eventId, playerId, status) VALUES (?, ?, ?)", [eventId, 1, "attending"]);
 
-    const delRes = await fetch(`${baseUrl}/api/events/${eventId}`, { method: "DELETE" });
+    const delRes = await fetch(`${baseUrl}/api/events/${eventId}`, { method: "DELETE", headers: { Authorization: `Bearer ${adminToken}` } });
     expect(delRes.status).toBe(204);
 
     // Event should be gone
-    const getRes = await fetch(`${baseUrl}/api/events/${eventId}`);
+    const getRes = await fetch(`${baseUrl}/api/events/${eventId}`, { headers: { Authorization: `Bearer ${adminToken}` } });
     expect(getRes.status).toBe(404);
 
     // Attendance records should also be gone
@@ -239,14 +247,14 @@ describe("Events routes", () => {
   });
 
   it("DELETE /api/events/:id — returns 404 for non-existent event", async () => {
-    const res = await fetch(`${baseUrl}/api/events/999`, { method: "DELETE" });
+    const res = await fetch(`${baseUrl}/api/events/999`, { method: "DELETE", headers: { Authorization: `Bearer ${adminToken}` } });
     expect(res.status).toBe(404);
   });
 
   it("POST /api/events — accepts teamName and returns it in response", async () => {
     const res = await fetch(`${baseUrl}/api/events`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
       body: JSON.stringify({
         type: "tournament",
         title: "Spring Cup",
@@ -259,7 +267,7 @@ describe("Events routes", () => {
     expect(body.teamName).toBe("FC Example E1");
 
     // Verify it persists via GET
-    const getRes = await fetch(`${baseUrl}/api/events/${body.id}`);
+    const getRes = await fetch(`${baseUrl}/api/events/${body.id}`, { headers: { Authorization: `Bearer ${adminToken}` } });
     const getBody = await getRes.json();
     expect(getBody.teamName).toBe("FC Example E1");
   });
@@ -267,7 +275,7 @@ describe("Events routes", () => {
   it("POST /api/events — teamName defaults to null when not provided", async () => {
     const res = await fetch(`${baseUrl}/api/events`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
       body: JSON.stringify({ type: "training", title: "No Team", date: "2026-04-06" }),
     });
     expect(res.status).toBe(201);
@@ -278,7 +286,7 @@ describe("Events routes", () => {
   it("PUT /api/events/:id — can update teamName", async () => {
     const createRes = await fetch(`${baseUrl}/api/events`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
       body: JSON.stringify({
         type: "tournament",
         title: "Autumn Cup",
@@ -290,7 +298,7 @@ describe("Events routes", () => {
 
     const res = await fetch(`${baseUrl}/api/events/${id}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
       body: JSON.stringify({ teamName: "FC New Name" }),
     });
     expect(res.status).toBe(200);
@@ -317,11 +325,11 @@ describe("Events routes", () => {
     // Also create a standalone event to make sure it still shows up
     await fetch(`${baseUrl}/api/events`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
       body: JSON.stringify({ type: "tournament", title: "Standalone Cup", date: "2026-03-15" }),
     });
 
-    const res = await fetch(`${baseUrl}/api/events`);
+    const res = await fetch(`${baseUrl}/api/events`, { headers: { Authorization: `Bearer ${adminToken}` } });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(Array.isArray(body)).toBe(true);
@@ -367,13 +375,13 @@ describe("Events routes", () => {
     );
 
     // With type filter — only future tournaments
-    const res = await fetch(`${baseUrl}/api/events?type=tournament&upcoming=true`);
+    const res = await fetch(`${baseUrl}/api/events?type=tournament&upcoming=true`, { headers: { Authorization: `Bearer ${adminToken}` } });
     const body = await res.json();
     expect(body).toHaveLength(1);
     expect(body[0].title).toBe("Future Cup");
 
     // Without type filter — all future events
-    const res2 = await fetch(`${baseUrl}/api/events?upcoming=true`);
+    const res2 = await fetch(`${baseUrl}/api/events?upcoming=true`, { headers: { Authorization: `Bearer ${adminToken}` } });
     const body2 = await res2.json();
     expect(body2).toHaveLength(2);
     expect(body2.every((e: Record<string, unknown>) => e.date! >= new Date().toISOString().slice(0, 10))).toBe(true);
@@ -389,7 +397,7 @@ describe("Events routes", () => {
       ["tournament", "Future Cup", "2027-06-15"],
     );
 
-    const res = await fetch(`${baseUrl}/api/events?upcoming=false`);
+    const res = await fetch(`${baseUrl}/api/events?upcoming=false`, { headers: { Authorization: `Bearer ${adminToken}` } });
     const body = await res.json();
     expect(body).toHaveLength(2);
   });
@@ -409,7 +417,7 @@ describe("Events routes", () => {
       ["training", "Mat Series (edited)", "2026-03-04", "19:00", 1],
     );
 
-    const res = await fetch(`${baseUrl}/api/events`);
+    const res = await fetch(`${baseUrl}/api/events`, { headers: { Authorization: `Bearer ${adminToken}` } });
     const body = await res.json();
 
     // Should not have duplicate entries for 2026-03-04

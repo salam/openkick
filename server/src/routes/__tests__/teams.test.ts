@@ -4,11 +4,16 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { initDB } from "../../database.js";
 import { teamsRouter } from "../teams.js";
+import { generateJWT } from "../../auth.js";
 import type { Database } from "sql.js";
 
 let db: Database;
 let server: Server;
 let baseUrl: string;
+const authHeaders = {
+  "Content-Type": "application/json",
+  Authorization: `Bearer ${generateJWT({ id: 1, role: "admin" })}`,
+};
 
 async function createTestApp() {
   db = await initDB();
@@ -71,7 +76,7 @@ describe("Teams routes", () => {
 
     const res = await fetch(`${baseUrl}/api/events/${eventId}/teams`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ teamCount: 2 }),
     });
 
@@ -87,7 +92,7 @@ describe("Teams routes", () => {
 
     const res = await fetch(`${baseUrl}/api/events/${eventId}/teams`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({}),
     });
 
@@ -107,7 +112,7 @@ describe("Teams routes", () => {
     // First assign teams
     await fetch(`${baseUrl}/api/events/${eventId}/teams`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ teamCount: 2 }),
     });
 
@@ -137,7 +142,7 @@ describe("Teams routes", () => {
     // Assign teams first
     const assignRes = await fetch(`${baseUrl}/api/events/${eventId}/teams`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ teamCount: 2 }),
     });
     const assignBody = await assignRes.json();
@@ -146,7 +151,7 @@ describe("Teams routes", () => {
     // Manually set players for team
     const res = await fetch(`${baseUrl}/api/teams/${teamId}/players`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ playerIds: [p1, p2, p3] }),
     });
 
@@ -159,7 +164,7 @@ describe("Teams routes", () => {
   it("PUT /api/teams/:teamId/players — returns 404 for nonexistent team", async () => {
     const res = await fetch(`${baseUrl}/api/teams/9999/players`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ playerIds: [1] }),
     });
 
@@ -179,13 +184,14 @@ describe("Teams routes", () => {
     // Assign teams
     await fetch(`${baseUrl}/api/events/${eventId}/teams`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: JSON.stringify({ teamCount: 2 }),
     });
 
     // Delete teams
     const res = await fetch(`${baseUrl}/api/events/${eventId}/teams`, {
       method: "DELETE",
+      headers: { Authorization: `Bearer ${generateJWT({ id: 1, role: "admin" })}` },
     });
     expect(res.status).toBe(204);
 

@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from "express";
+import { authMiddleware, requireRole } from "../auth.js";
 import { getDB, getLastInsertId } from "../database.js";
 import {
   expandSeries,
@@ -50,7 +51,7 @@ function computeDeadline(
 // ── Event Series CRUD ───────────────────────────────────────────────
 
 // POST /api/event-series
-eventSeriesRouter.post("/event-series", (req: Request, res: Response) => {
+eventSeriesRouter.post("/event-series", authMiddleware, requireRole("admin", "coach"), (req: Request, res: Response) => {
   const {
     type,
     title,
@@ -184,7 +185,7 @@ eventSeriesRouter.get("/event-series/:id", (req: Request, res: Response) => {
 });
 
 // PUT /api/event-series/:id
-eventSeriesRouter.put("/event-series/:id", (req: Request, res: Response) => {
+eventSeriesRouter.put("/event-series/:id", authMiddleware, requireRole("admin", "coach"), (req: Request, res: Response) => {
   const db = getDB();
   const id = Number(req.params.id);
 
@@ -243,7 +244,7 @@ eventSeriesRouter.put("/event-series/:id", (req: Request, res: Response) => {
 });
 
 // DELETE /api/event-series/:id
-eventSeriesRouter.delete("/event-series/:id", (req: Request, res: Response) => {
+eventSeriesRouter.delete("/event-series/:id", authMiddleware, requireRole("admin", "coach"), (req: Request, res: Response) => {
   const db = getDB();
   const id = Number(req.params.id);
 
@@ -270,6 +271,7 @@ eventSeriesRouter.delete("/event-series/:id", (req: Request, res: Response) => {
 // POST /api/event-series/:id/exclude
 eventSeriesRouter.post(
   "/event-series/:id/exclude",
+  authMiddleware, requireRole("admin", "coach"),
   (req: Request, res: Response) => {
     const db = getDB();
     const id = Number(req.params.id);
@@ -318,6 +320,7 @@ eventSeriesRouter.post(
 // POST /api/event-series/:id/materialize
 eventSeriesRouter.post(
   "/event-series/:id/materialize",
+  authMiddleware, requireRole("admin", "coach"),
   (req: Request, res: Response) => {
     const db = getDB();
     const id = Number(req.params.id);

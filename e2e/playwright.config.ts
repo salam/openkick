@@ -1,7 +1,7 @@
 import { defineConfig } from "@playwright/test";
 
-const SERVER_PORT = 3001;
-const WEB_PORT = 3000;
+const SERVER_PORT = 4001;
+const WEB_PORT = 4000;
 
 export default defineConfig({
   testDir: "./tests",
@@ -20,23 +20,26 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: "npm run dev",
+      command: "rm -f /tmp/openkick-e2e.db && npm run dev",
       cwd: "../server",
       port: SERVER_PORT,
-      reuseExistingServer: true,
+      reuseExistingServer: false,
       timeout: 30_000,
       env: {
         PORT: String(SERVER_PORT),
         NODE_ENV: "test",
-        DATABASE_PATH: ":memory:",
+        DB_PATH: "/tmp/openkick-e2e.db",
       },
     },
     {
-      command: "npm run dev",
+      command: `npx next dev --port ${WEB_PORT}`,
       cwd: "../web",
       port: WEB_PORT,
-      reuseExistingServer: true,
+      reuseExistingServer: false,
       timeout: 60_000,
+      env: {
+        BACKEND_PORT: String(SERVER_PORT),
+      },
     },
   ],
 });

@@ -4,6 +4,7 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { initDB } from "../../database.js";
 import { eventsRouter } from "../events.js";
+import { generateJWT } from "../../auth.js";
 import type { Database } from "sql.js";
 
 // BUG6 — POST /api/events/import-url and POST /api/events/import-pdf return 404
@@ -31,9 +32,12 @@ const VALID_IMPORT: import("../../services/tournament-import.js").ImportedTourna
 let db: Database;
 let server: Server;
 let baseUrl: string;
+let adminToken: string;
 
 async function createTestApp() {
   db = await initDB();
+  db.run("INSERT INTO guardians (id, phone, name, role, passwordHash) VALUES (1, '+41790000000', 'Admin', 'admin', 'hash')");
+  adminToken = generateJWT({ id: 1, role: "admin" });
   const app = express();
   app.use(express.json());
   app.use(express.raw({ type: "application/pdf", limit: "10mb" }));
@@ -66,7 +70,7 @@ describe("POST /api/events/import-url", () => {
 
     const res = await fetch(`${baseUrl}/api/events/import-url`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
       body: JSON.stringify({ url: "https://www.turnieragenda.ch/event/detail/7918" }),
     });
 
@@ -81,7 +85,7 @@ describe("POST /api/events/import-url", () => {
   it("returns 400 when url is missing", async () => {
     const res = await fetch(`${baseUrl}/api/events/import-url`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
       body: JSON.stringify({}),
     });
 
@@ -95,7 +99,7 @@ describe("POST /api/events/import-url", () => {
 
     const res = await fetch(`${baseUrl}/api/events/import-url`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
       body: JSON.stringify({ url: "https://bad.url" }),
     });
 
@@ -121,7 +125,7 @@ describe("POST /api/events/import-pdf", () => {
     const pdfBuffer = Buffer.from("fake-pdf-content");
     const res = await fetch(`${baseUrl}/api/events/import-pdf`, {
       method: "POST",
-      headers: { "Content-Type": "application/pdf" },
+      headers: { "Content-Type": "application/pdf", Authorization: `Bearer ${adminToken}` },
       body: pdfBuffer,
     });
 
@@ -134,7 +138,7 @@ describe("POST /api/events/import-pdf", () => {
   it("returns 400 when body is empty", async () => {
     const res = await fetch(`${baseUrl}/api/events/import-pdf`, {
       method: "POST",
-      headers: { "Content-Type": "application/pdf" },
+      headers: { "Content-Type": "application/pdf", Authorization: `Bearer ${adminToken}` },
       body: new Uint8Array(0),
     });
 
@@ -148,7 +152,7 @@ describe("POST /api/events/import-pdf", () => {
 
     const res = await fetch(`${baseUrl}/api/events/import-pdf`, {
       method: "POST",
-      headers: { "Content-Type": "application/pdf" },
+      headers: { "Content-Type": "application/pdf", Authorization: `Bearer ${adminToken}` },
       body: Buffer.from("not-a-real-pdf"),
     });
 

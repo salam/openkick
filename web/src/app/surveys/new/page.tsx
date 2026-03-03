@@ -4,6 +4,7 @@ import { useState, useEffect, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import { t, getLanguage } from '@/lib/i18n';
+import AuthGuard from '@/components/AuthGuard';
 
 /* ── Types ──────────────────────────────────────────────────────────── */
 
@@ -26,6 +27,10 @@ const SIZE_PICKER_OPTIONS = ['116', '128', '140', '152', '164', 'XS', 'S', 'M', 
 /* ── Component ─────────────────────────────────────────────────────── */
 
 export default function NewSurveyPage() {
+  return <AuthGuard><NewSurveyForm /></AuthGuard>;
+}
+
+function NewSurveyForm() {
   const router = useRouter();
 
   const [, setLang] = useState(() => getLanguage());

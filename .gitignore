@@ -8,5 +8,6 @@ server/uploads/
 public/uploads/
 .env
 .env.local
+.deploy-cyon.conf
 .DS_Store
 *.log

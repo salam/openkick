@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import { t, getLanguage } from '@/lib/i18n';
+import { formatDateTime } from '@/lib/date';
 
 /* ── Types ──────────────────────────────────────────────────────────── */
 
@@ -37,21 +38,6 @@ type TabType = 'admin' | 'training' | 'tournament';
 /* ── Helpers ────────────────────────────────────────────────────────── */
 
 const cardClass = 'rounded-lg border border-gray-200 bg-white p-6';
-
-function formatDate(iso: string | null): string {
-  if (!iso) return '';
-  try {
-    return new Date(iso).toLocaleDateString(undefined, {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch {
-    return iso;
-  }
-}
 
 /* ── Component ──────────────────────────────────────────────────────── */
 
@@ -302,7 +288,7 @@ function ChecklistCard({
               )}
               {item.completed && item.completed_at && (
                 <span className="text-[10px] text-gray-400">
-                  {formatDate(item.completed_at)}
+                  {formatDateTime(item.completed_at!)}
                 </span>
               )}
             </li>

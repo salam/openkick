@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { authMiddleware, requireRole } from "../auth.js";
 import {
   createHistoryEntry,
   addHistoryPlayers,
@@ -24,11 +25,7 @@ gameHistoryRouter.get("/game-history", (_req, res) => {
 // IMPORTANT: must be defined BEFORE /:id to avoid "latest" matching as an id
 gameHistoryRouter.get("/game-history/latest", (_req, res) => {
   const entry = getLatestHistory();
-  if (!entry) {
-    res.status(404).json({ error: "No history entries found" });
-    return;
-  }
-  res.json(entry);
+  res.json(entry ?? null);
 });
 
 // GET /game-history/:id — single entry with players + matches (public)
@@ -48,7 +45,7 @@ gameHistoryRouter.get("/game-history/:id", (req, res) => {
 });
 
 // POST /game-history — create new entry (coach)
-gameHistoryRouter.post("/game-history", (req, res) => {
+gameHistoryRouter.post("/game-history", authMiddleware, requireRole("admin", "coach"), (req, res) => {
   const { tournamentName, date, teamName, placeRanking, notes, players, matches } = req.body;
 
   if (!tournamentName || !date) {
@@ -76,7 +73,7 @@ gameHistoryRouter.post("/game-history", (req, res) => {
 });
 
 // PUT /game-history/:id/trophy — set/unset trophy (coach)
-gameHistoryRouter.put("/game-history/:id/trophy", (req, res) => {
+gameHistoryRouter.put("/game-history/:id/trophy", authMiddleware, requireRole("admin", "coach"), (req, res) => {
   const id = Number(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });
@@ -89,7 +86,7 @@ gameHistoryRouter.put("/game-history/:id/trophy", (req, res) => {
 });
 
 // POST /game-history/archive/:tournamentId — archive tournament from live ticker (coach)
-gameHistoryRouter.post("/game-history/archive/:tournamentId", (req, res) => {
+gameHistoryRouter.post("/game-history/archive/:tournamentId", authMiddleware, requireRole("admin", "coach"), (req, res) => {
   const tournamentId = Number(req.params.tournamentId);
   if (isNaN(tournamentId)) {
     res.status(400).json({ error: "Invalid tournamentId" });
@@ -106,7 +103,7 @@ gameHistoryRouter.post("/game-history/archive/:tournamentId", (req, res) => {
 });
 
 // DELETE /game-history/:id — delete entry (coach)
-gameHistoryRouter.delete("/game-history/:id", (req, res) => {
+gameHistoryRouter.delete("/game-history/:id", authMiddleware, requireRole("admin", "coach"), (req, res) => {
   const id = Number(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid id" });

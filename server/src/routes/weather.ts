@@ -41,24 +41,54 @@ function getClubCoordinates(): { latitude: number; longitude: number } | null {
 
 /**
  * GET /weather/current
- * Returns current weather at club location. No auth required.
+ * Returns the weather forecast for the next upcoming event (within 7 days).
+ * Includes event title and date so the UI can show context.
+ * No auth required.
  */
 weatherRouter.get("/weather/current", async (_req, res) => {
   try {
-    const coords = getClubCoordinates();
-    if (!coords) {
-      return res.status(404).json({ error: "No club coordinates configured" });
+    const db = getDB();
+    const today = new Date().toISOString().slice(0, 10);
+
+    // Find the next upcoming event within 7 days
+    const result = db.exec(
+      `SELECT id, title, date, startTime, location FROM events
+       WHERE date >= ? ORDER BY date ASC, startTime ASC LIMIT 1`,
+      [today],
+    );
+
+    if (result.length === 0 || result[0].values.length === 0) {
+      return res.status(404).json({ error: "No upcoming events" });
     }
 
-    const now = new Date();
-    const date = now.toISOString().slice(0, 10);
-    const time = `${String(now.getHours()).padStart(2, "0")}:00`;
+    const [eventId, title, eventDate, startTime, location] = result[0].values[0] as [
+      number, string, string, string | null, string | null,
+    ];
 
-    const forecast = await getWeatherForecast(coords.latitude, coords.longitude, date, time);
+    // Check within 7-day forecast window
+    const diffDays = (new Date(eventDate as string).getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+    if (diffDays > 7) {
+      return res.status(404).json({ error: "Next event is beyond forecast range" });
+    }
+
+    // Resolve coordinates: geocode event location, fall back to club coords
+    let coords = location ? await geocodeLocation(location) : null;
+    if (!coords) {
+      coords = getClubCoordinates();
+    }
+    if (!coords) {
+      return res.status(404).json({ error: "No coordinates available" });
+    }
+
+    const time = (startTime as string) || "18:00";
+    const forecast = await getWeatherForecast(coords.latitude, coords.longitude, eventDate as string, time);
 
     return res.json({
       ...forecast,
       icon: weatherCodeToEmoji(forecast.weatherCode),
+      eventId,
+      eventTitle: title,
+      eventDate,
     });
   } catch (err) {
     console.error("Weather current error:", err);

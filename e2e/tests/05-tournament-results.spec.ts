@@ -5,12 +5,13 @@ import { ApiHelper } from "../helpers/api.js";
 test.use({ storageState: AUTH_FILE });
 
 test.describe("05 — Tournament Results", () => {
-  let api: ApiHelper;
+  let token: string;
   let tournamentEventId: number;
 
   test.beforeAll(async ({ request }) => {
-    api = new ApiHelper(request);
-    const { token } = await api.login(ADMIN_EMAIL, ADMIN_PASSWORD);
+    const api = new ApiHelper(request);
+    const { token: t } = await api.login(ADMIN_EMAIL, ADMIN_PASSWORD);
+    token = t;
     api.setToken(token);
 
     const events = await api.getEvents();
@@ -18,8 +19,10 @@ test.describe("05 — Tournament Results", () => {
     tournamentEventId = tournament?.id ?? 3;
   });
 
-  test("add tournament result via API", async () => {
-    const res = await api.post(`/api/tournament-results/${tournamentEventId}`, {
+  test("add tournament result via API", async ({ request }) => {
+    const api = new ApiHelper(request);
+    api.setToken(token);
+    const res = await api.post(`/api/events/${tournamentEventId}/results`, {
       placement: 1,
       totalTeams: 8,
       summary: "Won the final 2-1 against FC Pfäffikon ZH. Unbeaten throughout the tournament.",
@@ -31,7 +34,9 @@ test.describe("05 — Tournament Results", () => {
     expect(res.status).toBe(201);
   });
 
-  test("add game history entry", async () => {
+  test("add game history entry", async ({ request }) => {
+    const api = new ApiHelper(request);
+    api.setToken(token);
     const res = await api.post("/api/game-history", {
       tournamentName: "Kunstrassenturnier Indoor",
       date: "2026-03-01",
@@ -41,9 +46,9 @@ test.describe("05 — Tournament Results", () => {
       trophyType: "1st_place",
       notes: "6 games, 5 wins, 1 draw",
       matches: [
-        { matchLabel: "Game 1", opponentName: "FC Greifensee", goalsFor: 3, goalsAgainst: 1 },
-        { matchLabel: "Game 5", opponentName: "FC Volketswil", goalsFor: 4, goalsAgainst: 0 },
-        { matchLabel: "Final", opponentName: "FC Pfäffikon ZH", goalsFor: 2, goalsAgainst: 1 },
+        { matchLabel: "Game 1", homeTeam: "FC Test E2E", awayTeam: "FC Greifensee", score: "3:1" },
+        { matchLabel: "Game 5", homeTeam: "FC Test E2E", awayTeam: "FC Volketswil", score: "4:0" },
+        { matchLabel: "Final", homeTeam: "FC Test E2E", awayTeam: "FC Pfäffikon ZH", score: "2:1" },
       ],
     });
     expect(res.status).toBe(201);

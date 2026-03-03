@@ -19,6 +19,7 @@ const sampleItems: FeedItem[] = [
     startTime: "09:00",
     location: "Stadium A",
     categoryRequirement: null,
+    cancelled: false,
     createdAt: "2026-03-01T10:00:00",
     placement: null,
     totalTeams: null,
@@ -35,6 +36,7 @@ const sampleItems: FeedItem[] = [
     startTime: "18:00",
     location: "Field B",
     categoryRequirement: null,
+    cancelled: false,
     createdAt: "2026-02-28T08:00:00",
     placement: null,
     totalTeams: null,
@@ -53,6 +55,7 @@ const trophyItem: FeedItem = {
   startTime: "10:00",
   location: "Arena X",
   categoryRequirement: null,
+  cancelled: false,
   createdAt: "2026-06-01T12:00:00",
   placement: 2,
   totalTeams: 12,
@@ -195,6 +198,21 @@ describe("Atom serializer with trophies", () => {
     const xml = toAtom([trophyItem], baseUrl, "OpenKick");
     expect(xml).toContain("2nd place");
     expect(xml).toContain("Fair Play Award");
+  });
+});
+
+describe("ICS serializer with cancelled event", () => {
+  it("includes STATUS:CANCELLED and [CANCELLED] prefix for cancelled events", () => {
+    const items: FeedItem[] = [{ ...sampleItems[0], cancelled: true }];
+    const ics = toIcs(items, "OpenKick");
+    expect(ics).toContain("STATUS:CANCELLED");
+    expect(ics).toContain("SUMMARY:[CANCELLED] Spring Cup");
+  });
+
+  it("does not include STATUS:CANCELLED for non-cancelled events", () => {
+    const ics = toIcs(sampleItems, "OpenKick");
+    expect(ics).not.toContain("STATUS:CANCELLED");
+    expect(ics).not.toContain("[CANCELLED]");
   });
 });
 

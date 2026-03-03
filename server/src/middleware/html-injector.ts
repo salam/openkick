@@ -174,7 +174,7 @@ export function createHtmlInjector(publicDir?: string) {
     try {
       let html = fs.readFileSync(found, "utf-8");
       const settings = getSettings();
-      const baseUrl = `${req.protocol}://${req.get("host") || "localhost"}`;
+      const baseUrl = process.env.CORS_ORIGIN || `${req.protocol}://${req.get("host") || "localhost"}`;
       const injection = buildInjection(settings, baseUrl);
 
       // Replace <title>

@@ -135,7 +135,7 @@ describe("whatsapp service", () => {
       const { chatCompletion } = await import("../llm.js");
       const chatCompletionMock = vi.mocked(chatCompletion);
       chatCompletionMock.mockResolvedValueOnce({
-        content: JSON.stringify({ intent: "attending", playerName: "Luca", reason: null }),
+        content: JSON.stringify({ entries: [{ intent: "attending", playerName: "Luca", date: null, reason: null }] }),
         model: "gpt-4o",
       });
 
@@ -150,7 +150,7 @@ describe("whatsapp service", () => {
       const { chatCompletion } = await import("../llm.js");
       const chatCompletionMock = vi.mocked(chatCompletion);
       chatCompletionMock.mockResolvedValueOnce({
-        content: JSON.stringify({ intent: "absent", playerName: null, reason: null }),
+        content: JSON.stringify({ entries: [{ intent: "absent", playerName: null, date: null, reason: null }] }),
         model: "gpt-4o",
       });
 

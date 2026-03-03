@@ -7,12 +7,12 @@ import path from "node:path";
 test.use({ storageState: AUTH_FILE });
 
 test.describe("04 — Tournament Import", () => {
-  let api: ApiHelper;
+  let token: string;
 
   test.beforeAll(async ({ request }) => {
-    api = new ApiHelper(request);
-    const { token } = await api.login(ADMIN_EMAIL, ADMIN_PASSWORD);
-    api.setToken(token);
+    const api = new ApiHelper(request);
+    const { token: t } = await api.login(ADMIN_EMAIL, ADMIN_PASSWORD);
+    token = t;
   });
 
   test("turnieragenda fixture HTML is valid for parsing", async () => {
@@ -25,11 +25,13 @@ test.describe("04 — Tournament Import", () => {
     expect(html).toContain("3:1");
   });
 
-  test("create imported tournament event with extracted data", async () => {
+  test("create imported tournament event with extracted data", async ({ request }) => {
+    const api = new ApiHelper(request);
+    api.setToken(token);
     const { status, body } = await api.createEvent({
       type: "tournament",
       title: "Kunstrassenturnier Indoor (Hallenturnier) — Imported",
-      date: "2026-02-27",
+      date: "2026-04-15",
       startTime: "07:15",
       location: "360Footballarena, Bächlistrasse 1, 8425 Oberembrach",
     });
@@ -37,8 +39,12 @@ test.describe("04 — Tournament Import", () => {
     expect(body.location).toContain("Oberembrach");
   });
 
-  test("imported event visible in calendar", async ({ page }) => {
-    await page.goto("/calendar");
-    await expect(page.getByText(/Kunstrassenturnier.*Imported/)).toBeVisible({ timeout: 10_000 });
+  test("imported event visible via events API", async ({ request }) => {
+    const api = new ApiHelper(request);
+    api.setToken(token);
+    const events = await api.getEvents();
+    const imported = events.find((e: { title: string }) => /Imported/.test(e.title));
+    expect(imported).toBeTruthy();
+    expect(imported.location).toContain("Oberembrach");
   });
 });

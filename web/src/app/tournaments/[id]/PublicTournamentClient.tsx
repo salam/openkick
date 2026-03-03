@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { t, getLanguage } from '@/lib/i18n';
+import { formatDateLong } from '@/lib/date';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
@@ -21,16 +22,6 @@ interface TournamentView {
 }
 
 /* ── Helpers ─────────────────────────────────────────────────────────── */
-
-function formatDate(dateStr: string): string {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('de-CH', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-}
 
 function statusLabel(status: TournamentView['status']): string {
   switch (status) {
@@ -147,7 +138,7 @@ export default function PublicTournamentClient() {
       </div>
 
       <section className="grid gap-4 sm:grid-cols-2">
-        <InfoItem label={t('date')} value={formatDate(tournament.date)} />
+        <InfoItem label={t('date')} value={formatDateLong(tournament.date)} />
         {tournament.startTime && (
           <InfoItem label={t('rsvp_start_time')} value={tournament.startTime} />
         )}

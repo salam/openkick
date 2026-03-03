@@ -302,9 +302,17 @@ function materializeVirtualEvent(evt: NextEvent): number {
     return existing[0].values[0][0] as number;
   }
 
+  // Extract seriesId from virtual series event ids (format: "series-{id}-{date}")
+  let seriesId: number | null = null;
+  if (typeof evt.id === "string") {
+    const match = String(evt.id).match(/^series-(\d+)-/);
+    if (match) seriesId = Number(match[1]);
+  }
+
+  const type = evt.source === "training" ? "training" : "event";
   db.run(
-    "INSERT INTO events (type, title, date, startTime) VALUES (?, ?, ?, ?)",
-    [evt.source === "training" ? "training" : "event", evt.title, evt.date, evt.startTime],
+    "INSERT INTO events (type, title, date, startTime, seriesId) VALUES (?, ?, ?, ?, ?)",
+    [type, evt.title, evt.date, evt.startTime, seriesId],
   );
   return getLastInsertId();
 }

@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from "express";
+import { authMiddleware, requireRole } from "../auth.js";
 import { getDB } from "../database.js";
 import {
   assignTeams,
@@ -10,7 +11,7 @@ import {
 export const teamsRouter = Router();
 
 // POST /api/events/:eventId/teams — auto-assign teams
-teamsRouter.post("/events/:eventId/teams", (req: Request, res: Response) => {
+teamsRouter.post("/events/:eventId/teams", authMiddleware, requireRole("admin", "coach"), (req: Request, res: Response) => {
   const eventId = Number(req.params.eventId);
   const { teamCount } = req.body;
 
@@ -31,7 +32,7 @@ teamsRouter.get("/events/:eventId/teams", (req: Request, res: Response) => {
 });
 
 // PUT /api/teams/:teamId/players — manual team adjustment
-teamsRouter.put("/teams/:teamId/players", (req: Request, res: Response) => {
+teamsRouter.put("/teams/:teamId/players", authMiddleware, requireRole("admin", "coach"), (req: Request, res: Response) => {
   const teamId = Number(req.params.teamId);
   const { playerIds } = req.body;
 
@@ -73,7 +74,7 @@ teamsRouter.put("/teams/:teamId/players", (req: Request, res: Response) => {
 });
 
 // DELETE /api/events/:eventId/teams — clear all teams
-teamsRouter.delete("/events/:eventId/teams", (req: Request, res: Response) => {
+teamsRouter.delete("/events/:eventId/teams", authMiddleware, requireRole("admin", "coach"), (req: Request, res: Response) => {
   const eventId = Number(req.params.eventId);
   clearTeams(eventId);
   res.status(204).end();

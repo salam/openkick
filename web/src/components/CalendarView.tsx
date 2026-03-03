@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { t, getLanguage } from '@/lib/i18n';
+import { formatWeekdayShort, formatDateWeekday } from '@/lib/date';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -289,11 +290,13 @@ function MonthlyView({
           const vacationStarts = vacations.filter((v) => v.startDate === dateStr);
 
           return (
-            <button
+            <div
               key={day}
-              type="button"
+              role="button"
+              tabIndex={0}
               onClick={() => onDayClick?.(dateStr)}
-              className={`min-h-[80px] p-1 text-left transition-colors sm:min-h-[100px] ${
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onDayClick?.(dateStr); }}
+              className={`min-h-[80px] cursor-pointer p-1 text-left transition-colors sm:min-h-[100px] ${
                 vacation ? 'bg-purple-50' : 'bg-white'
               } ${hasTraining ? 'border-l-[3px] border-l-primary-500' : ''} ${
                 today ? 'ring-2 ring-inset ring-primary-500' : ''
@@ -319,9 +322,11 @@ function MonthlyView({
                   </div>
                 ))}
                 {dayEvents.slice(0, 3).map((ev) => (
-                  <div
+                  <Link
                     key={ev.id}
-                    className={`truncate rounded px-1 py-0.5 text-[10px] font-medium sm:text-xs ${
+                    href={`/events/${ev.id}/`}
+                    onClick={(e) => e.stopPropagation()}
+                    className={`block truncate rounded px-1 py-0.5 text-[10px] font-medium transition-opacity hover:opacity-80 sm:text-xs ${
                       ev.cancelled
                         ? 'bg-red-50 text-red-400 line-through'
                         : typeBadgeStyle[ev.type] || 'bg-gray-100 text-gray-700'
@@ -329,7 +334,7 @@ function MonthlyView({
                   >
                     {ev.time && <span className="mr-1">{ev.time}</span>}
                     {ev.title}
-                  </div>
+                  </Link>
                 ))}
                 {dayEvents.length > 3 && (
                   <span className="block text-[10px] text-gray-400">
@@ -337,7 +342,7 @@ function MonthlyView({
                   </span>
                 )}
               </div>
-            </button>
+            </div>
           );
         })}
       </div>
@@ -550,6 +555,10 @@ function ListView({
           if (items.length === 0) return null;
 
           const renderedVacations = new Set<string>();
+          const isCurrentMonth = monthKey === initialMonthKey;
+          const hasTodayEvent = items.some(it => it.kind === 'event' && it.data.date === todayStr);
+          // Insert today marker position: before the first item after today's date
+          let todayMarkerInserted = false;
 
           return (
             <div key={monthKey} className="mb-8">
@@ -558,18 +567,36 @@ function ListView({
               </h3>
               <div className="space-y-2">
                 {items.map((item) => {
+                  // Insert today marker at the right chronological position
+                  const itemDate = item.kind === 'event' ? item.data.date : item.data.startDate;
+                  let todayMarker = null;
+                  if (isCurrentMonth && !hasTodayEvent && !todayMarkerInserted && itemDate >= todayStr) {
+                    todayMarkerInserted = true;
+                    todayMarker = (
+                      <div
+                        key="today-marker"
+                        id="calendar-today"
+                        className="flex items-center gap-3 rounded-lg border-2 border-dashed border-primary-300 bg-primary-50 px-4 py-3 text-sm font-medium text-primary-700"
+                      >
+                        <span className="inline-block h-2 w-2 rounded-full bg-primary-500" />
+                        {t('today')} &mdash; {formatDateWeekday(new Date().toISOString())}
+                      </div>
+                    );
+                  }
                   if (item.kind === 'vacation') {
                     const v = item.data;
                     if (renderedVacations.has(v.id)) return null;
                     renderedVacations.add(v.id);
                     return (
-                      <div
-                        key={`vac-${v.id}`}
-                        className="rounded-lg border border-purple-200 bg-purple-50 px-4 py-3 text-sm font-medium text-purple-700"
-                      >
-                        <span className="mr-2 inline-block h-2 w-2 rounded-full bg-purple-400" />
-                        {v.name}: {v.startDate} &ndash; {v.endDate}
-                      </div>
+                      <React.Fragment key={`vac-${v.id}`}>
+                        {todayMarker}
+                        <div
+                          className="rounded-lg border border-purple-200 bg-purple-50 px-4 py-3 text-sm font-medium text-purple-700"
+                        >
+                          <span className="mr-2 inline-block h-2 w-2 rounded-full bg-purple-400" />
+                          {v.name}: {v.startDate} &ndash; {v.endDate}
+                        </div>
+                      </React.Fragment>
                     );
                   }
 
@@ -578,8 +605,9 @@ function ListView({
                   const isTodayEvent = ev.date === todayStr;
 
                   return (
+                    <React.Fragment key={ev.id}>
+                      {todayMarker}
                     <Link
-                      key={ev.id}
                       href={`/events/${ev.id}/`}
                       id={isTodayEvent ? 'calendar-today' : undefined}
                       className={`flex items-center gap-4 rounded-lg border p-4 transition-shadow hover:shadow-md ${
@@ -591,7 +619,7 @@ function ListView({
                       {/* Date */}
                       <div className="flex w-14 shrink-0 flex-col items-center text-center">
                         <span className="text-xs font-medium text-gray-500">
-                          {new Date(ev.date + 'T00:00:00').toLocaleDateString('en', { weekday: 'short' })}
+                          {formatWeekdayShort(ev.date)}
                         </span>
                         <span className="text-lg font-bold text-gray-900">
                           {new Date(ev.date + 'T00:00:00').getDate()}
@@ -635,8 +663,19 @@ function ListView({
                         </span>
                       ) : null}
                     </Link>
+                    </React.Fragment>
                   );
                 })}
+                {/* Today marker at end of month if all items are before today */}
+                {isCurrentMonth && !hasTodayEvent && !todayMarkerInserted && (
+                  <div
+                    id="calendar-today"
+                    className="flex items-center gap-3 rounded-lg border-2 border-dashed border-primary-300 bg-primary-50 px-4 py-3 text-sm font-medium text-primary-700"
+                  >
+                    <span className="inline-block h-2 w-2 rounded-full bg-primary-500" />
+                    {t('today')} &mdash; {formatDateWeekday(new Date().toISOString())}
+                  </div>
+                )}
               </div>
             </div>
           );

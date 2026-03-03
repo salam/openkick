@@ -9,6 +9,7 @@ export interface FeedItem {
   startTime: string | null;
   location: string | null;
   categoryRequirement: string | null;
+  cancelled: boolean;
   createdAt: string;
   placement: number | null;
   totalTeams: number | null;
@@ -26,7 +27,7 @@ function buildQuery(join: "LEFT" | "INNER", query?: FeedQuery): { sql: string; p
   const limit = Math.min(Math.max(query?.limit ?? 50, 1), 200);
 
   let sql = `SELECT e.id, e.type, e.title, e.description, e.date, e.startTime,
-             e.location, e.categoryRequirement, e.createdAt,
+             e.location, e.categoryRequirement, e.cancelled, e.createdAt,
              tr.placement, tr.totalTeams, tr.summary AS trophySummary,
              tr.resultsUrl, tr.achievements
              FROM events e
@@ -58,6 +59,7 @@ function rowToFeedItem(columns: string[], row: unknown[]): FeedItem {
     startTime: (obj.startTime as string) ?? null,
     location: (obj.location as string) ?? null,
     categoryRequirement: (obj.categoryRequirement as string) ?? null,
+    cancelled: !!(obj.cancelled as number),
     createdAt: obj.createdAt as string,
     placement: (obj.placement as number) ?? null,
     totalTeams: (obj.totalTeams as number) ?? null,

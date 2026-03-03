@@ -5,15 +5,17 @@ import { ApiHelper } from "../helpers/api.js";
 test.use({ storageState: AUTH_FILE });
 
 test.describe("03 — Adding Events", () => {
-  let api: ApiHelper;
+  let token: string;
 
   test.beforeAll(async ({ request }) => {
-    api = new ApiHelper(request);
-    const { token } = await api.login(ADMIN_EMAIL, ADMIN_PASSWORD);
-    api.setToken(token);
+    const api = new ApiHelper(request);
+    const { token: t } = await api.login(ADMIN_EMAIL, ADMIN_PASSWORD);
+    token = t;
   });
 
-  test("create training event via API", async () => {
+  test("create training event via API", async ({ request }) => {
+    const api = new ApiHelper(request);
+    api.setToken(token);
     const { status, body } = await api.createEvent({
       type: "training",
       title: "Monday Training",
@@ -25,7 +27,9 @@ test.describe("03 — Adding Events", () => {
     expect(body.title).toBe("Monday Training");
   });
 
-  test("create match event via API", async () => {
+  test("create match event via API", async ({ request }) => {
+    const api = new ApiHelper(request);
+    api.setToken(token);
     const { status, body } = await api.createEvent({
       type: "match",
       title: "Friendly vs FC Zürich",
@@ -37,7 +41,9 @@ test.describe("03 — Adding Events", () => {
     expect(body.type).toBe("match");
   });
 
-  test("create tournament event via API", async () => {
+  test("create tournament event via API", async ({ request }) => {
+    const api = new ApiHelper(request);
+    api.setToken(token);
     const { status, body } = await api.createEvent({
       type: "tournament",
       title: "Kunstrassenturnier Indoor",

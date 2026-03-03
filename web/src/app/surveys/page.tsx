@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import { t, getLanguage } from '@/lib/i18n';
+import { formatDate } from '@/lib/date';
+import AuthGuard from '@/components/AuthGuard';
 
 interface Survey {
   id: number;
@@ -30,6 +32,10 @@ const STATUS_LABEL: Record<Survey['status'], string> = {
 };
 
 export default function SurveysPage() {
+  return <AuthGuard><SurveysPageContent /></AuthGuard>;
+}
+
+function SurveysPageContent() {
   const router = useRouter();
 
   const [, setLang] = useState(() => getLanguage());
@@ -178,7 +184,7 @@ export default function SurveysPage() {
 
               {survey.deadline && (
                 <p className="text-xs text-gray-500">
-                  {t('survey_deadline')}: {new Date(survey.deadline).toLocaleDateString()}
+                  {t('survey_deadline')}: {formatDate(survey.deadline)}
                 </p>
               )}
 

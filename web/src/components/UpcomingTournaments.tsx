@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
 import { t } from '@/lib/i18n';
+import { formatDate } from '@/lib/date';
 
 interface Tournament {
   id: string;
@@ -38,15 +39,6 @@ const statusLabels: Record<RegistrationStatus, string> = {
   closing_soon: 'Closing soon',
   closed: 'Closed',
 };
-
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-}
 
 export default function UpcomingTournaments() {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);

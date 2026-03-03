@@ -16,6 +16,7 @@ export interface LLMConfig {
   model: string;
   apiKey: string;
   productId?: string;
+  baseUrl?: string;
 }
 
 function getSetting(key: string): string | undefined {
@@ -32,15 +33,17 @@ export function getConfigFromSettings(): LLMConfig {
   const model = getSetting("llm_model") ?? "";
   const apiKey = getSetting("llm_api_key") ?? "";
   const productId = getSetting("llm_product_id");
+  const baseUrl = getSetting("llm_base_url");
 
-  return { provider, model, apiKey, ...(productId ? { productId } : {}) };
+  return { provider, model, apiKey, ...(productId ? { productId } : {}), ...(baseUrl ? { baseUrl } : {}) };
 }
 
 async function callOpenAI(
   messages: LLMMessage[],
   config: LLMConfig,
 ): Promise<LLMResponse> {
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+  const baseUrl = config.baseUrl ?? "https://api.openai.com/v1";
+  const response = await fetch(`${baseUrl}/chat/completions`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

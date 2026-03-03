@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { t } from '@/lib/i18n';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
@@ -14,12 +15,12 @@ interface HomepageStats {
 }
 
 const STAT_CONFIG = [
-  { key: 'lifetimeAthletes', label: 'Athletes' },
-  { key: 'activeAthletes', label: 'Active' },
-  { key: 'tournamentsPlayed', label: 'Tournaments' },
-  { key: 'trophiesWon', label: 'Trophies' },
-  { key: 'trainingSessionsThisSeason', label: 'Sessions' },
-  { key: 'activeCoaches', label: 'Coaches' },
+  { key: 'lifetimeAthletes', i18nKey: 'stat_athletes' },
+  { key: 'activeAthletes', i18nKey: 'stat_active' },
+  { key: 'tournamentsPlayed', i18nKey: 'stat_tournaments' },
+  { key: 'trophiesWon', i18nKey: 'stat_trophies' },
+  { key: 'trainingSessionsThisSeason', i18nKey: 'stat_sessions' },
+  { key: 'activeCoaches', i18nKey: 'stat_coaches' },
 ] as const;
 
 export default function HomepageStatsBar() {
@@ -54,7 +55,7 @@ export default function HomepageStatsBar() {
           <span className="font-semibold text-gray-900">
             {record[c.key] as number}
           </span>
-          <span className="text-gray-500">{c.label}</span>
+          <span className="text-gray-500">{t(c.i18nKey)}</span>
         </div>
       ))}
     </div>

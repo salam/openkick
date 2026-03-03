@@ -6,6 +6,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { initDB } from "../../database.js";
+import { generateJWT } from "../../auth.js";
 import { settingsRouter } from "../settings.js";
 import type { Database } from "sql.js";
 
@@ -14,9 +15,14 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 let db: Database;
 let server: Server;
 let baseUrl: string;
+let adminToken: string;
 
 async function createTestApp() {
   db = await initDB();
+  db.run(
+    "INSERT INTO guardians (id, phone, name, role, passwordHash) VALUES (1, '+41790000000', 'Admin', 'admin', 'hash')"
+  );
+  adminToken = generateJWT({ id: 1, role: "admin" });
   const app = express();
   app.use(express.json());
   app.use("/api", settingsRouter);
@@ -42,26 +48,38 @@ describe("Settings routes", () => {
     await teardown();
   });
 
-  it("GET /api/settings — returns all settings as a key-value object", async () => {
+  it("GET /api/settings — returns non-secret settings without auth", async () => {
+    // Insert a secret setting
+    db.run("INSERT OR REPLACE INTO settings (key, value) VALUES ('llm_api_key', 'sk-secret-123')");
+    db.run("INSERT OR REPLACE INTO settings (key, value) VALUES ('smtp_pass', 'smtp-secret')");
+
     const res = await fetch(`${baseUrl}/api/settings`);
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body).toEqual({
+    // Public settings should be present
+    expect(body).toMatchObject({
       llm_provider: "openai",
       bot_language: "de",
-      waha_url: "http://localhost:3008",
-      feeds_enabled: "true",
-      feed_rss_enabled: "true",
-      feed_atom_enabled: "true",
-      feed_activitypub_enabled: "true",
-      feed_atprotocol_enabled: "true",
-      feed_ics_enabled: "true",
-      feed_sitemap_enabled: "true",
       club_name: "My Club",
-      club_description: "A youth football club.",
-      contact_info: "",
-      club_logo: "",
     });
+    // Secret keys must NOT be present without auth
+    expect(body).not.toHaveProperty("llm_api_key");
+    expect(body).not.toHaveProperty("smtp_pass");
+    expect(body).not.toHaveProperty("captcha_hmac_secret");
+  });
+
+  it("GET /api/settings — returns ALL settings with admin auth", async () => {
+    db.run("INSERT OR REPLACE INTO settings (key, value) VALUES ('llm_api_key', 'sk-secret-123')");
+    db.run("INSERT OR REPLACE INTO settings (key, value) VALUES ('smtp_pass', 'smtp-secret')");
+
+    const res = await fetch(`${baseUrl}/api/settings`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.llm_api_key).toBe("sk-secret-123");
+    expect(body.smtp_pass).toBe("smtp-secret");
+    expect(body.club_name).toBe("My Club");
   });
 
   it("GET /api/settings/:key — returns single setting value", async () => {
@@ -71,8 +89,40 @@ describe("Settings routes", () => {
     expect(body).toEqual({ key: "bot_language", value: "de" });
   });
 
-  it("GET /api/settings/:key — returns 404 for unknown key", async () => {
+  it("GET /api/settings/:key — returns 403 for secret key without auth", async () => {
+    db.run("INSERT OR REPLACE INTO settings (key, value) VALUES ('llm_api_key', 'sk-secret')");
+    const res = await fetch(`${baseUrl}/api/settings/llm_api_key`);
+    expect(res.status).toBe(403);
+  });
+
+  it("GET /api/settings/:key — returns secret key with admin auth", async () => {
+    db.run("INSERT OR REPLACE INTO settings (key, value) VALUES ('smtp_pass', 'my-password')");
+    const res = await fetch(`${baseUrl}/api/settings/smtp_pass`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.value).toBe("my-password");
+  });
+
+  it("PUT /api/settings/:key — returns 401 without auth", async () => {
+    const res = await fetch(`${baseUrl}/api/settings/club_name`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ value: "Hacked Club" }),
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it("GET /api/settings/:key — returns 403 for non-whitelisted key without auth", async () => {
     const res = await fetch(`${baseUrl}/api/settings/nonexistent`);
+    expect(res.status).toBe(403);
+  });
+
+  it("GET /api/settings/:key — returns 404 for unknown key with admin auth", async () => {
+    const res = await fetch(`${baseUrl}/api/settings/nonexistent`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
     expect(res.status).toBe(404);
     const body = await res.json();
     expect(body).toHaveProperty("error");
@@ -81,7 +131,7 @@ describe("Settings routes", () => {
   it("PUT /api/settings/:key — updates an existing setting", async () => {
     const res = await fetch(`${baseUrl}/api/settings/bot_language`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
       body: JSON.stringify({ value: "en" }),
     });
     expect(res.status).toBe(200);
@@ -92,7 +142,7 @@ describe("Settings routes", () => {
   it("PUT /api/settings/:key — creates setting if it doesn't exist", async () => {
     const res = await fetch(`${baseUrl}/api/settings/new_setting`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
       body: JSON.stringify({ value: "hello" }),
     });
     expect(res.status).toBe(200);
@@ -103,7 +153,7 @@ describe("Settings routes", () => {
   it("PUT /api/settings/:key — returns 400 if value is missing", async () => {
     const res = await fetch(`${baseUrl}/api/settings/bot_language`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
       body: JSON.stringify({}),
     });
     expect(res.status).toBe(400);
@@ -114,7 +164,7 @@ describe("Settings routes", () => {
   it("GET after PUT — confirms the update persisted", async () => {
     await fetch(`${baseUrl}/api/settings/llm_provider`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
       body: JSON.stringify({ value: "anthropic" }),
     });
 
@@ -146,7 +196,7 @@ describe("Settings routes", () => {
         "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
       const res = await fetch(`${baseUrl}/api/settings/upload-logo`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
         body: JSON.stringify({ data: pngPixel, filename: "test-logo.png" }),
       });
       expect(res.status).toBe(200);
@@ -166,7 +216,7 @@ describe("Settings routes", () => {
     it("rejects invalid file type", async () => {
       const res = await fetch(`${baseUrl}/api/settings/upload-logo`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
         body: JSON.stringify({ data: "dGVzdA==", filename: "test.exe" }),
       });
       expect(res.status).toBe(400);
@@ -177,7 +227,7 @@ describe("Settings routes", () => {
     it("rejects request with missing data", async () => {
       const res = await fetch(`${baseUrl}/api/settings/upload-logo`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
         body: JSON.stringify({ filename: "logo.png" }),
       });
       expect(res.status).toBe(400);
@@ -188,7 +238,7 @@ describe("Settings routes", () => {
     it("rejects request with missing filename", async () => {
       const res = await fetch(`${baseUrl}/api/settings/upload-logo`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
         body: JSON.stringify({ data: "dGVzdA==" }),
       });
       expect(res.status).toBe(400);

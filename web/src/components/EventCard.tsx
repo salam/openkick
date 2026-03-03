@@ -4,10 +4,12 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { t, getLanguage } from '@/lib/i18n';
 import { apiFetch } from '@/lib/api';
+import { weatherDescription } from '@/lib/weather';
 
 interface WeatherData {
   temperature: number;
   precipitation: number;
+  weatherCode: number;
   icon: string;
   description: string;
 }
@@ -108,7 +110,7 @@ export default function EventCard({
           </svg>
           <span>{date} &middot; {time}</span>
           {weather && (
-            <span className="ml-auto text-xs text-gray-400" title={weather.description}>
+            <span className="ml-auto text-xs text-gray-400" title={weatherDescription(weather.weatherCode)}>
               {weather.icon} {Math.round(weather.temperature)}&deg;
               {weather.precipitation > 0 && <> &middot; {weather.precipitation}%</>}
             </span>

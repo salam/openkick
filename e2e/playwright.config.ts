@@ -6,6 +6,7 @@ const WEB_PORT = 3000;
 export default defineConfig({
   testDir: "./tests",
   fullyParallel: false,
+  workers: 1,            // sequential across files — tests build on each other
   retries: 0,
   timeout: 60_000,
   expect: { timeout: 10_000 },

@@ -14,6 +14,7 @@ const inputClass =
 type ConnectionStatus = 'connected' | 'qr_pending' | 'disconnected' | 'checking';
 type DockerStatus = 'checking' | 'available' | 'unavailable';
 type WahaContainerStatus = 'checking' | 'running' | 'stopped' | 'not_found';
+type NativeWahaStatus = 'checking' | 'reachable' | 'unreachable';
 
 interface WahaGroup {
   id: string;
@@ -35,6 +36,7 @@ export default function WahaConfigForm({
   // Docker + WAHA container state
   const [dockerStatus, setDockerStatus] = useState<DockerStatus>('checking');
   const [containerStatus, setContainerStatus] = useState<WahaContainerStatus>('checking');
+  const [nativeStatus, setNativeStatus] = useState<NativeWahaStatus>('checking');
   const [installingDocker, setInstallingDocker] = useState(false);
   const [dockerLog, setDockerLog] = useState<string[]>([]);
   const [installing, setInstalling] = useState(false);
@@ -53,13 +55,26 @@ export default function WahaConfigForm({
     try {
       const dockerRes = await apiFetch<{ available: boolean }>('/api/setup-waha/docker/status');
       setDockerStatus(dockerRes.available ? 'available' : 'unavailable');
-      if (!dockerRes.available) { setContainerStatus('not_found'); return; }
 
+      if (!dockerRes.available) {
+        // Docker not available — check if WAHA is running natively
+        setContainerStatus('not_found');
+        try {
+          const nativeRes = await apiFetch<{ reachable: boolean }>('/api/setup-waha/waha/reachable');
+          setNativeStatus(nativeRes.reachable ? 'reachable' : 'unreachable');
+        } catch {
+          setNativeStatus('unreachable');
+        }
+        return;
+      }
+
+      setNativeStatus('unreachable');
       const wahaRes = await apiFetch<{ status: string; port?: number }>('/api/setup-waha/waha/status');
       setContainerStatus(wahaRes.status as WahaContainerStatus);
     } catch {
       setDockerStatus('unavailable');
       setContainerStatus('not_found');
+      setNativeStatus('unreachable');
     }
   }, []);
 
@@ -339,8 +354,25 @@ export default function WahaConfigForm({
           )}
         </div>
 
-        {/* Docker not found — install button */}
-        {dockerStatus === 'unavailable' && !installingDocker && (
+        {/* Native WAHA detected (no Docker) */}
+        {dockerStatus === 'unavailable' && nativeStatus === 'reachable' && (
+          <div className="flex items-center gap-2 text-sm">
+            <span className="h-2 w-2 rounded-full bg-primary-500" />
+            <span className="text-gray-700">
+              WAHA: {t('waha_native_label')}
+            </span>
+            <button
+              onClick={handleRecheck}
+              disabled={recheckingInfra}
+              className="ml-1 text-xs text-primary-600 hover:text-primary-800 underline disabled:opacity-50 disabled:no-underline"
+            >
+              {t('check_again')}
+            </button>
+          </div>
+        )}
+
+        {/* Docker not found and no native WAHA — install button */}
+        {dockerStatus === 'unavailable' && nativeStatus !== 'reachable' && !installingDocker && (
           <div className="rounded-md border border-amber-200 bg-amber-50 p-3 space-y-2">
             <p className="text-sm text-amber-900">
               {t('docker_required_msg')}
@@ -442,7 +474,7 @@ export default function WahaConfigForm({
       <div className="mb-4 flex items-center gap-2">
         <span className={`h-2.5 w-2.5 rounded-full ${statusDot}`} />
         <span className="text-sm text-gray-700">{statusLabel}</span>
-        {status === 'disconnected' && containerStatus === 'running' && (
+        {status === 'disconnected' && (containerStatus === 'running' || nativeStatus === 'reachable') && (
           <button
             onClick={handleStartSession}
             disabled={startingSession}

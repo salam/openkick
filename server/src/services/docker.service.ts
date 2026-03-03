@@ -21,6 +21,21 @@ export interface WahaInstallConfig {
 }
 
 /**
+ * Checks whether WAHA is reachable at the given URL via its HTTP status endpoint.
+ * Works regardless of whether WAHA runs in Docker or as a native Node.js process.
+ */
+export async function isWahaReachable(wahaUrl: string): Promise<boolean> {
+  try {
+    const resp = await fetch(`${wahaUrl}/api/server/status`, {
+      signal: AbortSignal.timeout(3000),
+    });
+    return resp.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Wraps dockerode to manage the Docker daemon and the openkick-waha container.
  */
 export class DockerService {

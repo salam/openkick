@@ -171,12 +171,14 @@ function StepDocker({
   authToken,
   onNext,
   onSkip,
+  onNativeDetected,
 }: {
   authToken: string;
   onNext: () => void;
   onSkip: () => void;
+  onNativeDetected: () => void;
 }) {
-  const [status, setStatus] = useState<'checking' | 'available' | 'missing'>('checking');
+  const [status, setStatus] = useState<'checking' | 'available' | 'missing' | 'native'>('checking');
   const sse = useSSE(authToken);
 
   const checkDocker = useCallback(async () => {
@@ -189,13 +191,29 @@ function StepDocker({
       if (data.available) {
         setStatus('available');
         onNext();
-      } else {
-        setStatus('missing');
+        return;
       }
     } catch {
-      setStatus('missing');
+      // Docker not available — fall through to native check
     }
-  }, [authToken, onNext]);
+
+    // Docker not available — check if WAHA is reachable natively
+    try {
+      const res = await fetch(`${API_URL}/api/setup-waha/waha/reachable`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      const data = await res.json();
+      if (data.reachable) {
+        setStatus('native');
+        onNativeDetected();
+        return;
+      }
+    } catch {
+      // Native check also failed
+    }
+
+    setStatus('missing');
+  }, [authToken, onNext, onNativeDetected]);
 
   useEffect(() => {
     checkDocker();
@@ -219,10 +237,17 @@ function StepDocker({
         </div>
       )}
 
+      {status === 'native' && (
+        <div className="mb-4 rounded-lg bg-primary-50 px-4 py-3 text-sm text-primary-700">
+          <p className="font-medium">{t('waha_native_detected')}</p>
+          <p className="mt-1 text-xs text-primary-600">{t('waha_native_hint')}</p>
+        </div>
+      )}
+
       {status === 'missing' && !sse.running && (
         <>
           <p className="mb-4 text-sm text-gray-600">
-            {t('docker_not_found')}
+            {t('waha_neither_available')}
           </p>
           <p className="mb-4 text-xs text-gray-400">
             {t('docker_shared_hosting_hint')}
@@ -543,6 +568,14 @@ export default function WahaWizard({ authToken, onComplete, onSkip }: WahaWizard
     [markComplete],
   );
 
+  // When WAHA is running natively (no Docker), skip steps 1-3 and go to QR
+  const handleNativeDetected = useCallback(() => {
+    markComplete(1);
+    markComplete(2);
+    markComplete(3);
+    setStep(4);
+  }, [markComplete]);
+
   return (
     <div className="w-full max-w-md">
       {/* Branding */}
@@ -559,6 +592,7 @@ export default function WahaWizard({ authToken, onComplete, onSkip }: WahaWizard
             authToken={authToken}
             onNext={() => advance(1)}
             onSkip={onSkip}
+            onNativeDetected={handleNativeDetected}
           />
         )}
         {step === 2 && (

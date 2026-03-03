@@ -4,7 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { getDB } from "../database.js";
 import { authMiddleware, requireRole } from "../auth.js";
-import { DockerService } from "../services/docker.service.js";
+import { DockerService, isWahaReachable } from "../services/docker.service.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const VALID_ENGINES = ["WEBJS", "NOWEB"] as const;
@@ -93,6 +93,21 @@ setupWahaRouter.post("/docker/install", (req: Request, res: Response) => {
   req.on("close", () => {
     child.kill();
   });
+});
+
+// ── GET /waha/reachable ─────────────────────────────────────────────
+// Checks if WAHA is reachable at the configured URL (works for both
+// Docker-based and native/standalone WAHA installations).
+
+setupWahaRouter.get("/waha/reachable", async (_req: Request, res: Response) => {
+  try {
+    const wahaUrl = getWahaUrl();
+    const reachable = await isWahaReachable(wahaUrl);
+    res.json({ reachable, wahaUrl });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.status(500).json({ error: message });
+  }
 });
 
 // ── GET /waha/status ────────────────────────────────────────────────

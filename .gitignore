@@ -11,3 +11,12 @@ public/uploads/
 .deploy-cyon.conf
 .DS_Store
 *.log
+waha/.sessions/
+*.env.production
+
+.claude
+.claudine
+.driftctrl
+.claude/**
+.claudine/**
+.driftctrl/**

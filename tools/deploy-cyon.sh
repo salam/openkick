@@ -54,14 +54,18 @@ prompt_with_default "Node.js port on cyon (e.g. 40001 — pick an unused high po
 read -rp "JWT secret for production: " JWT_SECRET
 echo ""
 
-# Optional: WAHA / WhatsApp config
-prompt_with_default "WAHA URL (leave empty to skip WhatsApp)" "$PREV_WAHA_URL" WAHA_URL
+# Optional: Deploy WAHA (WhatsApp) alongside server (no Docker needed)
+DEPLOY_WAHA=""
+WAHA_NODE_PORT=""
+WAHA_URL=""
 WAHA_PORT=""
 WEBHOOK_URL=""
-if [[ -n "$WAHA_URL" ]]; then
-  prompt_with_default "WAHA port" "$PREV_WAHA_PORT" WAHA_PORT
-  local_default_webhook="${SITE_URL}/api/whatsapp/webhook"
-  prompt_with_default "Webhook URL for WAHA" "${PREV_WEBHOOK_URL:-$local_default_webhook}" WEBHOOK_URL
+read -rp "Deploy WAHA (WhatsApp) alongside server? [y/N] " DEPLOY_WAHA
+if [[ "$DEPLOY_WAHA" == "y" || "$DEPLOY_WAHA" == "Y" ]]; then
+  prompt_with_default "WAHA port on cyon (e.g. 40405)" "${PREV_WAHA_PORT:-40405}" WAHA_NODE_PORT
+  WAHA_URL="http://127.0.0.1:${WAHA_NODE_PORT}"
+  WAHA_PORT="${WAHA_NODE_PORT}"
+  WEBHOOK_URL="http://127.0.0.1:${NODE_PORT}/api/whatsapp/webhook"
 fi
 
 # Optional: LLM / Email
@@ -131,6 +135,16 @@ cd "$PROJECT_DIR/server"
 npm run build
 echo "  ✓ Server built → server/dist/"
 
+# ─── Step 2b: Build WAHA (if deploying) ──────────
+
+if [[ -n "$WAHA_NODE_PORT" ]]; then
+  echo ""
+  echo "▶ Building WAHA..."
+  cd "$PROJECT_DIR/waha"
+  npm run build
+  echo "  ✓ WAHA built → waha/dist/"
+fi
+
 # ─── Step 3: Generate production .env ─────────────
 
 echo ""
@@ -166,6 +180,18 @@ ENVEOF
 fi
 
 echo "  ✓ .env.production created"
+
+if [[ -n "$WAHA_NODE_PORT" ]]; then
+  WAHA_ENV_FILE="$PROJECT_DIR/waha/.env.production"
+  cat > "$WAHA_ENV_FILE" <<WAHAEOF
+WHATSAPP_API_PORT=${WAHA_NODE_PORT}
+WHATSAPP_DEFAULT_ENGINE=NOWEB
+WHATSAPP_HOOK_URL=http://127.0.0.1:${NODE_PORT}/api/whatsapp/webhook
+WHATSAPP_HOOK_EVENTS=message
+WAHA_WORKER_TYPE=LOCAL
+WAHAEOF
+  echo "  ✓ WAHA .env.production created"
+fi
 
 # ─── Step 4: Create .htaccess for routing ─────────
 
@@ -286,6 +312,44 @@ echo "▶ Starting server on remote..."
 ssh "${SSH_USER}@${SSH_HOST}" "cd ${SERVER_REMOTE} && chmod +x start.sh && nohup ./start.sh > server.log 2>&1 &"
 echo "  ✓ Server started on port ${NODE_PORT}"
 
+# ─── Step 8: Deploy WAHA (if enabled) ────────────
+
+if [[ -n "$WAHA_NODE_PORT" ]]; then
+  echo ""
+  echo "▶ Deploying WAHA to ${SSH_HOST}:${REMOTE_PATH}/../openkick-waha/ ..."
+  WAHA_REMOTE="${REMOTE_PATH}/../openkick-waha"
+  ssh "${SSH_USER}@${SSH_HOST}" "mkdir -p ${WAHA_REMOTE}/.sessions"
+
+  rsync -avz --delete \
+    --exclude='node_modules' \
+    --exclude='src' \
+    --exclude='.env' \
+    --exclude='.sessions' \
+    "$PROJECT_DIR/waha/dist/" \
+    "${SSH_USER}@${SSH_HOST}:${WAHA_REMOTE}/dist/"
+
+  rsync -avz \
+    "$PROJECT_DIR/waha/package.json" \
+    "$PROJECT_DIR/waha/package-lock.json" \
+    "$PROJECT_DIR/waha/start.sh" \
+    "$WAHA_ENV_FILE" \
+    "${SSH_USER}@${SSH_HOST}:${WAHA_REMOTE}/"
+
+  echo "  ✓ WAHA deployed"
+
+  echo ""
+  echo "▶ Installing WAHA production dependencies on remote..."
+  ssh "${SSH_USER}@${SSH_HOST}" "cd ${WAHA_REMOTE} && npm install --omit=dev"
+  echo "  ✓ WAHA dependencies installed"
+
+  echo ""
+  echo "▶ Starting WAHA on remote..."
+  ssh "${SSH_USER}@${SSH_HOST}" "cd ${WAHA_REMOTE} && chmod +x start.sh && pkill -f 'node dist/main.js' 2>/dev/null || true; nohup ./start.sh > waha.log 2>&1 &"
+  echo "  ✓ WAHA started on port ${WAHA_NODE_PORT}"
+
+  rm -f "$WAHA_ENV_FILE"
+fi
+
 # ─── Cleanup ──────────────────────────────────────
 
 rm -f "$ENV_FILE"
@@ -304,3 +368,13 @@ echo ""
 echo "  To restart the server:"
 echo "    ssh ${SSH_USER}@${SSH_HOST} 'cd ${SERVER_REMOTE} && pkill -f \"node dist/index.js\" ; nohup ./start.sh > server.log 2>&1 &'"
 echo ""
+if [[ -n "$WAHA_NODE_PORT" ]]; then
+  echo "  WAHA:     http://127.0.0.1:${WAHA_NODE_PORT} (internal)"
+  echo ""
+  echo "  To check WAHA logs:"
+  echo "    ssh ${SSH_USER}@${SSH_HOST} 'tail -f ${WAHA_REMOTE}/waha.log'"
+  echo ""
+  echo "  To restart WAHA:"
+  echo "    ssh ${SSH_USER}@${SSH_HOST} 'cd ${WAHA_REMOTE} && pkill -f \"node dist/main.js\" ; nohup ./start.sh > waha.log 2>&1 &'"
+  echo ""
+fi

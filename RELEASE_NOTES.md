@@ -1,5 +1,13 @@
 # OpenKick Release Notes
 
+## Version 1.29 (Wed, Mar 4 2026)
+
+* **Docker-free WhatsApp**: WAHA (WhatsApp HTTP API) can now run as a plain Node.js process — no Docker required
+* Works on shared hosting (e.g., Cyon) where Docker is not available
+* Setup wizard auto-detects native WAHA and skips Docker steps
+* Deploy script (`tools/deploy-cyon.sh`) now deploys WAHA alongside the server with one command
+* Settings page shows "Native (no Docker)" status when WAHA runs without Docker
+
 ## Version 1.28 (Tue, Mar 3 2026)
 
 * **Security fix**: API settings endpoint no longer exposes API keys, SMTP passwords, or other secrets to unauthenticated users

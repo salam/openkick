@@ -13,6 +13,12 @@ When you first set up OpenKick, the onboarding wizard guides you through WhatsAp
 
 If you skipped the wizard during onboarding, you can run it again from **Settings > WhatsApp**.
 
+### Without Docker (Shared Hosting)
+
+If your server doesn't support Docker (e.g., Cyon shared hosting), WAHA can run as a plain Node.js process. The deploy script (`tools/deploy-cyon.sh`) handles this automatically — choose "Deploy WAHA alongside server" when prompted.
+
+The setup wizard detects native WAHA and skips the Docker steps. You'll go straight to QR code scanning.
+
 The steps below are for manual setup if you prefer the command line.
 
 ---

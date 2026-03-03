@@ -15,6 +15,7 @@
 - [x] Multi-provider LLM abstraction (OpenAI, Claude, Infomaniak Euria)
 - [x] Whisper speech-to-text for voice messages
 - [x] WhatsApp integration via WAHA (webhook + message sending + session-based state machine)
+- [x] Docker-free WAHA deployment (NOWEB engine, runs as plain Node.js process on shared hosting)
 - [x] WhatsApp RSVP: parents confirm/decline attendance via chat message (intent classification, multi-child disambiguation)
 - [x] WhatsApp onboarding for unknown phone numbers (4-step: name, child, birth year, consent)
 - [x] WhatsApp coach/admin intent parsing (attendance overview, cancel event, send reminder, mark attendance, match sheet, admin link)
